@@ -58,13 +58,13 @@ class Fullboys : MainAPI() {
         } ?: return null
 
         return newMovieSearchResponse(
-            name = name,
-            url = url,
-            apiName = this@Fullboys.name,
-            type = TvType.NSFW,
-            posterUrl = image
-        )
-    }
+            title = name,
+    link = url,
+    type = TvType.NSFW
+        ).apply {
+    poster = image
+        }
+
 
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/home?search=$query"
@@ -109,26 +109,24 @@ class Fullboys : MainAPI() {
         val recName = aTag.attr("title") ?: aTag.selectFirst("h2.title")?.text() ?: return@mapNotNull null
         val recPoster = aTag.selectFirst("img")?.attr("src")
         newMovieSearchResponse(
-            name = recName,
-            url = recUrl,
-            apiName = this@Fullboys.name,
-            type = TvType.NSFW,
-            posterUrl = recPoster
-        )
+    title = recName,
+    link = recUrl,
+    type = TvType.NSFW
+).apply {
+    poster = recPoster
+}
+
     }
 
     return newMovieLoadResponse(
-        name = name,
-        url = url,
-        apiName = this.name,
-        type = TvType.NSFW,
-        dataUrl = videoUrl,
-        posterUrl = poster,
-        plot = description,
-        tags = tags
-    ).apply {
-        this.recommendations = recommendations
-        // Nếu muốn, có thể thêm previews vào 1 trường custom nếu app hỗ trợ
+    title = name,
+    link = url,
+    type = TvType.NSFW,
+    dataUrl = videoUrl
+).apply {
+    this.poster = poster
+    this.plot = description
+    this.tags = tags
     }
 }
     
