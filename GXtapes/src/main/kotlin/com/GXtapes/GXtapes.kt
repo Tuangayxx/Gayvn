@@ -22,6 +22,8 @@ class GXtapes : MainAPI() {
 
     override val mainPage = mainPageOf(
         "" to "Latest",
+        "/84750" to "Asian"
+        "/latin-287326" to "Latino"
         "/68780" to "BelAmi",
         "/62478" to "FraternityX",
         "/416537" to "Falcon Studio",
