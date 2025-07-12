@@ -17,7 +17,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
@@ -101,38 +100,41 @@ class GXtapes : MainAPI() {
     }
 }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-    val document = app.get(data).document
-    var found = false
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val document = app.get(data).document
+        var found = false
 
-    // Xử lý các iframe đặc biệt
-    document.select("#video-code iframe").forEach { iframe ->
-        val src = iframe.attr("src")
-        when {
-            src.contains("74k.io") -> {
-                // Giải mã URL 74k.io
-                val decodedUrl = "https://74k.io/e/" + src.substringAfterLast("/")
-                found = found or loadExtractor(decodedUrl, subtitleCallback, callback)
-            }
-            src.contains("88z.io") -> {
-                // Xử lý URL 88z.io dạng hash
-                val videoHash = src.substringAfter("#")
-                val directUrl = "https://88z.io/getvid/$videoHash"
-                callback.invoke(ExtractorLink(
-                    name = "88z.io",
-                    source = "Direct",
-                    url = directUrl,
-                    quality = Qualities.Unknown.value,
-                    isM3u8 = false
-                ))
-                found = true
-            }
-            else -> {
-                found = found or loadExtractor(src, subtitleCallback, callback)
+        document.select("#video-code iframe").forEach { iframe ->
+            val src = iframe.attr("src")
+            when {
+                src.contains("74k.io") -> {
+                    val decodedUrl = "https://74k.io/e/" + src.substringAfterLast("/")
+                    found = found or loadExtractor(decodedUrl, subtitleCallback, callback)
+                }
+                src.contains("88z.io") -> {
+                    val videoHash = src.substringAfter("#")
+                    val directUrl = "https://88z.io/getvid/$videoHash"
+                    callback.invoke(ExtractorLink(
+                        name = "88z.io",
+                        source = "Direct",
+                        url = directUrl,
+                        referer = mainUrl, // Đã sửa ở đây
+                        quality = Qualities.Unknown.value,
+                        isM3u8 = false
+                    ))
+                    found = true
+                }
+                else -> {
+                    found = found or loadExtractor(src, subtitleCallback, callback)
+                }
             }
         }
-    }
 
-    return found
-  }
+        return found
+    }
 }
