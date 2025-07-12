@@ -3,12 +3,8 @@ package com.GXtapes
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
-import okhttp3.Interceptor
-import okhttp3.Request
-import okhttp3.Response
 import org.jsoup.nodes.Element
 import java.io.IOException
-import okhttp3.OkHttpClientimport com.lagradost.cloudstream3.mvvm.safeApiCall
 import com.lagradost.api.Log
 
 
@@ -23,20 +19,6 @@ class GXtapes : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Client với headers để vượt qua kiểm tra
-    private val client by lazy {
-        app.createClient {
-            addHeaders(
-                mapOf(
-                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                    "Referer" to "https://gay.xtapes.in/",
-                    "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                    "Accept-Language" to "en-US,en;q=0.9",
-                    "DNT" to "1"
-                )
-            )
-        }
-    }
 
     override val mainPage = mainPageOf(
         "" to "Latest",
