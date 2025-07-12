@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import okhttp3.Interceptor
 
 
 class GXtapes : MainAPI() {
@@ -28,6 +29,19 @@ class GXtapes : MainAPI() {
         "/416537" to "Falcon Studio",
         "/627615" to "Onlyfans",
     )
+
+    override val client = super.client.newBuilder()
+        .addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+                .header("Referer", "https://gay.xtapes.in/")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("DNT", "1")
+                .build()
+            chain.proceed(request)
+        }
+        .build()
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (request.data.isEmpty()) {
@@ -108,21 +122,8 @@ class GXtapes : MainAPI() {
                     found = found or loadExtractor(decodedUrl, subtitleCallback, callback)
                 }
                 src.contains("88z.io") -> {
-                    val videoHash = src.substringAfter("#")
-                    val directUrl = "https://88z.io/#$videoHash"
-                    
-                    // Sử dụng constructor chính xác
-                    callback.invoke(
-                        ExtractorLink(
-                            source = name,
-                            name = "88z.io",
-                            url = directUrl,
-                            referer = mainUrl,
-                            quality = Qualities.Unknown.value,
-                            type = ExtractorLinkType.VIDEO // Thêm type ở đây
-                        )
-                    )
-                    found = true
+                    // Gọi hàm extract tùy chỉnh cho 88z.io
+                    found = found or extract88zLink(src, subtitleCallback, callback)
                 }
                 else -> {
                     found = found or loadExtractor(src, subtitleCallback, callback)
@@ -131,5 +132,47 @@ class GXtapes : MainAPI() {
         }
 
         return found
+    }
+
+    // 2. THÊM HÀM EXTRACT TÙY CHỈNH - Đặt sau hàm loadLinks
+    private suspend fun extract88zLink(
+        url: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        return try {
+            // Tải nội dung iframe
+            val iframeDoc = app.get(url).document
+            
+            // Tìm thẻ script chứa dữ liệu video
+            val scriptContent = iframeDoc.select("script").find { script ->
+                script.data().contains("media-player") || 
+                script.data().contains("sources")
+            }?.data() ?: return false
+            
+            // Trích xuất URL HLS từ dữ liệu JSON
+            val videoRegex = Regex("""sources\s*:\s*\[\s*\{\s*src\s*:\s*['"]([^'"]+)['"]""")
+            val videoUrl = videoRegex.find(scriptContent)?.groupValues?.get(1)
+                ?: return false
+
+            // Kiểm tra định dạng video
+            val isM3u8 = videoUrl.contains(".m3u8")
+            val quality = if (isM3u8) Qualities.Unknown.value else Qualities.Unknown.value
+            
+            // Trả về link video
+            callback.invoke(
+                ExtractorLink(
+                    source = name,
+                    name = "Vidstack Player",
+                    url = videoUrl,
+                    referer = mainUrl,
+                    quality = quality,
+                    type = if (isM3u8) ExtractorLinkType.HLS else ExtractorLinkType.VIDEO
+                )
+            )
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }
