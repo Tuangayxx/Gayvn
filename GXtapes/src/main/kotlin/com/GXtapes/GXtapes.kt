@@ -100,7 +100,7 @@ class GXtapes : MainAPI() {
     }
 }
 
-    override suspend fun loadLinks(
+     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -119,14 +119,18 @@ class GXtapes : MainAPI() {
                 src.contains("88z.io") -> {
                     val videoHash = src.substringAfter("#")
                     val directUrl = "https://88z.io/getvid/$videoHash"
-                    callback.invoke(ExtractorLink(
-                        name = "88z.io",
-                        source = "Direct",
-                        url = directUrl,
-                        referer = mainUrl, // Đã sửa ở đây
-                        quality = Qualities.Unknown.value,
-                        isM3u8 = false
-                    ))
+                    
+                    // Sử dụng newExtractorLink thay vì constructor
+                    callback.invoke(
+                        ExtractorLink.newExtractorLink(
+                            source = name, // "Tuangayxx"
+                            name = "88z.io",
+                            url = directUrl,
+                            referer = mainUrl,
+                            quality = Qualities.Unknown.value,
+                            isM3u8 = false
+                        )
+                    )
                     found = true
                 }
                 else -> {
