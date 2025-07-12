@@ -49,7 +49,7 @@ open class VID : ExtractorApi() {
 
 class GXtapesExtractor(
     override val name: String = "GXtapes",
-    override val mainUrl: String = "https://74k.io/e",
+    override val mainUrl: String = "https://74k.io/stream",
     override val requiresReferer: Boolean = false
 ) : ExtractorApi() {
     override suspend fun getUrl(
