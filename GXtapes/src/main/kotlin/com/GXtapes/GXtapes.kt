@@ -30,6 +30,7 @@ class GXtapes : MainAPI() {
         "$mainUrl/416510" to "FalconStudio",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         "$mainUrl/category/416510/" to "Falcon Studio",
         "$mainUrl/627615/" to "Onlyfans",
         "$mainUrl/category/627615/" to "Only fans",
@@ -37,11 +38,16 @@ class GXtapes : MainAPI() {
 =======
 =======
 >>>>>>> c31978e (Update GXtapes.kt)
+=======
+>>>>>>> c31978e (Update GXtapes.kt)
         "$mainUrl/category/416510" to "Falcon Studio",
         "$mainUrl/627615" to "Onlyfans",
         "$mainUrl/category/627615" to "Only fans",
         "$mainUrl/category/37433" to "Gay Hoopla",
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> c31978e (Update GXtapes.kt)
+=======
 >>>>>>> c31978e (Update GXtapes.kt)
 =======
 >>>>>>> c31978e (Update GXtapes.kt)
