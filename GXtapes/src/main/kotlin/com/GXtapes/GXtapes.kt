@@ -9,7 +9,7 @@ import com.lagradost.api.Log
 
 
 class GXtapes : MainAPI() {
-    override var mainUrl = "https://g.xtapes.in"
+    override var mainUrl = "https://gay.xtapes.in"
     override var name = "G_Xtapes"
     override val hasMainPage = true
     override var lang = "en"
@@ -22,15 +22,16 @@ class GXtapes : MainAPI() {
 
     override val mainPage = mainPageOf(
         "" to "Latest",
-        "/category/hdporn-783479" to "Random",
-        "/84750" to "Asian",
-        "/latin-287326" to "Latino",
-        "/68780" to "BelAmi",
-        "/62478" to "FraternityX",
-        "/416510" to "Falcon Studio",
-        "/category/416510" to "Falcon Studio",
-        "/627615" to "Onlyfans",
-        "/category/627615" to "Onlyfans",
+        "$mainUrl/category/hdporn-783479" to "Random",
+        "$mainUrl/84750" to "Asian",
+        "$mainUrl/latin-287326" to "Latino",
+        "$mainUrl/68780" to "BelAmi",
+        "$mainUrl/62478" to "FraternityX",
+        "$mainUrl/416510" to "FalconStudio",
+        "$mainUrl/category/416510" to "Falcon Studio",
+        "$mainUrl/627615" to "Onlyfans",
+        "$mainUrl/category/627615" to "Only fans",
+        "$mainUrl/category/37433" to "Gay Hoopla",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
