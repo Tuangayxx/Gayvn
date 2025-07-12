@@ -26,19 +26,11 @@ class GXtapes : MainAPI() {
         "/62478" to "FraternityX",
         "/416537" to "Falcon Studio",
         "/627615" to "Onlyfans",
-    )
+    )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (request.data.isEmpty()) {
-            "$mainUrl/page/$page/"
-        } else {
-            "$mainUrl${request.data}/page/$page/"
-        }
-        
-        val document = client.get(url).document
-        val home = document.select("ul.listing-tube li").mapNotNull { element ->
-            safeApiCall { element.toSearchResult() }
-        }
+        val document = app.get("$mainUrl/${request.data}/page/$page/").document
+        val home = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -50,6 +42,7 @@ class GXtapes : MainAPI() {
         )
     }
 
+
     private fun Element.toSearchResult(): SearchResponse {
         val title = this.select("img").attr("title")
         val href = fixUrl(this.select("a").attr("href"))
@@ -60,29 +53,29 @@ class GXtapes : MainAPI() {
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
+   override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..5) {
-            val document = client.get("$mainUrl/page/$i/?s=$query").document
-            val results = document.select("ul.listing-tube li").mapNotNull { element ->
-                safeApiCall { element.toSearchResult() }
+            val document = app.get("${mainUrl}/page/$i/?s=$query").document
+
+            val results = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+
+            if (!searchResponse.containsAll(results)) {
+                searchResponse.addAll(results)
+            } else {
+                break
             }
 
             if (results.isEmpty()) break
-            
-            results.forEach { newItem ->
-                if (searchResponse.none { it.url == newItem.url }) {
-                    searchResponse.add(newItem)
-                }
-            }
         }
 
         return searchResponse
     }
+   
 
     override suspend fun load(url: String): LoadResponse {
-        val document = client.get(url).document
+        val document = app.get(url).document
 
         val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
