@@ -2,6 +2,7 @@ package com.GXtapes
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.ExtractorLink
 import org.jsoup.nodes.Element
 
 class GXtapes : MainAPI() {
