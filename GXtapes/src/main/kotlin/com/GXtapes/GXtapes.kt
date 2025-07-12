@@ -109,7 +109,7 @@ class GXtapes : MainAPI() {
                 }
                 src.contains("88z.io") -> {
                     val videoHash = src.substringAfter("#")
-                    val directUrl = "https://88z.io/getvid/$videoHash"
+                    val directUrl = "https://88z.io/#$videoHash"
                     
                     // Sử dụng constructor chính xác
                     callback.invoke(
