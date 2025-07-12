@@ -9,5 +9,8 @@ import com.GXtapes.GXtapes
 class GXtapesProvider: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(GXtapes())
+        registerExtractorAPI(Stream())
+        registerExtractorAPI(VID())
+        registerExtractorAPI(XtapesExtractor())
     }
 }
