@@ -57,13 +57,14 @@ class Fullboys : MainAPI() {
             it.attr("data-cfsrc").takeIf { src -> src.isNotBlank() } ?: it.attr("src")
         } ?: return null
 
-        return newMovieSearchResponse(
-            title = name,
-    link = url,
-    type = TvType.NSFW
-        ).apply {
-    poster = image
-        }
+         return MovieSearchResponse(
+            name = name,
+            url = url,
+            apiName = this@Fullboys.name,
+            type = TvType.NSFW,
+            posterUrl = image
+        )
+    }
 
 
     override suspend fun search(query: String): List<SearchResponse> {
@@ -108,25 +109,27 @@ class Fullboys : MainAPI() {
         val recUrl = fixUrl(aTag.attr("href"))
         val recName = aTag.attr("title") ?: aTag.selectFirst("h2.title")?.text() ?: return@mapNotNull null
         val recPoster = aTag.selectFirst("img")?.attr("src")
-        newMovieSearchResponse(
-    title = recName,
-    link = recUrl,
-    type = TvType.NSFW
-).apply {
-    poster = recPoster
-}
-
+            MovieSearchResponse( 
+            name = recName,
+            url = recUrl,
+            apiName = this@Fullboys.name,
+            type = TvType.NSFW,
+            posterUrl = recPoster
+        )
     }
 
-    return newMovieLoadResponse(
-    title = name,
-    link = url,
-    type = TvType.NSFW,
-    dataUrl = videoUrl
-).apply {
-    this.poster = poster
-    this.plot = description
-    this.tags = tags
+    return MovieLoadResponse(
+        name = name,
+        url = url,
+        apiName = this.name,
+        type = TvType.NSFW,
+        dataUrl = videoUrl,
+        posterUrl = poster,
+        plot = description,
+        tags = tags
+    ).apply {
+        this.recommendations = recommendations
+        // Nếu muốn, có thể thêm previews vào 1 trường custom nếu app hỗ trợ
     }
 }
     
