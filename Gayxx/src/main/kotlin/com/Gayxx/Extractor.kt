@@ -56,10 +56,7 @@ open class VoeExtractor : ExtractorApi() {
                         newExtractorLink(
                             name = "Voe",
                             source = this.name,
-                            url = linkUrl,
-                            quality = getQualityFromName(linkLabel),
-                            referer = url,
-                            isM3u8 = true
+                            url = linkUrl
                         )
                     )
                 }
