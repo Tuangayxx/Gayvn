@@ -1,29 +1,10 @@
 package com.GXtapes
 
-import org.jsoup.nodes.Element
-import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.mvvm.logError
-import com.lagradost.cloudstream3.utils.M3u8Helper
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import org.json.JSONObject
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.extractors.DoodLaExtractor
-import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.newExtractorLink
-
+import org.jsoup.nodes.Element
 
 class GXtapes : MainAPI() {
-    private val globalTvType = TvType.NSFW
     override var mainUrl = "https://g.xtapes.in"
     override var name = "G_Xtapes"
     override val hasMainPage = true
@@ -38,18 +19,24 @@ class GXtapes : MainAPI() {
         "" to "Latest",
         "/68780" to "BelAmi",
         "/62478" to "FraternityX",
-        "/416537" to "Falcon Studio",
+        "/416537" to "Falcon Studio",  // Sửa URL thành đúng định dạng
         "/627615" to "Onlyfans",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}/page/$page/").document
-        val home     = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+        val url = if (request.data.isEmpty()) {
+            "$mainUrl/page/$page/"
+        } else {
+            "$mainUrl${request.data}/page/$page/"
+        }
+        
+        val document = app.get(url).document
+        val home = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
-            list    = HomePageList(
-                name               = request.name,
-                list               = home,
+            list = HomePageList(
+                name = request.name,
+                list = home,
                 isHorizontalImages = true
             ),
             hasNext = true
@@ -57,11 +44,11 @@ class GXtapes : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title     = this.select("img").attr("title")
-        val href      = fixUrl(this.select("a").attr("href"))
+        val title = this.select("img").attr("title")
+        val href = fixUrl(this.select("a").attr("href"))
         val posterUrl = fixUrlNull(this.select("img").attr("src"))
-        println(posterUrl)
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
@@ -70,37 +57,36 @@ class GXtapes : MainAPI() {
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..5) {
-            val document = app.get("${mainUrl}/page/$i/?s=$query").document
-
+            val document = app.get("$mainUrl/page/$i/?s=$query").document
             val results = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
 
-            if (!searchResponse.containsAll(results)) {
-                searchResponse.addAll(results)
-            } else {
-                break
-            }
-
             if (results.isEmpty()) break
+            
+            // Kiểm tra trùng lặp trước khi thêm
+            results.forEach { newItem ->
+                if (searchResponse.none { it.url == newItem.url }) {
+                    searchResponse.add(newItem)
+                }
+            }
         }
 
         return searchResponse
     }
 
     override suspend fun load(url: String): LoadResponse {
-    val document = app.get(url).document
+        val document = app.get(url).document
 
-    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
-    // Sửa selector để lấy poster trực tiếp từ meta og:image
-    val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
-    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
+        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
+        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-        this.posterUrl = poster
-        this.plot = description
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = poster
+            this.plot = description
+        }
     }
-}
 
-     override suspend fun loadLinks(
+    override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -120,10 +106,9 @@ class GXtapes : MainAPI() {
                     val videoHash = src.substringAfter("#")
                     val directUrl = "https://88z.io/getvid/$videoHash"
                     
-                    // Sử dụng newExtractorLink thay vì constructor
                     callback.invoke(
                         ExtractorLink.newExtractorLink(
-                            source = name, // "Tuangayxx"
+                            source = name,
                             name = "88z.io",
                             url = directUrl,
                             referer = mainUrl,
