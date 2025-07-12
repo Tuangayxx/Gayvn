@@ -85,10 +85,6 @@ subprojects {
         implementation("com.google.code.gson:gson:2.11.0")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
-implementation 'com.github.recloudstream:cloudstream:3.4.5'
-implementation 'org.jsoup:jsoup:1.17.2'
-implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0'
-
     }
 }
 
