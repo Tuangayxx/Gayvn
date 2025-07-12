@@ -47,13 +47,13 @@ open class VoeExtractor : ExtractorApi() {
                 .replace("0,", "0")
                 .trim()
             //Log.i(this.name, "Result => (src) ${src}")
-            parseJson<ResponseLinks?>(src)?.let { voelink ->
+            tryParseJson<ResponseLinks?>(src)?.let { voelink ->
                 //Log.i(this.name, "Result => (voelink) ${voelink}")
                 val linkUrl = voelink.url
                 val linkLabel = voelink.label?.toString() ?: ""
                 if (!linkUrl.isNullOrEmpty()) {
                     extractedLinksList.add(
-                        ExtractorLink(
+                        newExtractorLink(
                             name = "Voe",
                             source = this.name,
                             url = linkUrl,
