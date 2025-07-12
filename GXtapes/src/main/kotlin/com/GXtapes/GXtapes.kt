@@ -23,11 +23,11 @@ class GXtapes : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "/?filtre=date&cat=0" to "Latest",
-        "/category/porn-movies-214660" to "Full Movies",
-        "/category/asian-guys-porn" to "Asian",
-        "/category/groupsex-gangbang-porn-189457" to "Group",
-        "/category/latin-287326" to "Latino",
+        "" to "Latest",
+        "/68780" to "BelAmi",
+        "/62478" to "FraternityX",
+        "/416537" to "Falcon Studio",
+        "/627615" to "Onlyfans",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
