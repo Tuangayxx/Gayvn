@@ -22,12 +22,15 @@ class GXtapes : MainAPI() {
 
     override val mainPage = mainPageOf(
         "" to "Latest",
+        "/category/hdporn-783479" to "Random",
         "/84750" to "Asian",
         "/latin-287326" to "Latino",
         "/68780" to "BelAmi",
         "/62478" to "FraternityX",
-        "/416537" to "Falcon Studio",
+        "/416510" to "Falcon Studio",
+        "/category/416510" to "Falcon Studio",
         "/627615" to "Onlyfans",
+        "/category/627615" to "Onlyfans",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
