@@ -30,7 +30,7 @@ class Gayxx : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("$mainUrl/${request.data}/page/$page/").document
-        val home = document.select("div.videopost col-md-3 col-sm-4 col-xs-6").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -59,7 +59,7 @@ class Gayxx : MainAPI() {
         for (i in 1..5) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("div.videopost col-md-3 col-sm-4 col-xs-6").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
