@@ -1,4 +1,4 @@
-package com.GXtapes
+package com.Gayxx
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
