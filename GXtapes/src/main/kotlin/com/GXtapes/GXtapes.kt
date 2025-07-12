@@ -75,27 +75,51 @@ class GXtapes : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+    val document = app.get(url).document
 
-        val title       = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim().toString()
-        val iframe      = document.selectFirst("#video-code iframe")?.attr("src").toString()
-        val iframeDoc   = app.get(iframe).document
-        val poster      = fixUrlNull(iframeDoc.selectFirst("div#vplayer > img")?.attr("src"))
-        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
+    // Sửa selector để lấy poster trực tiếp từ meta og:image
+    val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
+    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot      = description
-        }
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        this.posterUrl = poster
+        this.plot = description
     }
+}
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val document = app.get(data).document
-        document.select("#video-code iframe").forEach { links ->
-            val url=links.attr("src")
-            Log.d("Tuangayxx test",url)
-            loadExtractor(url,subtitleCallback, callback)
+    val document = app.get(data).document
+    var found = false
+
+    // Xử lý các iframe đặc biệt
+    document.select("#video-code iframe").forEach { iframe ->
+        val src = iframe.attr("src")
+        when {
+            src.contains("74k.io") -> {
+                // Giải mã URL 74k.io
+                val decodedUrl = "https://74k.io/e/" + src.substringAfterLast("/")
+                found = found or loadExtractor(decodedUrl, subtitleCallback, callback)
+            }
+            src.contains("88z.io") -> {
+                // Xử lý URL 88z.io dạng hash
+                val videoHash = src.substringAfter("#")
+                val directUrl = "https://88z.io/getvid/$videoHash"
+                callback.invoke(ExtractorLink(
+                    name = "88z.io",
+                    source = "Direct",
+                    url = directUrl,
+                    quality = Qualities.Unknown.value,
+                    isM3u8 = false
+                ))
+                found = true
+            }
+            else -> {
+                found = found or loadExtractor(src, subtitleCallback, callback)
+            }
         }
-        return true
     }
+
+    return found
+  }
 }
