@@ -8,7 +8,5 @@ import android.content.Context
 class GXtapesProvider: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(GXtapes())
-        registerExtractorAPI(Stream())
-        registerExtractorAPI(VID())
     }
 }
