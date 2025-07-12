@@ -22,47 +22,15 @@ class GXtapes : MainAPI() {
 
     override val mainPage = mainPageOf(
         "" to "Latest",
-        "$mainUrl/category/hdporn-783479" to "Random",
-        "$mainUrl/84750" to "Asian",
-        "$mainUrl/latin-287326" to "Latino",
-        "$mainUrl/68780" to "BelAmi",
-        "$mainUrl/62478" to "FraternityX",
-        "$mainUrl/416510" to "FalconStudio",
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> ede6fa2 (Update GXtapes.kt)
-        "$mainUrl/category/416510/" to "Falcon Studio",
-        "$mainUrl/627615/" to "Onlyfans",
-        "$mainUrl/category/627615/" to "Only fans",
-        "$mainUrl/category/37433/" to "Gay Hoopla",
-<<<<<<< HEAD
-=======
-=======
->>>>>>> c31978e (Update GXtapes.kt)
-=======
->>>>>>> c31978e (Update GXtapes.kt)
-=======
->>>>>>> c31978e (Update GXtapes.kt)
-        "$mainUrl/category/416510" to "Falcon Studio",
-        "$mainUrl/627615" to "Onlyfans",
-        "$mainUrl/category/627615" to "Only fans",
-        "$mainUrl/category/37433" to "Gay Hoopla",
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> c31978e (Update GXtapes.kt)
-=======
->>>>>>> c31978e (Update GXtapes.kt)
-=======
->>>>>>> c31978e (Update GXtapes.kt)
-=======
->>>>>>> ede6fa2 (Update GXtapes.kt)
-=======
->>>>>>> c31978e (Update GXtapes.kt)
+        "/category/hdporn-783479" to "Random",
+        "/84750" to "Asian",
+        "/latin-287326" to "Latino",
+        "/68780" to "BelAmi",
+        "/62478" to "FraternityX",
+        "/416510" to "Falcon Studio",
+        "/category/416510" to "Falcon Studio",
+        "/627615" to "Onlyfans",
+        "/category/627615" to "Onlyfans",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
