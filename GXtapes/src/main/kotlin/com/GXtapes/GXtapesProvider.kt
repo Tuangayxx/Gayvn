@@ -3,6 +3,7 @@ package com.GXtapes
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
+import com.GXtapes.GXtapes
 
 @CloudstreamPlugin
 class GXtapesProvider: Plugin() {
