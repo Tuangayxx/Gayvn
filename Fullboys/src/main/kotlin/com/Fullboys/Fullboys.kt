@@ -22,11 +22,14 @@ class Fullboys : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "/topic/video/muscle" to "Muscle",
-        "/topic/video/korean" to "Korean",
-        "/topic/video/japanese" to "Japanese",
-        "/topic/video/taiwanese" to "Taiwanese",
-        "/topic/video/viet-nam" to "Vietnamese"
+        "/topic/video/muscle"      to "Muscle",
+        "/topic/video/korean"      to "Korean",
+        "/topic/video/japanese"    to "Japanese",
+        "/topic/video/taiwanese"   to "Taiwanese",
+        "/topic/video/viet-nam"    to "Vietnamese",
+        "/topic/video/philippines" to "Philippines",
+        "/topic/video/thailand"    to "Thái Lan",
+        "/topic/video/group"       to "Tập thể",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -114,7 +117,7 @@ class Fullboys : MainAPI() {
         )
     }
 
-    return MovieLoadResponse(
+    return newMovieLoadResponse(
         name = name,
         url = url,
         apiName = this.name,
