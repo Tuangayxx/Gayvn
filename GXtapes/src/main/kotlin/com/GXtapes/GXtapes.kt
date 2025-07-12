@@ -9,6 +9,7 @@ import org.jsoup.nodes.Element
 import java.io.IOException
 import okhttp3.OkHttpClient
 
+
 class GXtapes : MainAPI() {
     override var mainUrl = "https://g.xtapes.in"
     override var name = "G_Xtapes"
@@ -19,29 +20,6 @@ class GXtapes : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
-
-    // Sử dụng app mặc định với headers tùy chỉnh
-    private val app by lazy {
-        App(
-            client = OkHttpClient.Builder()
-                .addInterceptor(HeadersInterceptor())
-                .build()
-        )
-    }
-
-    // Interceptor để thêm headers
-    class HeadersInterceptor : Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request().newBuilder()
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
-                .header("Referer", "https://gay.xtapes.in/")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .header("DNT", "1")
-                .build()
-            return chain.proceed(request)
-        }
-    }
 
     override val mainPage = mainPageOf(
         "" to "Latest",
@@ -58,8 +36,7 @@ class GXtapes : MainAPI() {
             "$mainUrl${request.data}/page/$page/"
         }
         
-        val response = app.get(url)
-        val document = response.document
+        val document = app.get(url).document
         val home = document.select("ul.listing-tube li").mapNotNull { element ->
             element.toSearchResult()
         }
@@ -88,8 +65,7 @@ class GXtapes : MainAPI() {
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..5) {
-            val response = app.get("$mainUrl/page/$i/?s=$query")
-            val document = response.document
+            val document = app.get("$mainUrl/page/$i/?s=$query").document
             val results = document.select("ul.listing-tube li").mapNotNull { element ->
                 element.toSearchResult()
             }
@@ -107,8 +83,7 @@ class GXtapes : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val response = app.get(url)
-        val document = response.document
+        val document = app.get(url).document
 
         val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
@@ -126,68 +101,14 @@ class GXtapes : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val response = app.get(data)
-        val document = response.document
+        val document = app.get(data).document
         var found = false
 
         document.select("#video-code iframe").forEach { iframe ->
             val src = iframe.attr("src")
-            when {
-                src.contains("74k.io") -> {
-                    val decodedUrl = "https://74k.io/e/" + src.substringAfterLast("/")
-                    found = found or loadExtractor(decodedUrl, subtitleCallback, callback)
-                }
-                src.contains("88z.io") -> {
-                    found = found or extract88zLink(src, subtitleCallback, callback)
-                }
-                else -> {
-                    found = found or loadExtractor(src, subtitleCallback, callback)
-                }
-            }
+            found = found or loadExtractor(src, subtitleCallback, callback)
         }
 
         return found
-    }
-
-    private suspend fun extract88zLink(
-        url: String,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        return try {
-            // Tải nội dung iframe
-            val response = app.get(url)
-            val iframeDoc = response.document
-            
-            // Tìm thẻ script chứa dữ liệu video
-            val scriptContent = iframeDoc.select("script").find { script ->
-                script.data().contains("media-player") || 
-                script.data().contains("sources")
-            }?.data() ?: return false
-            
-            // Trích xuất URL HLS từ dữ liệu JSON
-            val videoRegex = Regex("""sources\s*:\s*\[\s*\{\s*src\s*:\s*['"]([^'"]+)['"]""")
-            val videoUrl = videoRegex.find(scriptContent)?.groupValues?.get(1)
-                ?: return false
-
-            // Kiểm tra định dạng video
-            val isM3u8 = videoUrl.contains(".m3u8")
-            val quality = Qualities.Unknown.value
-            
-            // Trả về link video
-            callback.invoke(
-                ExtractorLink(
-                    source = name,
-                    name = "Vidstack Player",
-                    url = videoUrl,
-                    referer = mainUrl,
-                    quality = quality,
-                    type = if (isM3u8) ExtractorLinkType.HLS else ExtractorLinkType.VIDEO
-                )
-            )
-            true
-        } catch (e: Exception) {
-            false
-        }
     }
 }
