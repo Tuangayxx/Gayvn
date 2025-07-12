@@ -7,6 +7,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Element
 import java.io.IOException
+import okhttp3.OkHttpClient
 
 class GXtapes : MainAPI() {
     override var mainUrl = "https://g.xtapes.in"
@@ -19,16 +20,28 @@ class GXtapes : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Sử dụng appUtils mặc định với headers tùy chỉnh
-    private val app = AppUtils.createClient(
-        headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Referer" to "https://gay.xtapes.in/",
-            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language" to "en-US,en;q=0.9",
-            "DNT" to "1"
+    // Sử dụng app mặc định với headers tùy chỉnh
+    private val app by lazy {
+        App(
+            client = OkHttpClient.Builder()
+                .addInterceptor(HeadersInterceptor())
+                .build()
         )
-    )
+    }
+
+    // Interceptor để thêm headers
+    class HeadersInterceptor : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val request = chain.request().newBuilder()
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+                .header("Referer", "https://gay.xtapes.in/")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("DNT", "1")
+                .build()
+            return chain.proceed(request)
+        }
+    }
 
     override val mainPage = mainPageOf(
         "" to "Latest",
@@ -45,8 +58,11 @@ class GXtapes : MainAPI() {
             "$mainUrl${request.data}/page/$page/"
         }
         
-        val document = app.get(url).document
-        val home = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+        val response = app.get(url)
+        val document = response.document
+        val home = document.select("ul.listing-tube li").mapNotNull { element ->
+            element.toSearchResult()
+        }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -72,8 +88,11 @@ class GXtapes : MainAPI() {
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..5) {
-            val document = app.get("$mainUrl/page/$i/?s=$query").document
-            val results = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+            val response = app.get("$mainUrl/page/$i/?s=$query")
+            val document = response.document
+            val results = document.select("ul.listing-tube li").mapNotNull { element ->
+                element.toSearchResult()
+            }
 
             if (results.isEmpty()) break
             
@@ -88,7 +107,8 @@ class GXtapes : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+        val response = app.get(url)
+        val document = response.document
 
         val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
@@ -106,7 +126,8 @@ class GXtapes : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val response = app.get(data)
+        val document = response.document
         var found = false
 
         document.select("#video-code iframe").forEach { iframe ->
@@ -135,7 +156,8 @@ class GXtapes : MainAPI() {
     ): Boolean {
         return try {
             // Tải nội dung iframe
-            val iframeDoc = app.get(url).document
+            val response = app.get(url)
+            val iframeDoc = response.document
             
             // Tìm thẻ script chứa dữ liệu video
             val scriptContent = iframeDoc.select("script").find { script ->
