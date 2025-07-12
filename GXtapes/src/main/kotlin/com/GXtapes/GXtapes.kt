@@ -3,6 +3,7 @@ package com.GXtapes
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
 
 class GXtapes : MainAPI() {
@@ -20,7 +21,7 @@ class GXtapes : MainAPI() {
         "" to "Latest",
         "/68780" to "BelAmi",
         "/62478" to "FraternityX",
-        "/416537" to "Falcon Studio",  // Sửa URL thành đúng định dạng
+        "/416537" to "Falcon Studio",
         "/627615" to "Onlyfans",
     )
 
@@ -63,7 +64,6 @@ class GXtapes : MainAPI() {
 
             if (results.isEmpty()) break
             
-            // Kiểm tra trùng lặp trước khi thêm
             results.forEach { newItem ->
                 if (searchResponse.none { it.url == newItem.url }) {
                     searchResponse.add(newItem)
@@ -107,8 +107,9 @@ class GXtapes : MainAPI() {
                     val videoHash = src.substringAfter("#")
                     val directUrl = "https://88z.io/getvid/$videoHash"
                     
+                    // Sử dụng ExtractorLink trực tiếp
                     callback.invoke(
-                        ExtractorLink.newExtractorLink(
+                        ExtractorLink(
                             source = name,
                             name = "88z.io",
                             url = directUrl,
