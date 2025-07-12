@@ -49,7 +49,7 @@ open class VID : ExtractorApi() {
 
 class GXtapesExtractor(
     override val name: String = "GXtapes",
-    override val mainUrl: String = "https://74k.io/stream",
+    override val mainUrl: String = "https://74k.io/e/",
     override val requiresReferer: Boolean = false
 ) : ExtractorApi() {
     override suspend fun getUrl(
@@ -77,3 +77,34 @@ class GXtapesExtractor(
         }
     }
 }
+
+class GXtapesnewExtractor(
+    override val name: String = "88z.io",
+    override val mainUrl: String = "https://88z.io/",
+    override val requiresReferer: Boolean = false
+) : ExtractorApi() {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val document = app.get(url).document
+        var found = false
+
+        document.select("#viodeo-code iframe").forEach { iframe ->
+            val src = iframe.attr("src")
+            val videoHash = src.substringAfter("/")
+            val directUrl = "$mainUrl/$videoHash"
+        callback(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    directUrl,
+                    ExtractorLinkType.M3U8
+                )
+            )
+        }
+    }
+}
+
