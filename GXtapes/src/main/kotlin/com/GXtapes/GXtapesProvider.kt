@@ -12,5 +12,6 @@ class GXtapesProvider: Plugin() {
         registerExtractorAPI(Stream())
         registerExtractorAPI(VID())
         registerExtractorAPI(GXtapesExtractor())
+        registerExtractorAPI(GXtapesnewExtractor())
     }
 }
