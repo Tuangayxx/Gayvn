@@ -28,10 +28,17 @@ class GXtapes : MainAPI() {
         "$mainUrl/68780" to "BelAmi",
         "$mainUrl/62478" to "FraternityX",
         "$mainUrl/416510" to "FalconStudio",
+<<<<<<< HEAD
         "$mainUrl/category/416510/" to "Falcon Studio",
         "$mainUrl/627615/" to "Onlyfans",
         "$mainUrl/category/627615/" to "Only fans",
         "$mainUrl/category/37433/" to "Gay Hoopla",
+=======
+        "$mainUrl/category/416510" to "Falcon Studio",
+        "$mainUrl/627615" to "Onlyfans",
+        "$mainUrl/category/627615" to "Only fans",
+        "$mainUrl/category/37433" to "Gay Hoopla",
+>>>>>>> c31978e (Update GXtapes.kt)
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
