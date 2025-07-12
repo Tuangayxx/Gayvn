@@ -3,8 +3,11 @@ package com.GXtapes
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+
 
 class GXtapes : MainAPI() {
     override var mainUrl = "https://g.xtapes.in"
@@ -107,7 +110,7 @@ class GXtapes : MainAPI() {
                     val videoHash = src.substringAfter("#")
                     val directUrl = "https://88z.io/getvid/$videoHash"
                     
-                    // Sử dụng ExtractorLink trực tiếp
+                    // Sử dụng cách tạo ExtractorLink không deprecated
                     callback.invoke(
                         ExtractorLink(
                             source = name,
@@ -115,6 +118,7 @@ class GXtapes : MainAPI() {
                             url = directUrl,
                             referer = mainUrl,
                             quality = Qualities.Unknown.value,
+                            type = INFER_TYPE,
                             isM3u8 = false
                         )
                     )
