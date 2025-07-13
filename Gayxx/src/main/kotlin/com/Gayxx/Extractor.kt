@@ -158,15 +158,15 @@ class MixDropExtractor : ExtractorApi() {
     }
 }
 
-class StreamTapeNet : StreamTape() {
+class StreamTapeNet : StreamTapeExtractor() {
     override var mainUrl = "https://streamtape.net"
 }
 
-class StreamTapeXyz : StreamTape() {
+class StreamTapeXyz : StreamTapeExtractor() {
     override var mainUrl = "https://streamtape.xyz"
 }
 
-class ShaveTape : StreamTape(){
+class ShaveTape : StreamTapeExtractor(){
     override var mainUrl = "https://shavetape.cash"
 }
 
