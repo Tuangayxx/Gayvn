@@ -1,99 +1,87 @@
 package com.Gayxx
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.extractors.DoodLaExtractor
-import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.fixUrl
-import com.lagradost.cloudstream3.utils.getAndUnpack
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import org.json.JSONObject
+import org.jsoup.nodes.Document
 
-
-class Stream : Filesim() {
-    override var mainUrl = "https://vide0.net/e"
+// Tạo lớp cơ sở cho các extractor video
+abstract class BaseVideoExtractor : ExtractorApi() {
+    protected abstract val domain: String
+    override val mainUrl: String get() = "https://$domain"
+    
+    protected fun newHlsLink(
+        url: String,
+        quality: Int = Qualities.Unknown.value,
+        name: String = this.name
+    ) = newExtractorLink(
+        name = name,
+        source = this.name,
+        url = url,
+        quality = quality,
+        type = ExtractorLinkType.HLS
+    )
 }
 
+// Stream Extractor - Không cần thay đổi nhiều
+class Stream : BaseVideoExtractor() {
+    override val name = "Stream"
+    override val domain = "vide0.net"
+    override val mainUrl = "https://$domain/e"
+}
 
-open class VoeExtractor : ExtractorApi() {
-    override var name: String = "Voe"
-    override val mainUrl: String = "https://voe.sx"
+// Voe Extractor - Tối ưu regex và xử lý lỗi
+class VoeExtractor : BaseVideoExtractor() {
+    override val name = "Voe"
+    override val domain = "voe.sx"
     override val requiresReferer = false
 
-    private data class ResponseLinks(
+    private data class VideoSource(
         @JsonProperty("hls") val url: String?,
-        @JsonProperty("video_height") val label: Int?
-        //val type: String // Mp4
+        @JsonProperty("video_height") val height: Int?
     )
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val extractedLinksList: MutableList<ExtractorLink> = mutableListOf()
-        val doc = app.get(url).text
-        if (doc.contains("Error 404 - File not found")) return null
-        if (doc.isNotBlank()) {
-            val start = "const sources ="
-            var src = doc.substring(doc.indexOf(start))
-            src = src.substring(start.length, src.indexOf(";"))
-                .replace("0,", "0")
-                .trim()
-            //Log.i(this.name, "Result => (src) ${src}")
-            tryParseJson<ResponseLinks?>(src)?.let { voelink ->
-                //Log.i(this.name, "Result => (voelink) ${voelink}")
-                val linkUrl = voelink.url
-                val linkLabel = voelink.label?.toString() ?: ""
-                if (!linkUrl.isNullOrEmpty()) {
-                    extractedLinksList.add(
-                        newExtractorLink(
-                            name = "Voe",
-                            source = this.name,
-                            url = linkUrl
-                        )
-                    )
-                }
-            }
-        }
-        return extractedLinksList
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+        val response = app.get(url)
+        if (response.code == 404) return emptyList()
+        
+        val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
+            .find(response.text)
+            ?.groupValues?.get(1)
+            ?.replace("0,", "0") // Fix JSON syntax issue
+            ?: return emptyList()
+
+        return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
+            source.url?.let { url ->
+                listOf(newHlsLink(url, source.height ?: Qualities.Unknown.value))
+            } ?: emptyList()
+        } ?: emptyList()
     }
 }
 
+// Vide0 Extractor - Tối ưu selector và xử lý URL
+class Vide0Extractor : BaseVideoExtractor() {
+    override val name = "vide0"
+    override val domain = "vide0.net"
+    override val requiresReferer = false
 
-class vide0Extractor(
-    override val name: String = "vide0",
-    override val mainUrl: String = "https://vide0.net/e/",
-    override val requiresReferer: Boolean = false
-) : ExtractorApi() {
     override suspend fun getUrl(
         url: String,
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val document = app.get(url).document
-        var found = false
-
-        document.select("#video-code iframe").forEach { iframe ->
-            val src = iframe.attr("src")
-            val videoHash = src.substringAfter("/")
-            val directUrl = "$mainUrl/$videoHash"
-        callback(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    directUrl,
-                    ExtractorLinkType.M3U8
-                )
-            )
+        val doc = app.get(url).document
+        
+        doc.select("#video-code iframe[src]").mapNotNull { iframe ->
+            iframe.attr("src").takeIf { it.isNotBlank() }?.substringAfterLast("/")
+        }.forEach { videoId ->
+            callback(newHlsLink("$mainUrl/e/$videoId"))
         }
     }
 }
-
