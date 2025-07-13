@@ -96,8 +96,17 @@ class Gayxx : MainAPI() {
         val document = app.get(data).document
         document.select(".videohere iframe[src]").forEach { links ->
             val url = links.attr("src")
-            Log.d("Tuangayxx Test", url)
-            loadExtractor(url, subtitleCallback, callback)
+            if (
+                url.contains("vide0.net") ||
+                url.contains("voe.sx") ||
+                url.contains("mixdrop") ||
+                url.contains("streamtape") ||
+                url.contains("dood") ||
+                url.contains("abyss")
+            ) {
+                Log.d("Tuangayxx Test", url)
+                loadExtractor(url, subtitleCallback, callback)
+            }
         }
         return true
     }
