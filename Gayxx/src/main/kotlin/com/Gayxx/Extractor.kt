@@ -20,15 +20,13 @@ open class BaseVideoExtractor : ExtractorApi() {
     
     protected fun newHlsLink(
         url: String,
-        quality: Int = Qualities.Unknown.value,
         name: String = this.name
     ) = newExtractorLink(
         name = name,
         source = this.name,
         url = url,
-        quality = quality,
-        type = INFER_TYPE, // Sửa HLS → M3U8
-        isM3u8 = true
+        type = INFER_TYPE
+     
     )
 }
 
@@ -61,7 +59,7 @@ class VoeExtractor : BaseVideoExtractor() {
 
         return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
             source.url?.let { url ->
-                listOf(newHlsLink(url, source.height ?: Qualities.Unknown.value))
+                listOf(newHlsLink(url))
             } ?: emptyList()
         } ?: emptyList()
     }
