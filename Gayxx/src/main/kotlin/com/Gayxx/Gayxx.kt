@@ -94,7 +94,7 @@ class Gayxx : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select("#video-code iframe").forEach { links ->
+        document.select(".videohere iframe[src]").forEach { links ->
             val url = links.attr("src")
             Log.d("Tuangayxx Test", url)
             loadExtractor(url, subtitleCallback, callback)
