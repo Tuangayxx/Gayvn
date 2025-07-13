@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.JsUnpacker
 import org.jsoup.nodes.Document
 import com.Gayxx.Gayxx
 
@@ -127,35 +128,34 @@ class DoodExtractor : ExtractorApi() {
     }
 }
 
-class MixDropExtractor : ExtractorApi()
-    override var name = "DoodStream"
+class MixDropExtractor : ExtractorApi() {
+    override var name = "MixDrop"
     override var mainUrl = "https://mixdrop.to"
     override val requiresReferer = false
-    
+
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-            val response = app.get(url, referer = mainUrl).document
-            val extractedpack =
-            response.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data().toString()
-            JsUnpacker(extractedpack).unpack()?.let { unPacked ->
+        val response = app.get(url, referer = mainUrl).document
+        val extractedpack = response.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data().toString()
+        // Nếu chưa có JsUnpacker, bạn cần import hoặc viết hàm giải mã JS
+        // Giả sử bạn đã có JsUnpacker:
+        val unpacked = JsUnpacker(extractedpack).unpack()
+        unpacked?.let { unPacked ->
             Regex("sources:\\[\\{file:\"(.*?)\"").find(unPacked)?.groupValues?.get(1)?.let { link ->
                 return listOf(
                     newExtractorLink(
-                        this.name,
-                        this.name,
-                        link,
+                        source = name,
+                        name = name,
+                        url = link,
                         type = INFER_TYPE
-                    )
-                    {
+                    ) {
                         this.referer = referer ?: ""
                     }
                 )
             }
         }
         return null
-    }   
-
-
-
+    }
+}
 
 class StreamTapeNet : StreamTape() {
     override var mainUrl = "https://streamtape.net"
@@ -178,20 +178,20 @@ open class StreamTapeExtractor : ExtractorApi() {
         Regex("""'robotlink'\)\.innerHTML = '(.+?)'\+ \('(.+?)'\)""")
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        with(app.get(url)) {
-            linkRegex.find(this.text)?.let {
-                val extractedUrl =
-                    "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
-                return listOf(
-                    ExtractorLink(
-                        name,
-                        name,
-                        extractedUrl,
-                        url,
-                        Qualities.Unknown.value,
-                    )
-                )
-            }
+        val response = app.get(url)
+        linkRegex.find(response.text)?.let {
+            val extractedUrl =
+                "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = extractedUrl,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = referer ?: ""
+                }
+            )
         }
         return null
     }
