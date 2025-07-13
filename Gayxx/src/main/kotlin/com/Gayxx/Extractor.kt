@@ -21,7 +21,7 @@ abstract class BaseVideoExtractor : ExtractorApi() {
         url: String,
         quality: Int = Qualities.Unknown.value,
         name: String = this.name
-    ) = newExtractorLink(
+    ) = ExtractorLink(
         name = name,
         source = this.name,
         url = url,
