@@ -8,13 +8,15 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.nodes.Document
 
-// Tạo lớp cơ sở cho các extractor video
-abstract class GayxxExtractor : ExtractorApi() {
+// Lớp cơ sở với các thành phần cần thiết
+abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
     
+    // Hàm helper để tạo link HLS
     protected fun newHlsLink(
         url: String,
         quality: Int = Qualities.Unknown.value,
@@ -28,15 +30,16 @@ abstract class GayxxExtractor : ExtractorApi() {
     )
 }
 
-// Stream Extractor - Không cần thay đổi nhiều
-class Stream : GayxxExtractor() {
+// Stream Extractor - đã sửa lỗi requiresReferer
+class Stream : BaseVideoExtractor() {
     override val name = "Stream"
     override val domain = "vide0.net"
     override val mainUrl = "https://$domain/e"
+    override val requiresReferer = false // Thêm dòng này
 }
 
-// Voe Extractor - Tối ưu regex và xử lý lỗi
-class VoeExtractor : GayxxExtractor() {
+// Voe Extractor - đã sửa lỗi newExtractorLink và HLS
+class VoeExtractor : BaseVideoExtractor() {
     override val name = "Voe"
     override val domain = "voe.sx"
     override val requiresReferer = false
@@ -64,9 +67,9 @@ class VoeExtractor : GayxxExtractor() {
     }
 }
 
-// Vide0 Extractor - Tối ưu selector và xử lý URL
-class Vide0Extractor : GayxxExtractor() {
-    override val name = "vide0"
+// Vide0 Extractor - đổi tên thành Vide0Extractor (chữ V hoa)
+class Vide0Extractor : BaseVideoExtractor() {
+    override val name = "Vide0"
     override val domain = "vide0.net"
     override val requiresReferer = false
 
