@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.nodes.Document
+import com.Gayxx.Gayxx
 
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
