@@ -89,7 +89,7 @@ class Vide0Extractor : BaseVideoExtractor() {
     }
 }
 
-class DoodstreamExtractor : ExtractorApi() {
+class DoodExtractor : ExtractorApi() {
     override var name = "DoodStream"
     override var mainUrl = "https://DoodStream.com"
     override val requiresReferer = false
