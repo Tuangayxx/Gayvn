@@ -14,7 +14,7 @@ import com.lagradost.cloudstream3.utils.INFER_TYPE
 import org.jsoup.nodes.Document
 import com.Gayxx.Gayxx
 
-open class BaseVideoExtractor : ExtractorApi() {
+abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
     
