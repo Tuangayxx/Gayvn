@@ -15,6 +15,5 @@ class GayxxProvider: Plugin() {
         registerExtractorAPI(MixDropExtractor())
         registerExtractorAPI(StreamTapeExtractor())
         registerExtractorAPI(DoodExtractor())
-        registerExtractorAPI(AbyssExtractor())
     }
 }

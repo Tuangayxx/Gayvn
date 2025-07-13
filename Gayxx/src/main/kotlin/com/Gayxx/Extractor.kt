@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.getQualityFromName
 import org.jsoup.nodes.Document
 import com.Gayxx.Gayxx
 
@@ -123,5 +124,75 @@ class DoodExtractor : ExtractorApi() {
                 this.quality = getQualityFromName(quality)
             }
         ) // links are valid for 8h
+    }
+}
+
+class MixDropExtractor : ExtractorApi()
+    override var name = "DoodStream"
+    override var mainUrl = "https://mixdrop.to"
+    override val requiresReferer = false
+    
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+            val response = app.get(url, referer = mainUrl).document
+            val extractedpack =
+            response.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data().toString()
+            JsUnpacker(extractedpack).unpack()?.let { unPacked ->
+            Regex("sources:\\[\\{file:\"(.*?)\"").find(unPacked)?.groupValues?.get(1)?.let { link ->
+                return listOf(
+                    newExtractorLink(
+                        this.name,
+                        this.name,
+                        link,
+                        type = INFER_TYPE
+                    )
+                    {
+                        this.referer = referer ?: ""
+                    }
+                )
+            }
+        }
+        return null
+    }   
+
+
+
+
+class StreamTapeNet : StreamTape() {
+    override var mainUrl = "https://streamtape.net"
+}
+
+class StreamTapeXyz : StreamTape() {
+    override var mainUrl = "https://streamtape.xyz"
+}
+
+class ShaveTape : StreamTape(){
+    override var mainUrl = "https://shavetape.cash"
+}
+
+open class StreamTapeExtractor : ExtractorApi() {
+    override var name = "StreamTape"
+    override var mainUrl = "https://streamtape.com"
+    override val requiresReferer = false
+
+    private val linkRegex =
+        Regex("""'robotlink'\)\.innerHTML = '(.+?)'\+ \('(.+?)'\)""")
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        with(app.get(url)) {
+            linkRegex.find(this.text)?.let {
+                val extractedUrl =
+                    "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
+                return listOf(
+                    ExtractorLink(
+                        name,
+                        name,
+                        extractedUrl,
+                        url,
+                        Qualities.Unknown.value,
+                    )
+                )
+            }
+        }
+        return null
     }
 }
