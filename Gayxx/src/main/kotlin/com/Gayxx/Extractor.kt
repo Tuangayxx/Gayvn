@@ -11,34 +11,31 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.jsoup.nodes.Document
 
-// Lớp cơ sở với các thành phần cần thiết
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
     
-    // Hàm helper để tạo link HLS
     protected fun newHlsLink(
         url: String,
         quality: Int = Qualities.Unknown.value,
         name: String = this.name
-    ) = ExtractorLink(
+    ) = newExtractorLink(
         name = name,
         source = this.name,
         url = url,
         quality = quality,
-        type = ExtractorLinkType.HLS
+        type = ExtractorLinkType.M3U8, // Sửa HLS → M3U8
+        isM3u8 = true
     )
 }
 
-// Stream Extractor - đã sửa lỗi requiresReferer
 class Stream : BaseVideoExtractor() {
     override val name = "Stream"
     override val domain = "vide0.net"
     override val mainUrl = "https://$domain/e"
-    override val requiresReferer = false // Thêm dòng này
+    override val requiresReferer = false
 }
 
-// Voe Extractor - đã sửa lỗi newExtractorLink và HLS
 class VoeExtractor : BaseVideoExtractor() {
     override val name = "Voe"
     override val domain = "voe.sx"
@@ -56,7 +53,7 @@ class VoeExtractor : BaseVideoExtractor() {
         val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
             .find(response.text)
             ?.groupValues?.get(1)
-            ?.replace("0,", "0") // Fix JSON syntax issue
+            ?.replace("0,", "0")
             ?: return emptyList()
 
         return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
@@ -67,7 +64,6 @@ class VoeExtractor : BaseVideoExtractor() {
     }
 }
 
-// Vide0 Extractor - đổi tên thành Vide0Extractor (chữ V hoa)
 class Vide0Extractor : BaseVideoExtractor() {
     override val name = "Vide0"
     override val domain = "vide0.net"
