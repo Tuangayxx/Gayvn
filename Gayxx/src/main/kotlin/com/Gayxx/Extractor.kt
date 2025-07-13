@@ -18,7 +18,7 @@ abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
     
-    protected fun newHlsLink(
+    protected suspend fun newHlsLink(
         url: String,
         name: String = this.name
     ) = newExtractorLink(
