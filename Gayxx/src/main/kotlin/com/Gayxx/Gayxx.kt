@@ -94,20 +94,25 @@ class Gayxx : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select(".videohere iframe[src]").forEach { links ->
-            val url = links.attr("src")
+        document.select(".videohere iframe[src]").forEach { iframe ->>
+            val url = iframe.attr("src")
+            // Kiểm tra log để debugiểm tra log để debug
+            Log.d("Tuangayxx Test", url)
+            // Chỉ truyền link hợp lệ cho extractor extractor
             if (
                 url.contains("vide0.net") ||
-                url.contains("voe.sx") ||
-                url.contains("mixdrop") ||
-                url.contains("streamtape") ||
+                url.contains("voe.sx") ||||
+                url.contains("mixdrop") ||") ||
+                url.contains("streamtape") || url.contains("streamtape") ||
                 url.contains("dood") ||
                 url.contains("abyss")
-            ) {
-                Log.d("Tuangayxx Test", url)
-                loadExtractor(url, subtitleCallback, callback)
+             { {
+                loadExtractor(url, subtitleCallback, callback)       loadExtractor(url, subtitleCallback, callback)
             }
-        }
+        }   }
         return true
+        }
     }
-}
+
+
+
