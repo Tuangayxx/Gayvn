@@ -11,7 +11,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Document
 
 // Tạo lớp cơ sở cho các extractor video
-abstract class BaseVideoExtractor : ExtractorApi() {
+abstract class GayxxExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
     
@@ -29,14 +29,14 @@ abstract class BaseVideoExtractor : ExtractorApi() {
 }
 
 // Stream Extractor - Không cần thay đổi nhiều
-class Stream : BaseVideoExtractor() {
+class Stream : GayxxExtractor() {
     override val name = "Stream"
     override val domain = "vide0.net"
     override val mainUrl = "https://$domain/e"
 }
 
 // Voe Extractor - Tối ưu regex và xử lý lỗi
-class VoeExtractor : BaseVideoExtractor() {
+class VoeExtractor : GayxxExtractor() {
     override val name = "Voe"
     override val domain = "voe.sx"
     override val requiresReferer = false
@@ -65,7 +65,7 @@ class VoeExtractor : BaseVideoExtractor() {
 }
 
 // Vide0 Extractor - Tối ưu selector và xử lý URL
-class Vide0Extractor : BaseVideoExtractor() {
+class Vide0Extractor : GayxxExtractor() {
     override val name = "vide0"
     override val domain = "vide0.net"
     override val requiresReferer = false
