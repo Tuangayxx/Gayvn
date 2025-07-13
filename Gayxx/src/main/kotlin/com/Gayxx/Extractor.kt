@@ -9,10 +9,12 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.lagradost.cloudstream3.utils.INFER_TYPE
 import org.jsoup.nodes.Document
 import com.Gayxx.Gayxx
 
-abstract class BaseVideoExtractor : ExtractorApi() {
+open class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
     
@@ -25,7 +27,7 @@ abstract class BaseVideoExtractor : ExtractorApi() {
         source = this.name,
         url = url,
         quality = quality,
-        type = ExtractorLinkType.M3U8, // Sửa HLS → M3U8
+        type = INFER_TYPE, // Sửa HLS → M3U8
         isM3u8 = true
     )
 }
@@ -79,7 +81,10 @@ class Vide0Extractor : BaseVideoExtractor() {
         val doc = app.get(url).document
         
         doc.select("#video-code iframe[src]").mapNotNull { iframe ->
-            iframe.attr("src").takeIf { it.isNotBlank() }?.substringAfterLast("/")
+            val src = iframe.attr("src")
+                if (src.isNotBlank() && src.contains("/")) {
+                    src.substringAfterLast("/")
+    }              else null
         }.forEach { videoId ->
             callback(newHlsLink("$mainUrl/e/$videoId"))
         }
