@@ -95,29 +95,29 @@ class Gayxx : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val document = app.get(data).document
-        document.select(".videohere iframe[src]").forEach { iframe ->>
-            val url = iframe.attr("src")
-            // Kiểm tra log để debug
-            Log.d("Tuangayxx Test", url) ?: continue
-            // Chỉ truyền link hợp lệ cho extractor
-            if (
-                url.contains("vide0.net") ||
-                url.contains("voe.sx") ||
-                url.contains("mixdrop") ||") ||
-                url.contains("streamtape") ||
-                url.contains("dood") ||
-                url.contains("abyss")
-        
-             loadExtractor(url, subtitleCallback, callback)
-            
-           }
-        return true
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val supportedDomains = listOf(
+        "vide0.net", "voe.sx", "mixdrop", 
+        "streamtape", "dood", "abyss"
+    )
+    
+    app.get(data).document
+        .select(".videohere iframe[src]")
+        .mapNotNull { it.attr("src").takeIf(String::isNotBlank) }
+        .filter { url ->
+            supportedDomains.any { domain -> domain in url }.also {
+                if (!it) println("Skipped unsupported URL: $url")
+            }
+        }
+        .forEach { url ->
+            loadExtractor(url, subtitleCallback, callback)
+                }
+    
+    return true
         }
 }
 
