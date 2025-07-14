@@ -21,11 +21,18 @@ class Gayxx : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "/?type=latest" to "Latest",
-        "/category/asian-gay-sex" to "Onlyfans",
+        "/2025/07" to "Latest",
+        "/2025/06" to "Tháng sáu",
+        "/2025/05" to "Tháng năm",
+        "/2025/04" to "Tháng bốn",
+        "/2025/03" to "Tháng ba",
+        "/2025/02" to "Tháng hai",
+        "/2025/01" to "Tháng một",
+        "/2024"    to "Năm ngoái",
+        "/hottest-gay-porn-sex" to "Hot Videos",
         "/category/group" to "Càng đông càng vui",
-        "/hottest-gay-porn-sex" to "Hot",
-        "/category/sex-gay-onlyfans-chinese" to "Chinese",
+        "category/gay-viet" to "Việt Nam ngày nay",
+        "/category/sex-gay-onlyfans-chinese" to "Tung Của",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
