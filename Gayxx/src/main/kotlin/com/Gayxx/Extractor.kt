@@ -65,6 +65,7 @@ class VoeExtractor : BaseVideoExtractor() {
 class Vide0Extractor : BaseVideoExtractor() {
     override val name = "Vide0"
     override val domain = "vide0.net"
+    override val mainUrl = "https://$domain/e"
     override val requiresReferer = false
 
     override suspend fun getUrl(
@@ -77,8 +78,8 @@ class Vide0Extractor : BaseVideoExtractor() {
 
         doc.select("iframe[src]").mapNotNull { iframe ->
             val src = iframe.attr("src")
-            if (src.isNotBlank() && src.contains("e/")) {
-                src.substringAfterLast("e/")
+            if (src.isNotBlank() && src.contains("/")) {
+                src.substringAfterLast("/")
             } else null
         }.forEach { videoId ->
             callback(
