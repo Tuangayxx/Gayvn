@@ -104,11 +104,11 @@ class Gayxx : MainAPI() {
         document.select(".videohere iframe[src]").forEach { iframe ->>
             val url = iframe.attr("src")
             // Kiểm tra log để debugiểm tra log để debug
-            Log.d("Tuangayxx Test", url)
+            Log.d("Tuangayxx Test", url) ?: continue
             // Chỉ truyền link hợp lệ cho extractor extractor
             if (
                 url.contains("vide0.net") ||
-                url.contains("voe.sx") ||||
+                url.contains("voe.sx") ||
                 url.contains("mixdrop") ||") ||
                 url.contains("streamtape") || url.contains("streamtape") ||
                 url.contains("dood") ||
