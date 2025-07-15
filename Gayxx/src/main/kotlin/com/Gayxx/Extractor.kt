@@ -69,29 +69,33 @@ class Vide0Extractor : BaseVideoExtractor() {
     override val mainUrl = "https://$domain/e"
     override val requiresReferer = false
 
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val doc = app.get(url).document
+    private data class VideoSource(
+        @JsonProperty("hls") val url: String?,
+        @JsonProperty("video_height") val height: Int?
+    )
 
-        doc.select(".videohere iframe[src]").mapNotNull { iframe ->
-            val src = iframe.attr("src")
-            if (src.isNotBlank() && src.contains("/")) {
-                src.substringAfterLast("/")
-            } else null
-        }.forEach { videoId ->
-            callback(
-                newExtractorLink(
-                    name = name,
-                    source = name,
-                    url = "$mainUrl/$videoId",
-                    type = INFER_TYPE
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+        val response = app.get(url)
+        if (response.code == 404) return emptyList()
+
+        val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
+            .find(response.text)
+            ?.groupValues?.get(1)
+            ?.replace("0,", "0")
+            ?: return emptyList()
+
+        return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
+            source.url?.let { videoUrl ->
+                listOf(
+                    newExtractorLink(
+                        name = name,
+                        source = name,
+                        url = videoUrl,
+                        type = INFER_TYPE
+                    )
                 )
-            )
-        }
+            } ?: emptyList()
+        } ?: emptyList()
     }
 }
 
@@ -103,7 +107,7 @@ class DoodExtractor : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val response0 = app.get(url).text
         val md5 = mainUrl + (Regex("/pass_md5/[^']*").find(response0)?.value ?: return null)
-        val res = app.get(md5, referer = mainUrl + "/e/" + url.substringAfterLast("/"))
+        val res = app.get(md5, referer = mainUrl + url.substringAfterLast("/"))
         val trueUrl =
             if (res.toString().contains("cloudflarestorage")) res.toString()
             else res.text + "zUEJeL3mUN?token=" + md5.substringAfterLast("/")
