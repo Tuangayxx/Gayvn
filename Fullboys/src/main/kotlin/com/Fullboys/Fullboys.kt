@@ -177,8 +177,9 @@ class Fullboys : MainAPI() {
                 source = name,
                 name = label, // "Server 1" hoặc "Server 2"
                 url = url
-        )
-    }
+                            )                          
+                )
+                        }
     return true
-    }
+            }
 }
