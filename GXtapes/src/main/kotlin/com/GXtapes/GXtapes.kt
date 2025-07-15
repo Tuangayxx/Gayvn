@@ -26,11 +26,12 @@ class GXtapes : MainAPI() {
         "/84750" to "Asian",
         "/latin-287326" to "Latino",
         "/68780" to "BelAmi",
-        "/62478" to "FraternityX",
-        "/416510" to "Falcon Studio",
+        "/62478"           to "FraternityX",
+        "/category/62478"  to "Fraternity X",
+        "/416510"          to "Falcon Studio",
         "/category/416510" to "Falcon Studio",
-        "/627615" to "Onlyfans",
-        "/category/627615" to "Onlyfans",
+        "/621576" to "Only fans",
+        "/category/621576" to "Onlyfans",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
