@@ -139,42 +139,49 @@ class Fullboys : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    // data là url gốc trang video
-
-    // Lấy lại HTML trang video (nên để tránh miss các link)
     val doc = app.get(data).document
-
-    // Lấy link từ các button server
-    val serverLinks = doc.select(".box-server button[onclick]").mapNotNull { btn ->
-        // Tìm link trong onclick
+    
+    // SỬA SELECTOR: Chọn các nút server trong .box-server
+    val serverLinks = doc.select(".box-server button").mapNotNull { btn ->
         val onclick = btn.attr("onclick")
-        val regex = Regex("['\"](https?://[^'\"]+\\.mp4)['\"]")
+        if (onclick.isNullOrEmpty()) return@mapNotNull null
+        
+        // SỬA CÁCH TRÍCH XUẤT: Lấy tham số thứ 4 từ hàm server()
+        val regex = Regex("server\\(([^)]+)\\)")
         val match = regex.find(onclick)
-        val url = match?.groupValues?.getOrNull(1)
-        val label = btn.text().trim()
-        // Có thể đặt chất lượng theo server hoặc tự xác định
-        if (url != null) Pair(url, label) else null
+        
+        match?.groupValues?.get(1)?.split(',')?.let { args ->
+            if (args.size >= 4) {
+                // Lấy URL (tham số thứ 4) và loại bỏ dấu nháy
+                val url = args[3].trim().removeSurrounding("'", "'").removeSurrounding("\"", "\"")
+                val label = btn.text().trim()
+                Pair(url, label)
+            } else null
+        }
     }
-
-    // Nếu không tìm thấy, fallback về link cũ
+    
     if (serverLinks.isEmpty()) {
         callback(
             newExtractorLink(
                 source = name,
                 name = "Fullboys Stream",
-                url = data
+                url = data,
+                referer = "https://fullboys.net/", // Thêm referer nếu cần
+                quality = Qualities.Unknown.value
             )
         )
         return true
     }
-
-    // Trả về từng chất lượng/server
+    
     serverLinks.forEach { (url, label) ->
         callback(
             newExtractorLink(
                 source = name,
-                name = label, // VD: "Server 1", "Server 2"
-                url = url
+                name = label, // "Server 1" hoặc "Server 2"
+                url = url,
+                referer = "https://fullboys.net/", // Thêm referer nếu cần
+                quality = Qualities.Unknown.value,
+                isM3u8 = url.contains(".m3u8") // Kiểm tra định dạng
             )
         )
     }
