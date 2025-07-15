@@ -77,7 +77,7 @@ class Vide0Extractor : BaseVideoExtractor() {
     ) {
         val doc = app.get(url).document
 
-        doc.select("iframe[src]").mapNotNull { iframe ->
+        doc.select(".videohere iframe[src]").mapNotNull { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank() && src.contains("/")) {
                 src.substringAfterLast("/")
