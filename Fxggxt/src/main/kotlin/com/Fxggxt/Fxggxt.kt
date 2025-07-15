@@ -111,7 +111,7 @@ class Fxggxt : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val embedUrl = document.selectFirst("div.responsive-player iframe")?.attr("src")
+        val embedUrl = document.selectFirst("div.video-player iframe")?.attr("src")
 
         if (!embedUrl.isNullOrEmpty()) {
             loadExtractor(embedUrl, data, subtitleCallback, callback)
