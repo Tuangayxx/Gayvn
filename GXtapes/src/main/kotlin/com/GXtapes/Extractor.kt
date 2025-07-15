@@ -92,7 +92,7 @@ class GXtapesnewExtractor(
         val document = app.get(url).document
         var found = false
 
-        document.select("#viodeo-code iframe").forEach { iframe ->
+        document.select("#video-code iframe").forEach { iframe ->
             val src = iframe.attr("src")
             val videoHash = src.substringAfter("/")
             val directUrl = "$mainUrl/$videoHash"
