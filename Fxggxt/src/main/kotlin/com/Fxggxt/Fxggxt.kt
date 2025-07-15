@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
+import java.io.IOException
 
 class Fxggxt : MainAPI() {
     override var mainUrl = "https://fxggxt.com"
