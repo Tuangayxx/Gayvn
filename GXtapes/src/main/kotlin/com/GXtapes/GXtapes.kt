@@ -22,15 +22,15 @@ class GXtapes : MainAPI() {
 
     override val mainPage = mainPageOf(
         "" to "Latest",
-        "/category/hdporn-783479" to "Random",
-        "/84750" to "Asian",
-        "/latin-287326" to "Latino",
-        "/68780" to "BelAmi",
-        "/62478"           to "FraternityX",
+        "/?filtre=date&amp;cat=312" to "Full Movies",
+        "/category/groupsex-gangbang-porn-189457" to "Gang bang & Group",
+        "/category/860425" to "Corbin Fisher",
+        "/category/139616" to "Timtales",
+        "/category/68780"  to "Bel Ami",
+        "/category/346893" to "Sean Cody",
         "/category/62478"  to "Fraternity X",
-        "/416510"          to "Falcon Studio",
         "/category/416510" to "Falcon Studio",
-        "/621576" to "Only fans",
+        "/category/37433"  to "Gay Hoopla",
         "/category/621576" to "Onlyfans",
     )    
 
