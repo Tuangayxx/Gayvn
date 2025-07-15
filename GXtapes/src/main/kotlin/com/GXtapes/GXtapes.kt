@@ -21,8 +21,8 @@ class GXtapes : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "" to "Latest",
-        "/?filtre=date&amp;cat=312" to "Full Movies",
+        ""                                        to "Latest",
+        "/category/porn-movies-214660"            to "Full Movies",
         "/category/groupsex-gangbang-porn-189457" to "Gang bang & Group",
         "/category/860425" to "Corbin Fisher",
         "/category/139616" to "Timtales",
