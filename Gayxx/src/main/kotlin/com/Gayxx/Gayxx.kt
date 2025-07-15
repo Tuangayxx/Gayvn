@@ -106,7 +106,7 @@ class Gayxx : MainAPI() {
     )
     
     app.get(data).document
-        .select(".videohere iframe[src]")
+        .select("iframe[src]")
         .mapNotNull { it.attr("src").takeIf(String::isNotBlank) }
         .filter { url ->
             supportedDomains.any { domain -> domain in url }.also {
