@@ -20,13 +20,6 @@ abstract class BaseVideoExtractor : ExtractorApi() {
     override val mainUrl: String get() = "https://$domain"
 }
 
-class Stream : BaseVideoExtractor() {
-    override val name = "Stream"
-    override val domain = "vide0.net"
-    override val mainUrl = "https://$domain/e"
-    override val requiresReferer = false
-}
-
 class VoeExtractor : BaseVideoExtractor() {
     override val name = "Voe"
     override val domain = "jilliandescribecompany.com"

@@ -9,7 +9,6 @@ import com.Gayxx.Gayxx
 class GayxxProvider: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Gayxx())
-        registerExtractorAPI(Stream())
         registerExtractorAPI(VoeExtractor())
         registerExtractorAPI(Vide0Extractor())
         registerExtractorAPI(MixDropExtractor())

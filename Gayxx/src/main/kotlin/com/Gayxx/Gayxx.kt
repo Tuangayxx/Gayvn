@@ -102,7 +102,7 @@ class Gayxx : MainAPI() {
 ): Boolean {
     val supportedDomains = listOf(
         "vide0.net", "voe.sx", "mixdrop", 
-        "streamtape", "dood", "abyss"
+        "streamtape", "doodstream.com", "abyss.to"
     )
     
     app.get(data).document
