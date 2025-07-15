@@ -29,7 +29,8 @@ class Stream : BaseVideoExtractor() {
 
 class VoeExtractor : BaseVideoExtractor() {
     override val name = "Voe"
-    override val domain = "voe.sx"
+    override val domain = "jilliandescribecompany.com"
+    override val mainUrl = "https://$domain/e"
     override val requiresReferer = false
 
     private data class VideoSource(
