@@ -166,8 +166,7 @@ class Fullboys : MainAPI() {
                 source = name,
                 name = "Fullboys Stream",
                 url = data,
-                referer = "https://fullboys.net/", // Thêm referer nếu cần
-                quality = Qualities.Unknown.value
+                quality = getQualityFromName
             )
         )
         return true
@@ -179,9 +178,7 @@ class Fullboys : MainAPI() {
                 source = name,
                 name = label, // "Server 1" hoặc "Server 2"
                 url = url,
-                referer = "https://fullboys.net/", // Thêm referer nếu cần
-                quality = Qualities.Unknown.value,
-                isM3u8 = url.contains(".m3u8") // Kiểm tra định dạng
+                quality = getQualityFromName
             )
         )
     }
