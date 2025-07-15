@@ -165,8 +165,7 @@ class Fullboys : MainAPI() {
             newExtractorLink(
                 source = name,
                 name = "Fullboys Stream",
-                url = data,
-                quality = getQualityFromName
+                url = data
             )
         )
         return true
@@ -177,9 +176,7 @@ class Fullboys : MainAPI() {
             newExtractorLink(
                 source = name,
                 name = label, // "Server 1" hoặc "Server 2"
-                url = url,
-                quality = getQualityFromName
-            )
+                url = url
         )
     }
     return true
