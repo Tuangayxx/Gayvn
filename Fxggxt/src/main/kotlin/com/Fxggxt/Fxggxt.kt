@@ -26,11 +26,19 @@ class Fxggxt : MainAPI() {
         "$mainUrl/tag/interracial-gay-porn/" to "Interracial",
         "$mainUrl/tag/muscle-gay-porn/" to "Muscle",
         "$mainUrl/tag/straight-guys-gay-porn/" to "Straight",
-        "$mainUrl/tag/twink-gay-porn/" to "Twink",
-        "$mainUrl/category/asgmax/" to "ASGmax",
-        "$mainUrl/category/corbin-fisher/" to "Corbin Fisher",
-        "$mainUrl/category/facedownassup/" to "Face down ass up",
+        "$mainUrl/tag/twink-gay-porn/"         to "Twink",
+        "$mainUrl/category/asgmax/"            to "ASGmax",
+        "$mainUrl/category/corbin-fisher/"     to "Corbin Fisher",
+        "$mainUrl/category/facedownassup/"     to "Face down ass up",
+        "$mainUrl/category/adulttime/"         to "Adulttime",
+        "$mainUrl/category/bel-ami/"           to "Bel Ami",
+        "$mainUrl/category/bi-guys-fuck/"      to "Bi Guys Fuck",
+        "$mainUrl/category/falcon-studios/"    to "Falcon Studios",
+        "$mainUrl/category/fraternity-x/"      to "Fraternity X",
+        "$mainUrl/category/slamrush/"          to "Slam Rush",
+        "$mainUrl/category/seehimfuck/"        to "See Him Fuck",
     )
+
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
@@ -65,7 +73,7 @@ class Fxggxt : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
-        for (i in 1..7) {
+        for (i in 1..5) {
             val url = if (i > 1) {
                 "$mainUrl/page/$i/?s=$query"
             } else {
@@ -111,7 +119,7 @@ class Fxggxt : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val embedUrl = document.selectFirst("div.video-player iframe")?.attr("src")
+        val embedUrl = document.selectFirst("div.responsive-player iframe")?.attr("src")
 
         if (!embedUrl.isNullOrEmpty()) {
             loadExtractor(embedUrl, data, subtitleCallback, callback)
