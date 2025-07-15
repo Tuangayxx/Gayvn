@@ -4,6 +4,8 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
@@ -15,7 +17,7 @@ class Fxggxt : MainAPI() {
     override val hasDownloadSupport = true
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
-        override val vpnStatus = VPNStatus.MightBeNeeded
+    override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
         "$mainUrl/tag/amateur-gay-porn/" to "Amateur",
