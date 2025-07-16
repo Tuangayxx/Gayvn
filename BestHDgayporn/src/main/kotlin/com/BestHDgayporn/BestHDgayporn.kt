@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.io.IOException
+import com.lagradost.api.Log
 
 class BestHDgayporn : MainAPI() {
     // Main provider information
