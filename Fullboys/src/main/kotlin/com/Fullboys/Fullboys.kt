@@ -61,7 +61,7 @@ class Fullboys : MainAPI() {
             name = name,
             url = url,
             type = TvType.NSFW,
-            posterUrl = image
+            image = image
         )
     }
 
