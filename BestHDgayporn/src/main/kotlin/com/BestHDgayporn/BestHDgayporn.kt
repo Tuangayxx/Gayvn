@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 import java.io.IOException
 import com.lagradost.api.Log
+import com.lagradost.cloudstream3.app
 
 class BestHDgayporn : MainAPI() {
     // Main provider information
@@ -108,15 +109,21 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    // 'data' bây giờ chính là URL trang chi tiết
+    // Truy cập trang chi tiết
     val document = app.get(data).document
 
-    // Chọn thẻ <video> (class vjs-tech) hoặc trực tiếp <source> bên trong
-    document.select("video#player_html5_api, video").forEach { video ->
-        // Ưu tiên lấy src của chính <video>, nếu không có thì lấy từ <source>
-        val src = video.attr("src").ifBlank {
-            video.selectFirst("source")?.attr("src").orEmpty()
-        }
+    // Tìm link player-embed từ meta tag
+    val embedUrl = document.selectFirst("meta[property=og:video:url]")?.attr("content")
+        ?: document.selectFirst("meta[property=og:video:secure_url]")?.attr("content")
+
+    if (embedUrl.isNullOrBlank()) return false
+
+    // Truy cập trang player-embed
+    val embedDoc = app.get(embedUrl).document
+
+    // Tìm thẻ <video> hoặc <source> trong player-embed
+    embedDoc.select("video, source").forEach { video ->
+        val src = video.attr("src")
         if (src.isNotBlank()) {
             loadExtractor(src, subtitleCallback, callback)
         }
