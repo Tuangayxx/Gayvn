@@ -9,8 +9,8 @@ import com.lagradost.api.Log
 
 
 class GXtapes : MainAPI() {
-    override var mainUrl = "https://gay.xtapes.in"
-    override var name = "G_Xtapes"
+    override var mainUrl = "https://besthdgayporn.com"
+    override var name = "BestHDgayporn"
     override val hasMainPage = true
     override var lang = "en"
     override val hasQuickSearch = false
@@ -21,22 +21,23 @@ class GXtapes : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        ""                                        to "Latest",
-        "/category/porn-movies-214660"            to "Full Movies",
-        "/category/groupsex-gangbang-porn-189457" to "Gang bang & Group",
-        "/category/860425" to "Corbin Fisher",
-        "/category/139616" to "Timtales",
-        "/category/68780"  to "Bel Ami",
-        "/category/346893" to "Sean Cody",
-        "/category/62478"  to "Fraternity X",
-        "/category/416510" to "Falcon Studio",
-        "/category/37433"  to "Gay Hoopla",
-        "/category/621576" to "Onlyfans",
+        ""                             to "Latest",
+        "/video-tag/onlyfans"          to "Onlyfans",
+        "/video-tag/men-com"           to "MEN.com",
+        "/video-tag/corbin-fisher"     to "Corbin Fisher",
+        "/video-tag/raw-fuck-club"     to "Raw fuck club",
+        "/video-tag/randy-blue"        to "Randy Blue",
+        "/video-tag/sean-cody"         to "Sean Cody",
+        "/video-tag/falcon-studios"    to "Falcon Studio",
+        "/video-tag/voyr"              to "Voyr",
+        "/video-tag/next-door-studios" to "Next Door Studios",
+        "/video-tag/noir-male"         to "Noir Male",
+        "/video-tag/asg-max"           to "ASG Max",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("$mainUrl/${request.data}/page/$page/").document
-        val home = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.aiovg-section-videos aiovg-grid aiovg-row").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -50,7 +51,7 @@ class GXtapes : MainAPI() {
 
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("img").attr("title")
+        val title = this.select("a").attr("titleaiovg-link-title")
         val href = fixUrl(this.select("a").attr("href"))
         val posterUrl = fixUrlNull(this.select("img").attr("src"))
         
@@ -65,7 +66,7 @@ class GXtapes : MainAPI() {
         for (i in 1..5) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.aiovg-section-videos aiovg-grid aiovg-row").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
@@ -100,7 +101,7 @@ class GXtapes : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select("#video-code iframe").forEach { links ->
+        document.select("#player source").forEach { links ->
             val url = links.attr("src")
             Log.d("Tuangayxx Test", url)
             loadExtractor(url, subtitleCallback, callback)
