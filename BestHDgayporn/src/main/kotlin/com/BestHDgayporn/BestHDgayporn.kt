@@ -32,52 +32,50 @@ class BestHDgayporn : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = if (request.data.isNullOrBlank())
-        "$mainUrl/page/$page/"
-    else
-        "$mainUrl${request.data}/page/$page/"
+        // Build URL cho "Latest" hoặc category
+        val url = if (request.data.isNullOrBlank()) {
+            "$mainUrl/page/$page/"
+        } else {
+            "$mainUrl${request.data.trimStart('/')}/page/$page/"
+        }
 
-    val document = app.get(url).document
-    val articles = document.select("article.postbox")
+        val document = app.get(url).document
 
-    println("DEBUG: Found ${articles.size} articles at $url")
+        // Chọn đúng các item-video của aiovg
+        val items = document.select("div.aiovg-section-videos div.aiovg-item-video")
+        val videos = items.mapNotNull { it.toSearchResult() }
+        val hasNext = document.selectFirst("a.next.page-numbers") != null
 
-    val videos = articles.mapNotNull { it.toSearchResult() }
-    val hasNext = document.selectFirst("a.next.page-numbers") != null
-
-    return newHomePageResponse(
-        list = HomePageList(
-            name = request.name,
-            list = videos,
-            isHorizontalImages = true
-        ),
-        hasNext = hasNext
-    )
-}
-
+        return newHomePageResponse(
+            list = HomePageList(
+                name = request.name,
+                list = videos,
+                isHorizontalImages = true
+            ),
+            hasNext = hasNext
+        )
+    }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val searchResults = mutableListOf<SearchResponse>()
+        val results = mutableListOf<SearchResponse>()
         for (i in 1..5) {
-            val document = app.get("$mainUrl/page/$i/?s=$query").document
-            val results = document.select("article.postbox").mapNotNull { it.toSearchResult() }
-
-            if (results.isEmpty()) break
-            searchResults.addAll(results)
+            val doc = app.get("$mainUrl/page/$i/?s=$query").document
+            val pageItems = doc.select("div.aiovg-section-videos div.aiovg-item-video")
+            val pageResults = pageItems.mapNotNull { it.toSearchResult() }
+            if (pageResults.isEmpty()) break
+            results += pageResults
         }
-        return searchResults
+        return results
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-
-        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: "No Title"
-        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
-        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-
+        val d = app.get(url).document
+        val title = d.selectFirst("meta[property=og:title]")?.attr("content")?.trim().orEmpty()
+        val poster = d.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
+        val plot   = d.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = description
+            posterUrl = poster
+            this.plot = plot
         }
     }
 
@@ -87,24 +85,29 @@ class BestHDgayporn : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
-        document.select("#player source").forEach {
-            val videoUrl = it.attr("src")
-            if (videoUrl.isNotBlank()) {
-                loadExtractor(videoUrl, subtitleCallback, callback)
-            }
+        val d = app.get(data).document
+        d.select("#player source").forEach {
+            val src = it.attr("src")
+            if (src.isNotBlank()) loadExtractor(src, subtitleCallback, callback)
         }
         return true
     }
 
+    // Chuyển mỗi aiovg-item-video thành SearchResponse
     private fun Element.toSearchResult(): SearchResponse? {
-        val anchor = selectFirst("a") ?: return null
-        val title = selectFirst("h5.entry-title")?.text()?.trim() ?: return null
-        val href = anchor.attr("href").let { fixUrl(it) }
-        val poster = selectFirst("img")?.attr("abs:src")?.let { fixUrlNull(it) }
+        // Lấy link & title từ caption
+        val linkElem = selectFirst("div.aiovg-caption a.aiovg-link-title")
+            ?: return null
+        val href  = fixUrl(linkElem.attr("href"))
+        val title = linkElem.text().trim()
+        // Lấy poster từ img[data-src] (lazy-load)
+        val imgElem = selectFirst("div.aiovg-thumbnail img")
+        val dataSrc = imgElem?.attr("data-src").takeIf { !it.isNullOrBlank() }
+            ?: imgElem?.attr("src").orEmpty()
+        val poster = fixUrlNull(dataSrc)
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = poster
+            posterUrl = poster
         }
     }
 }
