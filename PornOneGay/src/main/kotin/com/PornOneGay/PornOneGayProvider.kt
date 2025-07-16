@@ -11,7 +11,7 @@ import java.lang.System
 
 class PornOneGayProvider : MainAPI() {
     override var mainUrl              = "https://pornone.com/gay"
-    override var name                 = "PornOne"
+    override var name                 = "PornOneGay"
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasDownloadSupport   = true
