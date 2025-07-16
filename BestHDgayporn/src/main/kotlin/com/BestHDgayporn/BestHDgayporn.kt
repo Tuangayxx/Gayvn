@@ -6,6 +6,10 @@ import org.jsoup.nodes.Element
 import java.io.IOException
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.json.JSONObject
+
 
 class BestHDgayporn : MainAPI() {
     // Main provider information
@@ -121,13 +125,40 @@ override suspend fun loadLinks(
     // Truy cập trang player-embed
     val embedDoc = app.get(embedUrl).document
 
-    // Tìm thẻ <video> hoặc <source> trong player-embed
+    // --- Ưu tiên lấy link từ JSON-LD ---
+    val jsonScript = embedDoc.selectFirst("script[type=application/ld+json]")?.data()
+    if (!jsonScript.isNullOrBlank()) {
+        try {
+            val jsonObject = JSONObject(jsonScript)
+            val contentUrl = jsonObject.optString("contentUrl", "")
+
+            if (contentUrl.isNotBlank()) {
+                callback.invoke(
+                    ExtractorLink(
+                        source = "BestHDGayPorn",
+                        name = "HD",
+                        url = contentUrl,
+                        referer = embedUrl,
+                        quality = Qualities.Unknown.value,
+                        isM3u8 = contentUrl.endsWith(".m3u8")
+                    )
+                )
+                return true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // Fallback: Tìm thẻ <video> hoặc <source> nếu JSON không có
     embedDoc.select("video, source").forEach { video ->
         val src = video.attr("src")
         if (src.isNotBlank()) {
             loadExtractor(src, subtitleCallback, callback)
         }
     }
+
     return true
 }
+
 }
