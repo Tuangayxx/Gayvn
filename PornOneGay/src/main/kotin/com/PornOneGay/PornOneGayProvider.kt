@@ -5,6 +5,7 @@ import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.app
 import org.json.JSONObject
 import org.jsoup.nodes.Document
 import java.lang.System
