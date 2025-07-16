@@ -57,10 +57,9 @@ class Fullboys : MainAPI() {
             it.attr("data-cfsrc").takeIf { src -> src.isNotBlank() } ?: it.attr("src")
         } ?: return null
 
-         return MovieSearchResponse(
+         return newMovieSearchResponse(
             name = name,
             url = url,
-            apiName = this@Fullboys.name,
             type = TvType.NSFW,
             posterUrl = image
         )
