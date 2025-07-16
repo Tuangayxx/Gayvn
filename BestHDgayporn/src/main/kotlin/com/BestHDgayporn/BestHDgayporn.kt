@@ -83,48 +83,45 @@ class BestHDgayporn : MainAPI() {
         return items.mapNotNull { it.toSearchResult() }
     }
 
-    // Load detailed video information
-    override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
-        // Use meta tags to get information
-        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: "No title"
-        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
-        val plot = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+   override suspend fun load(url: String): LoadResponse {
+    val document = app.get(url).document
 
-        // Find the player iframe
-        val playerIframe = document.selectFirst("div.aiovg-player iframe")
-        val episodeUrl = playerIframe?.attr("src")
+    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim().orEmpty()
+    val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
+    val plot   = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        // Create a single episode with the iframe URL
-        val episodes = if (episodeUrl != null) {
-            listOf(Episode(data = episodeUrl, name = "Play"))
-        } else {
-            emptyList()
-        }
+    // **Lấy embedUrl từ og:video:url**
+    val embedUrl = document
+        .selectFirst("meta[property=og:video:url]")
+        ?.attr("content")
+        ?.trim()
+        ?: ""  // nếu không có thì fallback
 
-        return newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
-            this.posterUrl = poster
-            this.plot = plot
+    // Nếu muốn, còn có thể lấy trực tiếp contentUrl MP4 từ JSON-LD:
+    // val jsonLd = document.selectFirst("script[type=application/ld+json]")?.html()
+    // parse jsonLd để lấy "contentUrl"
+
+    return newMovieLoadResponse(title, embedUrl, TvType.NSFW, embedUrl) {
+        this.posterUrl = poster
+        this.plot = plot
+    }
+}
+
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    // 'data' bây giờ là embedUrl
+    val doc = app.get(data).document
+    // Trên page embed thường có <video id="player"><source src="...mp4"></video>
+    doc.select("video#player source, #player source").forEach {
+        val src = it.attr("src")
+        if (src.isNotBlank()) {
+            loadExtractor(src, subtitleCallback, callback)
         }
     }
-
-    // Load video stream links
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        // 'data' is now the iframe URL
-        val document = app.get(data).document
-
-        // Find video sources within the iframe
-        document.select("source[src]").forEach {
-            val src = it.attr("src")
-            if (src.isNotBlank()) {
-                loadExtractor(src, subtitleCallback, callback)
-            }
-        }
-        return true
-    }
+    return true
+}
 }
