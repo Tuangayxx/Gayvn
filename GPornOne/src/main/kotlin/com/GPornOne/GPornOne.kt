@@ -36,7 +36,6 @@ class GPornOne : MainAPI() {
             "/orgy/"       to "Orgy",
             "/romantic/"   to "Romantic",
             "/foursome/"   to "Foursome",
-            "/vietnamese/" to "Việt Nam",
         )
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
             var document = app.get("$mainUrl${request.data}$page", timeout = 30).document
