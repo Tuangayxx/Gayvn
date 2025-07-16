@@ -83,23 +83,20 @@ class BestHDgayporn : MainAPI() {
         return items.mapNotNull { it.toSearchResult() }
     }
 
-   override suspend fun load(url: String): LoadResponse {
+  override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
+    // Tiêu đề, poster, plot như trước
     val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim().orEmpty()
     val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
     val plot   = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-    // **Lấy embedUrl từ og:video:url**
+    // **Lấy URL của iframe embed** (nơi chứa player thực sự)
     val embedUrl = document
-        .selectFirst("meta[property=og:video:url]")
-        ?.attr("content")
+        .selectFirst("div.aiovg-player iframe")
+        ?.attr("src")
         ?.trim()
-        ?: ""  // nếu không có thì fallback
-
-    // Nếu muốn, còn có thể lấy trực tiếp contentUrl MP4 từ JSON-LD:
-    // val jsonLd = document.selectFirst("script[type=application/ld+json]")?.html()
-    // parse jsonLd để lấy "contentUrl"
+        ?: throw IOException("Không tìm thấy iframe video") 
 
     return newMovieLoadResponse(title, embedUrl, TvType.NSFW, embedUrl) {
         this.posterUrl = poster
@@ -107,19 +104,20 @@ class BestHDgayporn : MainAPI() {
     }
 }
 
+
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    // 'data' bây giờ là embedUrl
+    // 'data' giờ là URL iframe embed
     val doc = app.get(data).document
-    // Trên page embed thường có <video id="player"><source src="...mp4"></video>
-    doc.select("video#player source, #player source").forEach {
-        val src = it.attr("src")
-        if (src.isNotBlank()) {
-            loadExtractor(src, subtitleCallback, callback)
+    // Trên page embed có thẻ video-js với <video src="...mp4"> và <source src="...mp4">
+    doc.select("video[src], video#player source[src]").forEach { element ->
+        val videoUrl = element.attr("src")
+        if (videoUrl.isNotBlank()) {
+            loadExtractor(videoUrl, subtitleCallback, callback)
         }
     }
     return true
