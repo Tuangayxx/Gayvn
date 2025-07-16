@@ -95,10 +95,9 @@ class BestHDgayporn : MainAPI() {
     // Trả về một "episode" duy nhất, dùng chính URL trang làm data
     val episodes = listOf(Episode(data = url, name = "Play"))
 
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+    return newMovieLoadResponse(title, url, TvType.NSFW, episodes) {
         this.posterUrl = poster
         this.plot = description
-        this.episodes = episodes
     }
 }
 
