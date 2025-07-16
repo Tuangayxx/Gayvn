@@ -36,7 +36,7 @@ class BestHDgayporn : MainAPI() {
         val url = if (request.data.isNullOrBlank()) {
             "$mainUrl/page/$page/"
         } else {
-            "$mainUrl${request.data.trimStart('/')}/page/$page/"
+            "$mainUrl${request.data}/page/$page/"
         }
 
         val document = app.get(url).document
