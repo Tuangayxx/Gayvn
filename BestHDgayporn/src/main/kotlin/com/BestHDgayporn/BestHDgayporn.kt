@@ -136,7 +136,6 @@ override suspend fun loadLinks(
                 callback.invoke(
                     newExtractorLink(
                         source = "BestHDGayPorn",
-                        name = "HD",
                         url = contentUrl,
                         type = ExtractorLinkType.VIDEO
                     )
