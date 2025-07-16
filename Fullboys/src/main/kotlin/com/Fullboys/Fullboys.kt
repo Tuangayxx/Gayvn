@@ -53,7 +53,7 @@ class Fullboys : MainAPI() {
         val url = fixUrl(aTag.attr("href"))
         val name = aTag.selectFirst("h2.title")?.text() ?: return null
 
-        val image = aTag.selectFirst("img")?.let {
+        val posterUrl = aTag.selectFirst("img")?.let {
             it.attr("data-cfsrc").takeIf { src -> src.isNotBlank() } ?: it.attr("src")
         } ?: return null
 
@@ -61,7 +61,7 @@ class Fullboys : MainAPI() {
             name = name,
             url = url,
             type = TvType.NSFW,
-            image = image
+            posterUrl = posterUrl
         )
     }
 
