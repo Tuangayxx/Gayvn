@@ -3,6 +3,7 @@ package com.BestHDgayporn
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
+import java.io.IOException
 
 class BestHDgayporn : MainAPI() {
     // Main provider information
