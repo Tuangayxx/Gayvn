@@ -87,24 +87,20 @@ class BestHDgayporn : MainAPI() {
   override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    // Tiêu đề, poster, plot như trước
-    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim().orEmpty()
+    // Lấy tiêu đề, poster, mô tả như trước
+    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
     val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
-    val plot   = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-    // **Lấy URL của iframe embed** (nơi chứa player thực sự)
-    val embedUrl = document
-        .selectFirst("div.aiovg-player iframe")
-        ?.attr("src")
-        ?.trim()
-        ?: throw IOException("Không tìm thấy iframe video") 
+    // Trả về một "episode" duy nhất, dùng chính URL trang làm data
+    val episodes = listOf(Episode(data = url, name = "Play"))
 
-    return newMovieLoadResponse(title, embedUrl, TvType.NSFW, embedUrl) {
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
         this.posterUrl = poster
-        this.plot = plot
+        this.plot = description
+        this.episodes = episodes
     }
 }
-
 
 override suspend fun loadLinks(
     data: String,
@@ -112,13 +108,17 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    // 'data' giờ là URL iframe embed
-    val doc = app.get(data).document
-    // Trên page embed có thẻ video-js với <video src="...mp4"> và <source src="...mp4">
-    doc.select("video[src], video#player source[src]").forEach { element ->
-        val videoUrl = element.attr("src")
-        if (videoUrl.isNotBlank()) {
-            loadExtractor(videoUrl, subtitleCallback, callback)
+    // 'data' bây giờ chính là URL trang chi tiết
+    val document = app.get(data).document
+
+    // Chọn thẻ <video> (class vjs-tech) hoặc trực tiếp <source> bên trong
+    document.select("video#player_html5_api, video").forEach { video ->
+        // Ưu tiên lấy src của chính <video>, nếu không có thì lấy từ <source>
+        val src = video.attr("src").ifBlank {
+            video.selectFirst("source")?.attr("src").orEmpty()
+        }
+        if (src.isNotBlank()) {
+            loadExtractor(src, subtitleCallback, callback)
         }
     }
     return true
