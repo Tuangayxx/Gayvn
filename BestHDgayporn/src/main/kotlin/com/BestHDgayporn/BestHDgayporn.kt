@@ -1,4 +1,4 @@
-package com.GXtapes
+package com.BestHDgayporn
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -8,7 +8,7 @@ import java.io.IOException
 import com.lagradost.api.Log
 
 
-class GXtapes : MainAPI() {
+class BestHDgayporn : MainAPI() {
     override var mainUrl = "https://besthdgayporn.com"
     override var name = "BestHDgayporn"
     override val hasMainPage = true
