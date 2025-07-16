@@ -4,9 +4,6 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
-import java.io.IOException
-import com.lagradost.api.Log
-
 
 class BestHDgayporn : MainAPI() {
     override var mainUrl = "https://besthdgayporn.com"
@@ -18,7 +15,6 @@ class BestHDgayporn : MainAPI() {
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
-
 
     override val mainPage = mainPageOf(
         ""                             to "Latest",
@@ -33,58 +29,41 @@ class BestHDgayporn : MainAPI() {
         "/video-tag/next-door-studios" to "Next Door Studios",
         "/video-tag/noir-male"         to "Noir Male",
         "/video-tag/asg-max"           to "ASG Max",
-    )    
+    )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}/page/$page/").document
-        val home = document.select("div.large-up-4 > article").mapNotNull { it.toSearchResult() }
+        val url = "${mainUrl.trimEnd('/')}/${request.data.trimStart('/')}/page/$page/"
+        val document = app.get(url).document
+
+        val videos = document.select("article.postbox").mapNotNull { it.toSearchResult() }
+        val hasNext = document.selectFirst("a.next.page-numbers") != null
 
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,
-                list = home,
+                list = videos,
                 isHorizontalImages = true
             ),
-            hasNext = true
+            hasNext = hasNext
         )
     }
 
-
-    private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("a").attr("h5.entry-title")
-        val href = fixUrl(this.select("a").attr("href"))
-        val posterUrl = fixUrlNull(this.select("img").attr("abs:src"))
-        
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    }
-
-   override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-
+    override suspend fun search(query: String): List<SearchResponse> {
+        val searchResults = mutableListOf<SearchResponse>()
         for (i in 1..5) {
-            val document = app.get("${mainUrl}/page/$i/?s=$query").document
-
-            val results = document.select("div.large-up-4 > article").mapNotNull { it.toSearchResult() }
-
-            if (!searchResponse.containsAll(results)) {
-                searchResponse.addAll(results)
-            } else {
-                break
-            }
+            val document = app.get("$mainUrl/page/$i/?s=$query").document
+            val results = document.select("article.postbox").mapNotNull { it.toSearchResult() }
 
             if (results.isEmpty()) break
+            searchResults.addAll(results)
         }
-
-        return searchResponse
+        return searchResults
     }
-   
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
-        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
+        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: "No Title"
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
         val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
@@ -101,11 +80,23 @@ class BestHDgayporn : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select("#player source").forEach { links ->
-            val url = links.attr("src")
-            Log.d("Tuangayxx Test", url)
-            loadExtractor(url, subtitleCallback, callback)
+        document.select("#player source").forEach {
+            val videoUrl = it.attr("src")
+            if (videoUrl.isNotBlank()) {
+                loadExtractor(videoUrl, subtitleCallback, callback)
+            }
         }
         return true
+    }
+
+    private fun Element.toSearchResult(): SearchResponse? {
+        val anchor = selectFirst("a") ?: return null
+        val title = selectFirst("h5.entry-title")?.text()?.trim() ?: return null
+        val href = anchor.attr("href").let { fixUrl(it) }
+        val poster = selectFirst("img")?.attr("abs:src")?.let { fixUrlNull(it) }
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = poster
+        }
     }
 }
