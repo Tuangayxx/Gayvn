@@ -32,21 +32,29 @@ class BestHDgayporn : MainAPI() {
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = "${mainUrl.trimEnd('/')}/${request.data.trimStart('/')}/page/$page/"
-        val document = app.get(url).document
+    val url = if (request.data.isNullOrBlank())
+        "$mainUrl/page/$page/"
+    else
+        "$mainUrl${request.data}/page/$page/"
 
-        val videos = document.select("article.postbox").mapNotNull { it.toSearchResult() }
-        val hasNext = document.selectFirst("a.next.page-numbers") != null
+    val document = app.get(url).document
+    val articles = document.select("article.postbox")
 
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = videos,
-                isHorizontalImages = true
-            ),
-            hasNext = hasNext
-        )
-    }
+    println("DEBUG: Found ${articles.size} articles at $url")
+
+    val videos = articles.mapNotNull { it.toSearchResult() }
+    val hasNext = document.selectFirst("a.next.page-numbers") != null
+
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = videos,
+            isHorizontalImages = true
+        ),
+        hasNext = hasNext
+    )
+}
+
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResults = mutableListOf<SearchResponse>()
