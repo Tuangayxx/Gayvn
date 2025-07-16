@@ -10,7 +10,7 @@ import org.json.JSONObject
 import org.jsoup.nodes.Document
 import java.lang.System
 
-class PornOneGayProvider : MainAPI() {
+class PornOneGay : MainAPI() {
     override var mainUrl              = "https://pornone.com/gay"
     override var name                 = "PornOneGay"
     override val hasMainPage          = true
