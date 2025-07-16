@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
 class BestHDgayporn : MainAPI() {
-    // Thông tin cơ bản về nhà cung cấp
+    // Main provider information
     override var mainUrl = "https://besthdgayporn.com"
     override var name = "BestHDgayporn"
     override val hasMainPage = true
@@ -16,7 +16,7 @@ class BestHDgayporn : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Danh mục trang chính
+    // Main page categories
     override val mainPage = mainPageOf(
         "" to "Latest",
         "/video-tag/onlyfans" to "Onlyfans",
@@ -32,7 +32,7 @@ class BestHDgayporn : MainAPI() {
         "/video-tag/asg-max" to "ASG Max",
     )
 
-    // Lấy dữ liệu cho trang chính
+    // Fetch data for the main page
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (request.data.isBlank()) {
             "$mainUrl/page/$page/"
@@ -41,12 +41,12 @@ class BestHDgayporn : MainAPI() {
         }
 
         val document = app.get(url).document
-        // Sử dụng selector chính xác để tìm các video
-        [cite_start]val items = document.select("div.aiovg-item-video") [cite: 216, 232, 249, 268]
+        // Use the correct selector to find video items
+        val items = document.select("div.aiovg-item-video")
         val videos = items.mapNotNull { it.toSearchResult() }
-        
-        // Kiểm tra xem có trang tiếp theo không
-        [cite_start]val hasNext = document.selectFirst("a.next.page-numbers") != null [cite: 825]
+
+        // Check for a next page
+        val hasNext = document.selectFirst("a.next.page-numbers") != null
 
         return newHomePageResponse(
             list = HomePageList(
@@ -58,14 +58,14 @@ class BestHDgayporn : MainAPI() {
         )
     }
 
-    // Chuyển đổi một phần tử HTML thành SearchResponse
+    // Convert an HTML element to a SearchResponse
     private fun Element.toSearchResult(): SearchResponse? {
-        // Lấy link và tiêu đề từ phần tử a trong caption
-        [cite_start]val linkElement = this.selectFirst("div.aiovg-caption a.aiovg-link-title") ?: return null [cite: 229, 246]
+        // Get the link and title from the anchor element in the caption
+        val linkElement = this.selectFirst("div.aiovg-caption a.aiovg-link-title") ?: return null
         val href = fixUrl(linkElement.attr("href"))
         val title = linkElement.text().trim()
-        
-        // Lấy ảnh poster, ưu tiên "data-src" cho lazy-load
+
+        // Get the poster image, prioritizing "data-src" for lazy-loading
         val imgElement = this.selectFirst("img.aiovg-responsive-element")
         val posterUrl = imgElement?.attr("data-src")?.takeIf { it.isNotBlank() }
             ?: imgElement?.attr("src")
@@ -75,7 +75,7 @@ class BestHDgayporn : MainAPI() {
         }
     }
 
-    // Tìm kiếm video
+    // Search for videos
     override suspend fun search(query: String): List<SearchResponse> {
         val searchUrl = "$mainUrl/?s=$query"
         val document = app.get(searchUrl).document
@@ -83,19 +83,19 @@ class BestHDgayporn : MainAPI() {
         return items.mapNotNull { it.toSearchResult() }
     }
 
-    // Tải thông tin chi tiết của video
+    // Load detailed video information
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        // Sử dụng meta tags để lấy thông tin
-        [cite_start]val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: "No title" [cite: 15]
-        [cite_start]val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim() [cite: 37]
-        [cite_start]val plot = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim() [cite: 17]
-        
-        // Tìm iframe của player
-        [cite_start]val playerIframe = document.selectFirst("div.aiovg-player iframe") [cite: 142]
+        // Use meta tags to get information
+        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: "No title"
+        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
+        val plot = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+
+        // Find the player iframe
+        val playerIframe = document.selectFirst("div.aiovg-player iframe")
         val episodeUrl = playerIframe?.attr("src")
 
-        // Tạo một tập phim duy nhất với URL của iframe
+        // Create a single episode with the iframe URL
         val episodes = if (episodeUrl != null) {
             listOf(Episode(data = episodeUrl, name = "Play"))
         } else {
@@ -108,17 +108,17 @@ class BestHDgayporn : MainAPI() {
         }
     }
 
-    // Tải link stream của video
+    // Load video stream links
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // 'data' bây giờ là URL của iframe
+        // 'data' is now the iframe URL
         val document = app.get(data).document
-        
-        // Tìm các source video trong iframe
+
+        // Find video sources within the iframe
         document.select("source[src]").forEach {
             val src = it.attr("src")
             if (src.isNotBlank()) {
