@@ -38,6 +38,7 @@ class BestHDgayporn : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val document = app.get("$mainUrl/${request.data}/page/$page/").document
         val home = document.select("div.aiovg-item-video aiovg-item-video-63297 aiovg-col aiovg-col-2").mapNotNull { it.toSearchResult() }
+        val home = document.select("article.postbox").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -67,6 +68,7 @@ class BestHDgayporn : MainAPI() {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
             val results = document.select("div.aiovg-item-video aiovg-item-video-63297 aiovg-col aiovg-col-2").mapNotNull { it.toSearchResult() }
+            val results = document.select("article.postbox").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
