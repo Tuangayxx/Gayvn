@@ -148,14 +148,27 @@ override suspend fun loadLinks(
     }
 
     // Fallback: Tìm thẻ <video> hoặc <source> nếu JSON không có
-    embedDoc.select("video, source").forEach { video ->
-        val src = video.attr("src")
+    val videoSrc = embedDoc.selectFirst("video")?.attr("src")
+    if (!videoSrc.isNullOrBlank()) {
+        callback.invoke(
+            newExtractorLink(
+                source = "BestHDGayPorn",
+                url = videoSrc,
+                type = ExtractorLinkType.VIDEO
+            )
+        )
+    }
+    embedDoc.select("source").forEach { source ->
+        val src = source.attr("src")
         if (src.isNotBlank()) {
-            loadExtractor(src, subtitleCallback, callback)
+            callback.invoke(
+                newExtractorLink(
+                    source = "BestHDGayPorn",
+                    url = src,
+                    type = ExtractorLinkType.VIDEO
+                )
+            )
         }
     }
-
-    return true
-}
 
 }
