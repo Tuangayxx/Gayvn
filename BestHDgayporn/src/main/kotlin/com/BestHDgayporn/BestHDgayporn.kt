@@ -92,7 +92,7 @@ class BestHDgayporn : MainAPI() {
 
   override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
-    val videoElement = doc.selectFirst("article[itemtype='http://schema.org/VideoObject']")
+    val videoElement = document.selectFirst("article[itemtype='http://schema.org/VideoObject']")
         ?: throw ErrorLoadingException("Không tìm thấy thẻ video")
 
     // Lấy tiêu đề, poster, mô tả như trước
