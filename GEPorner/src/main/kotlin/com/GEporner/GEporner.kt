@@ -17,14 +17,14 @@ class GEporner : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-            "/cat/gay/hd-sex"           to "Recent Videos",
-            "/cat/gay/asian"            to "Châu Á",
-            "/cat/gay/group-sex"        to "Chơi tập thể",
-            "/cat/gay/orgy"             to "Chơi bày đàn",
-            "/cat/gay/threesome"        to "Chơi 3",
-            "/cat/gay/bisexual"         to "Bi",
-            "/cat/gay/hd-1080p"         to "1080 Porn",
-            "/cat/gay/4k-porn"          to "4K Porn",
+            "cat/gay/hd-sex"           to "Recent Videos",
+            "cat/gay/asian"            to "Châu Á",
+            "cat/gay/group-sex"        to "Chơi tập thể",
+            "cat/gay/orgy"             to "Chơi bày đàn",
+            "cat/gay/threesome"        to "Chơi 3",
+            "cat/gay/bisexual"         to "Bi",
+            "cat/gay/hd-1080p"         to "1080 Porn",
+            "cat/gay/4k-porn"          to "4K Porn",
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
