@@ -160,7 +160,8 @@ override suspend fun loadLinks(
             )
         )
     }
-    embedDoc.select("video source").forEach { source ->
+    // Fallback: Tìm thẻ <source> trong player-embed
+    embedDoc.select("source").forEach { source ->
     val src = source.attr("src")
     if (src.isNotBlank()) {
         Log.i("BestHDGayPorn", "Found video src: $src")
@@ -172,8 +173,10 @@ override suspend fun loadLinks(
                 type = ExtractorLinkType.VIDEO
             )
         )
-        }   
+        return true // Trả về true ngay khi tìm thấy link
     }
-    return true
+}
+// Nếu không tìm thấy link nào thì trả về false
+return false
 }
 }
