@@ -7,7 +7,7 @@ import org.json.JSONObject
 import java.math.BigInteger
 
 class GEporner : MainAPI() {
-    override var mainUrl              = "https://www.eporner.com/cat/gay"
+    override var mainUrl              = "https://www.eporner.com"
     override var name                 = "EpornerGay"
     override val hasMainPage          = true
     override var lang                 = "en"
@@ -17,14 +17,14 @@ class GEporner : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-            "hd-sex"           to "Recent Videos",
-            "asian"            to "Châu Á",
-            "group-sex"        to "Chơi tập thể",
-            "orgy"             to "Chơi bày đàn",
-            "threesome"        to "Chơi 3",
-            "bisexual"         to "Bi",
-            "hd-1080p"         to "1080 Porn",
-            "4k-porn"          to "4K Porn",
+            "/cat/gay/hd-sex"           to "Recent Videos",
+            "/cat/gay/asian"            to "Châu Á",
+            "/cat/gay/group-sex"        to "Chơi tập thể",
+            "/cat/gay/orgy"             to "Chơi bày đàn",
+            "/cat/gay/threesome"        to "Chơi 3",
+            "/cat/gay/bisexual"         to "Bi",
+            "/cat/gay/hd-1080p"         to "1080 Porn",
+            "/cat/gay/4k-porn"          to "4K Porn",
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -54,12 +54,11 @@ class GEporner : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val subMainUrl=mainUrl.replace("/cat/gay","")
         val subquery=query.replace(" ","-")
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..10) {
-            val document = app.get("${subMainUrl}/search/$subquery/$i").document
+            val document = app.get("${mainUrl}/search/$subquery/$i").document
             //val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
             val results = document.select("div.mb").mapNotNull {
