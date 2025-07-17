@@ -4,7 +4,6 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.fixUrlNull
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.app
@@ -30,9 +29,13 @@ class BestHDgayporn : MainAPI() {
         val document = app.get(url).document
         val responseList = document.select("div.aiovg-item-video").mapNotNull { it.toSearchResult() }
         
-        return HomePageResponse(
-            HomePageList(request.name, responseList, isHorizontalImages = true),
-            hasNext = responseList.isNotEmpty()
+        return newHomePageResponse(
+            list    = HomePageList(
+                name               = request.name,
+                list               = home,
+                isHorizontalImages = true
+            ),
+            hasNext = true
         )
     }
 
