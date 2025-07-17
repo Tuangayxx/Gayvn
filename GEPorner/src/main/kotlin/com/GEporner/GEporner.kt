@@ -1,19 +1,14 @@
-package com.GPornOne
+package com.GEporner
 
-import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
-import org.json.JSONArray
-import java.io.IOException
+import java.math.BigInteger
 
-class GPornOne : MainAPI() {
-    override var mainUrl              = "https://pornone.com/gay"
-    override var name                 = "PornOneGay"
+class GEporner : MainAPI() {
+    override var mainUrl              = "https://www.eporner.com/cat/gay"
+    override var name                 = "EpornerGay_4K"
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasDownloadSupport   = true
@@ -22,52 +17,52 @@ class GPornOne : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-            "/"            to "Latest Updates",
-            "/1080p/"      to "1080p",
-            "/720p/"       to "720p",
-            "/asian/"      to "Asian",
-            "/bisexual/"   to "Bi",
-            "/boy/"        to "Boy",
-            "/big-dick/"   to "Big Dick",
-            "/full-movie/" to "Phim dài",
-            "/gangbang/"   to "Gang bang",
-            "/group-sex/"  to "Group",
-            "/love/"       to "Love",
-            "/orgy/"       to "Orgy",
-            "/romantic/"   to "Romantic",
-            "/foursome/"   to "Foursome",
+            "/hd-sex"           to "4K Recent Videos",
+            "/hd-sex/asian"     to "Châu Á",
+            "/hd-sex/group-sex" to "Chơi tập thể",
+            "/hd-sex/orgy"      to "Chơi bày đàn",
+            "/hd-sex/threesome" to "Chơi 3",
+            "/hd-sex/bisexual"  to "Bi",
+            "/hd-1080p"         to "1080 Porn",
+            "/4k-porn"          to "4K Porn",
         )
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-            var document = app.get("$mainUrl${request.data}$page", timeout = 30).document
-            val responseList  = document.select(".popbop.vidLinkFX").mapNotNull { it.toSearchResult() }
-            return newHomePageResponse(HomePageList(request.name, responseList, isHorizontalImages = true),hasNext = true)
 
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val document = app.get("$mainUrl/${request.data}/$page/").document
+        val home = document.select("#div-search-results div.mb").mapNotNull { it.toSearchResult() }
+        return newHomePageResponse(
+            list    = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = true
+        )
     }
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select(".videotitle").text()
-        val href =  this.attr("href")
-        var posterUrl = this.select(".imgvideo").attr("data-src")
-
-        if (posterUrl.isEmpty()) {
-            posterUrl = this.select(".imgvideo").attr("src")
+        val title = fixTitle(this.select("div.mbunder p.mbtit a").text() ?: "No Title").trim()
+        val href = fixUrl(this.select("div.mbcontent a").attr("href"))
+        var posterUrl = this.selectFirst("img")?.attr("data-src")
+        if (posterUrl.isNullOrBlank())
+        {
+            posterUrl=this.selectFirst("img")?.attr("src")
         }
-
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-
+        val subquery=query.replace(" ","-")
         val searchResponse = mutableListOf<SearchResponse>()
 
-        for (i in 1..7) {
-            var document = app.get("$mainUrl/search?q=$query&page=$i", timeout = 30).document
+        for (i in 1..10) {
+            val document = app.get("${mainUrl}/search/$subquery/$i").document
+            //val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            //val document = app.get("${mainUrl}/page/$i/?s=$queassry").document
-
-            val results = document.select(".popbop.vidLinkFX").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.mb").mapNotNull {
+                it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
@@ -77,45 +72,69 @@ class GPornOne : MainAPI() {
 
             if (results.isEmpty()) break
         }
-
         return searchResponse
-
     }
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        val script = document.select("script[data-react-helmet=\"true\"]").html()
-        val jsonObj = JSONObject(script)
-        val title = jsonObj.get("name")
-        val poster = jsonObj.getJSONArray("thumbnailUrl")[0]
-        val description = jsonObj.get("description")
+
+        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim().toString()
+        val poster = fixUrlNull(document.selectFirst("[property='og:image']")?.attr("content"))
+        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
     
 
-        return newMovieLoadResponse(title.toString(), url, TvType.NSFW, url) {
-            this.posterUrl = poster.toString()
-            this.plot = description.toString()
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = poster
+            this.plot = description
         }
     }
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val doc = app.get(data).document
-        val sources = doc.select("#pornone-video-player source")
-        sources.forEach { item->
-            val src = item.attr("src")
-            val quality = item.attr("res")
-            callback.invoke(newExtractorLink(
-                source = name,
-                name = name,
-                url = src
-            ) {
-                this.referer = ""
-                this.quality = quality.toInt()
-            }
+        val doc= app.get(data).toString()
+        val vid=Regex("EP.video.player.vid = '([^']+)'").find(doc)?.groupValues?.get(1).toString()
+        val hash=Regex("EP.video.player.hash = '([^']+)'").find(doc)?.groupValues?.get(1).toString()
+        val url="https://www.eporner.com/xhr/video/$vid?hash=${base36(hash)}"
+        //Log.d("Phisher",url)
+        val json= app.get(url).toString()
+        val jsonObject = JSONObject(json)
+        val sources = jsonObject.getJSONObject("sources")
+        val mp4Sources = sources.getJSONObject("mp4")
+        val qualities = mp4Sources.keys()
+        while (qualities.hasNext()) {
+            val quality = qualities.next() as String
+            val sourceObject = mp4Sources.getJSONObject(quality)
+            val src = sourceObject.getString("src")
+            val labelShort = sourceObject.getString("labelShort") ?: ""
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = src,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = ""
+                    this.quality = getIndexQuality(labelShort)
+                }
             )
         }
-
-
-
         return true
+    }
+// Thanks to https://github.com/alfa-addon/addon/blob/2a3c9d5e4d35f8420e680d2ee8dd31291bbc727e/plugin.video.alfa/servers/eporner.py#L26 for Code
+    fun base36(hash: String): String {
+        return if (hash.length >= 32) {
+            // Split the hash into 4 parts, convert each part to base36, and concatenate the results
+            val part1 = BigInteger(hash.substring(0, 8), 16).toString(36)
+            val part2 = BigInteger(hash.substring(8, 16), 16).toString(36)
+            val part3 = BigInteger(hash.substring(16, 24), 16).toString(36)
+            val part4 = BigInteger(hash.substring(24, 32), 16).toString(36)
+
+            part1 + part2 + part3 + part4
+        } else {
+            throw IllegalArgumentException("Hash length is invalid")
+        }
+    }
+    private fun getIndexQuality(str: String?): Int {
+        return Regex("(\\d{3,4})[pP]").find(str ?: "") ?. groupValues ?. getOrNull(1) ?. toIntOrNull()
+            ?: Qualities.Unknown.value
     }
 }
