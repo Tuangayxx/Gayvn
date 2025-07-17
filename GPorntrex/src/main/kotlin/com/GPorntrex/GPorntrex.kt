@@ -32,15 +32,15 @@ class GPorntrex : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-            "latest-updates" to "Latest Videos",
-            "most-popular/daily/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=video_viewed_today&from4=" to "Most popular daily",
-            "top-rated/daily/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=rating_today&from4=" to "Top rated daily",
-            "most-popular/weekly/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=video_viewed_week&from4=" to "Most popular weekly",
-            "top-rated/weekly/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=rating_week&from4=" to "Top rated weekly",
-            "most-popular/monthly/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=video_viewed_month&from4=" to "Most popular monthly",
-            "top-rated/monthly/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=rating_month&from4=" to "Top rated monthly",
-            "most-popular/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=video_viewed&from4=" to "Most popular all time",
-            "top-rated/?mode=async&function=get_block&block_id=list_videos_common_videos_list_norm&sort_by=rating&from4=" to "Top rated all time",
+            "search/gay/"                to "Most Relevant",
+            "search/gay/most-popular"    to "Most Viewed",
+            "search/gay/top-rated"       to "Top Rated",
+            "search/gay/most-favourited" to "Most Favourited",
+            "search/gay/longest"         to "Longest",
+            "members/2708370/videos"     to "Playplist 1",
+            "members/1210815/videos"     to "Playplist 2",
+            "members/1510454/videos"     to "Playplist 3",
+            "members/2133294/videos"     to "Playplist 4"
     )
 
     override suspend fun getMainPage(
