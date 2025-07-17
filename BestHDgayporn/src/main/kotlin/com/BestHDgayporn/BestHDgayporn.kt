@@ -153,6 +153,7 @@ override suspend fun loadLinks(
         callback.invoke(
             newExtractorLink(
                 source = "BestHDGayPorn",
+                name = "Normal",
                 url = videoSrc,
                 type = ExtractorLinkType.VIDEO
             )
@@ -164,11 +165,12 @@ override suspend fun loadLinks(
             callback.invoke(
                 newExtractorLink(
                     source = "BestHDGayPorn",
+                    name = "Normal",
                     url = src,
                     type = ExtractorLinkType.VIDEO
                 )
             )
         }
     }
-
+}
 }
