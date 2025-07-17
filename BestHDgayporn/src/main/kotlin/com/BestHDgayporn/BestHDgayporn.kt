@@ -5,6 +5,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.fixUrlNull
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
 
@@ -27,7 +29,11 @@ class BestHDgayporn : MainAPI() {
         val url = if (page > 1) "${request.data}page/$page/" else request.data
         val document = app.get(url).document
         val responseList = document.select("div.aiovg-item-video").mapNotNull { it.toSearchResult() }
-        return newHomePageResponse(responseList, hasNext = responseList.isNotEmpty())
+        
+        return HomePageResponse(
+            HomePageList(request.name, responseList, isHorizontalImages = true),
+            hasNext = responseList.isNotEmpty()
+        )
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -58,7 +64,9 @@ class BestHDgayporn : MainAPI() {
         val title = videoElement.selectFirst("meta[itemprop='name']")?.attr("content") ?: "No Title"
         val poster = videoElement.selectFirst("meta[itemprop='thumbnailUrl']")?.attr("content") ?: ""
         val description = videoElement.selectFirst("meta[itemprop='description']")?.attr("content") ?: ""
-        val actors = doc.select("#video-actors a").mapNotNull { it.text().trim() }.filter { it.isNotEmpty() }
+        val actors = doc.select("#video-actors a")
+            .mapNotNull { it.text().trim() }
+            .filter { it.isNotEmpty() }
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
@@ -73,24 +81,25 @@ class BestHDgayporn : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        // Ưu tiên lấy link embed từ iframe trong khối player
+        // Thử lấy link embed từ iframe
         val embedUrl = document.selectFirst("div.responsive-player iframe")?.attr("src")
         if (!embedUrl.isNullOrEmpty()) {
             loadExtractor(embedUrl, data, subtitleCallback, callback)
-        } else {
-            // Fallback: nếu không có iframe, thử lấy trực tiếp từ thẻ <video>
-            val videoSrc = document.selectFirst("video")?.attr("src")
-            if (!videoSrc.isNullOrEmpty()) {
-                callback.invoke(
-                    newExtractorLink(
-                        source = name,
-                        name = "Normal",
-                        url = videoSrc,
-                        type = ExtractorLinkType.VIDEO
-                    )
-                )
-            }
+            return true
         }
-        return true
+        // Fallback: nếu không có iframe, thử lấy link trực tiếp từ thẻ <video>
+        val videoSrc = document.selectFirst("video")?.attr("src")
+        if (!videoSrc.isNullOrEmpty()) {
+            callback.invoke(
+                newExtractorLink(
+                    source = name,
+                    name = "Normal",
+                    url = videoSrc,
+                    type = ExtractorLinkType.VIDEO
+                )
+            )
+            return true
+        }
+        return false
     }
 }
