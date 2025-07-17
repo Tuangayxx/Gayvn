@@ -7,6 +7,6 @@ import com.lagradost.cloudstream3.plugins.Plugin
 @CloudstreamPlugin
 class GEpornerProvider : Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Eporner())
+        registerMainAPI(GEporner())
     }
 }

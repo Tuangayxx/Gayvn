@@ -8,7 +8,7 @@ import java.math.BigInteger
 
 class GEporner : MainAPI() {
     override var mainUrl              = "https://www.eporner.com/cat/gay"
-    override var name                 = "EpornerGay_4K"
+    override var name                 = "EpornerGay"
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasDownloadSupport   = true
