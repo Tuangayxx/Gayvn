@@ -92,16 +92,15 @@ class BestHDgayporn : MainAPI() {
 
   override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
+    val videoElement = doc.selectFirst("article[itemtype='http://schema.org/VideoObject']")
+        ?: throw ErrorLoadingException("Không tìm thấy thẻ video")
 
     // Lấy tiêu đề, poster, mô tả như trước
     val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
     val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
     val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-    // Trả về một "episode" duy nhất, dùng chính URL trang làm data
-    val episodes = listOf(Episode(data = url, name = "Play"))
-
-    return newMovieLoadResponse(title, url, TvType.NSFW, episodes) {
+        return newMovieLoadResponse(title, url, TvType.NSFW) {
         this.posterUrl = poster
         this.plot = description
     }
@@ -149,8 +148,9 @@ override suspend fun loadLinks(
     }
 
     // Fallback: Tìm thẻ <video> hoặc <source> nếu JSON không có
-    val videoSrc = embedDoc.selectFirst("video")?.attr("src")
-    if (!videoSrc.isNullOrBlank()) {
+    val val embedUrl = document.selectFirst("video")?.attr("src")
+    if (!embedUrl.isNullOrEmpty()) {
+            loadExtractor(embedUrl, data, subtitleCallback, callback)
         callback.invoke(
             newExtractorLink(
                 source = "BestHDGayPorn",
