@@ -27,7 +27,7 @@ class BestHDgayporn : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) "${request.data}page/$page/" else request.data
         val document = app.get(url).document
-        val responseList = document.select("div.aiovg-item-video").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.aiovg-item-video").mapNotNull { it.toSearchResult() }
         
         return newHomePageResponse(
             list    = HomePageList(
