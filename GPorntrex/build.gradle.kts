@@ -3,7 +3,7 @@ version = 1
 cloudstream {
     authors     = listOf("Gayvn")
     language    = "en"
-    description = "Eporner Gay is the best free full length porn video site. Choose from millions of hardcore videos that stream quickly and in high quality and only full length"
+    description = "Porntrex Gay is the best free full length porn video site. Choose from millions of hardcore videos that stream quickly and in high quality and only full length"
 
     /**
      * Status int as the following:
@@ -14,5 +14,5 @@ cloudstream {
     **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://static-eu-cdn.eporner.com/favicon.png"
+    iconUrl = "https://www.google.com/s2/favicons?domain=www.porntrex.com&sz=%size%"
 }
