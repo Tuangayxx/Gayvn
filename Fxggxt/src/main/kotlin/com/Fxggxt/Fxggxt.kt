@@ -16,6 +16,7 @@ class Fxggxt : MainAPI() {
     override var name = "Fxggxt"
     override val hasMainPage = true
     override val hasDownloadSupport = true
+    override val hasChromecastSupport = true
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
 
