@@ -35,20 +35,15 @@ class BestHDgayporn : MainAPI() {
         "/video-tag/asg-max" to "ASG Max",
     )
 
-    // Fetch data for the main page
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (request.data.isBlank()) {
-            "$mainUrl/page/$page/"
+        val url = if (page > 1) {
+            "${request.data}page/$page/"
         } else {
-            "$mainUrl${request.data}/page/$page/"
+            request.data
         }
 
         val document = app.get(url).document
-        val responseList = document.select("div.aiovg-item-video")
-        val videos = responseList.mapNotNull { it.toSearchResult() }
-
-        // Check for a next page
-        val hasNext = document.selectFirst("a.next.page-numbers") != null
+        val responseList = document.select("div.aiovg-item-video").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             HomePageList(request.name, responseList, isHorizontalImages = true),
@@ -56,17 +51,15 @@ class BestHDgayporn : MainAPI() {
         )
     }
 
-    // Convert an HTML element to a SearchResponse
     private fun Element.toSearchResult(): SearchResponse? {
-        // Get the link and title from the anchor element in the caption
-        val linkElement = this.selectFirst("div.aiovg-caption a.aiovg-link-title") ?: return null
-        val href = fixUrl(linkElement.attr("href"))
-        val title = linkElement.text().trim()
+        val aTag  = this.selectFirst("a") ?: return null
+        val href  = aTag.attr("href")
+        val title = aTag.selectFirst("haiovg-link-title")?.text() ?: "No Title"
 
-        // Get the poster image, prioritizing "data-src" for lazy-loading
-        val imgElement = this.selectFirst("img.aiovg-responsive-element")
-        val posterUrl = imgElement?.attr("data-src")?.takeIf { it.isNotBlank() }
-            ?: imgElement?.attr("src")
+        var posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("data-src")
+        if (posterUrl.isNullOrEmpty()) {
+            posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("src")
+        }
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = fixUrlNull(posterUrl)
