@@ -160,18 +160,19 @@ override suspend fun loadLinks(
             )
         )
     }
-    embedDoc.select("source").forEach { source ->
-        val src = source.attr("src")
-        if (src.isNotBlank()) {
-            callback.invoke(
-                newExtractorLink(
-                    source = "BestHDGayPorn",
-                    name = "Normal",
-                    url = src,
-                    type = ExtractorLinkType.VIDEO
-                )
+    embedDoc.select("video source").forEach { source ->
+    val src = source.attr("src")
+    if (src.isNotBlank()) {
+        Log.i("BestHDGayPorn", "Found video src: $src")
+        callback.invoke(
+            newExtractorLink(
+                source = "BestHDGayPorn",
+                name = "Normal",
+                url = src,
+                type = ExtractorLinkType.VIDEO
             )
-        }
+        )
+        }   
     }
     return true
 }
