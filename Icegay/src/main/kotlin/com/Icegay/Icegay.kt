@@ -1,4 +1,4 @@
-package com.GPorntrex
+package com.Icegay
 
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
@@ -23,24 +23,24 @@ import org.json.JSONObject
 import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
 
-class GPorntrex : MainAPI() {
-    override var mainUrl = "https://www.porntrex.com"
-    override var name = "G_Porntrex"
+class Icegay : MainAPI() {
+    override var mainUrl = "https://www.icegay.tv/"
+    override var name = "Icegay"
     override val hasMainPage = true
     override val hasDownloadSupport = true
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-            "search/gay/"                to "Most Relevant",
-            "search/gay/most-popular"    to "Most Viewed",
-            "search/gay/top-rated"       to "Top Rated",
-            "search/gay/most-favourited" to "Most Favourited",
-            "search/gay/longest"         to "Longest",
-            "members/2708370/videos"     to "Playplist 1",
-            "members/1210815/videos"     to "Playplist 2",
-            "members/1510454/videos"     to "Playplist 3",
-            "members/2133294/videos"     to "Playplist 4"
+            ""                   to "Popular",
+            "newest"             to "Newest",
+            "top-rated"          to "Top Rated",
+            "category/threesome" to "Most Favourited",
+            "category/asian"          to "Asian",
+            "category/reality"        to "Reality",
+            "category/hot"            to "Hot",
+            "channels/latinleche"     to "Latinleche",
+            "channels/twink-trade"    to "Twink Trade"
     )
 
     override suspend fun getMainPage(
