@@ -7,7 +7,7 @@ import org.json.JSONObject
 import java.math.BigInteger
 
 class GEporner : MainAPI() {
-    override var mainUrl              = "https://www.eporner.com/cat/gay"
+    override var mainUrl              = "https://www.eporner.com/cat/gay/"
     override var name                 = "EpornerGay"
     override val hasMainPage          = true
     override var lang                 = "en"
@@ -17,14 +17,14 @@ class GEporner : MainAPI() {
     override val vpnStatus            = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-            "/hd-sex"           to "4K Recent Videos",
-            "/hd-sex/asian"     to "Châu Á",
-            "/hd-sex/group-sex" to "Chơi tập thể",
-            "/hd-sex/orgy"      to "Chơi bày đàn",
-            "/hd-sex/threesome" to "Chơi 3",
-            "/hd-sex/bisexual"  to "Bi",
-            "/hd-1080p"         to "1080 Porn",
-            "/4k-porn"          to "4K Porn",
+            "hd-sex"           to "Recent Videos",
+            "asian"            to "Châu Á",
+            "group-sex"        to "Chơi tập thể",
+            "orgy"             to "Chơi bày đàn",
+            "threesome"        to "Chơi 3",
+            "bisexual"         to "Bi",
+            "hd-1080p"         to "1080 Porn",
+            "4k-porn"          to "4K Porn",
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
