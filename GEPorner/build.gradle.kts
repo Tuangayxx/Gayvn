@@ -14,5 +14,5 @@ cloudstream {
     **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://pornone.com/favicon.ico"
+    iconUrl = "https://static-eu-cdn.eporner.com/favicon.png"
 }
