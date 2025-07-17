@@ -94,7 +94,7 @@ class GEporner : MainAPI() {
         val vid=Regex("EP.video.player.vid = '([^']+)'").find(doc)?.groupValues?.get(1).toString()
         val hash=Regex("EP.video.player.hash = '([^']+)'").find(doc)?.groupValues?.get(1).toString()
         val url="https://www.eporner.com/xhr/video/$vid?hash=${base36(hash)}"
-        //Log.d("Phisher",url)
+        //Log.d("Tuangayvn",url)
         val json= app.get(url).toString()
         val jsonObject = JSONObject(json)
         val sources = jsonObject.getJSONObject("sources")
