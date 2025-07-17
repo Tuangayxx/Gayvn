@@ -2,6 +2,7 @@ package com.BestHDgayporn
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import org.jsoup.nodes.Element
 import java.io.IOException
 import com.lagradost.api.Log
@@ -49,8 +50,8 @@ class BestHDgayporn : MainAPI() {
 
         val document = app.get(url).document
         // Use the correct selector to find video items
-        val items = document.select("div.aiovg-item-video")
-        val videos = items.mapNotNull { it.toSearchResult() }
+        val responseList = document.select("div.aiovg-item-video")
+        val videos = responseList.mapNotNull { it.toSearchResult() }
 
         // Check for a next page
         val hasNext = document.selectFirst("a.next.page-numbers") != null
@@ -58,12 +59,13 @@ class BestHDgayporn : MainAPI() {
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,
-                list = videos,
+                list = responseList,
                 isHorizontalImages = true
             ),
-            hasNext = hasNext
+            hasNext = responseList.isNotEmpty()
         )
     }
+
 
     // Convert an HTML element to a SearchResponse
     private fun Element.toSearchResult(): SearchResponse? {
@@ -82,6 +84,7 @@ class BestHDgayporn : MainAPI() {
         }
     }
 
+
     // Search for videos
     override suspend fun search(query: String): List<SearchResponse> {
         val searchUrl = "$mainUrl/?s=$query"
@@ -90,93 +93,37 @@ class BestHDgayporn : MainAPI() {
         return items.mapNotNull { it.toSearchResult() }
     }
 
-  override suspend fun load(url: String): LoadResponse {
-    val document = app.get(url).document
-    val videoElement = document.selectFirst("article[itemtype='http://schema.org/VideoObject']")
-        ?: throw ErrorLoadingException("Không tìm thấy thẻ video")
+    override suspend fun load(url: String): LoadResponse {
+        val doc = app.get(url).document
+        val videoElement = doc.selectFirst("div[context='https:\/\/schema.org']")
+            ?: throw ErrorLoadingException("Không tìm thấy thẻ video")
 
-    // Lấy tiêu đề, poster, mô tả như trước
-    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
-    val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
-    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        val title = videoElement.selectFirst("meta[itemprop='name']")?.attr("content") ?: "No Title"
+        val poster = videoElement.selectFirst("meta[itemprop='thumbnailUrl']")?.attr("content") ?: ""
+        val description = videoElement.selectFirst("meta[itemprop='description']")?.attr("content") ?: ""
 
-        return newMovieLoadResponse(title, url, TvType.NSFW) {
-        this.posterUrl = poster
-        this.plot = description
-    }
-}
+        val actors = doc.select("#video-actors a").mapNotNull { it.text() }.filter { it.isNotBlank() }
 
-override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    // Truy cập trang chi tiết
-    val document = app.get(data).document
-
-    // Tìm link player-embed từ meta tag
-    val embedUrl = document.selectFirst("meta[property=og:video:url]")?.attr("content")
-        ?: document.selectFirst("meta[property=og:video:secure_url]")?.attr("content")
-
-    if (embedUrl.isNullOrBlank()) return false
-
-    // Truy cập trang player-embed
-    val embedDoc = app.get(embedUrl).document
-
-    // --- Ưu tiên lấy link từ JSON-LD ---
-    val jsonScript = embedDoc.selectFirst("script[type=application/ld+json]")?.data()
-    if (!jsonScript.isNullOrBlank()) {
-        try {
-            val jsonObject = JSONObject(jsonScript)
-            val contentUrl = jsonObject.optString("contentUrl", "")
-
-            if (contentUrl.isNotBlank()) {
-                callback.invoke(
-                    newExtractorLink(
-                        source = "BestHDGayPorn",
-                        name = "Normal",
-                        url = contentUrl,
-                        type = ExtractorLinkType.VIDEO
-                    )
-                )
-                return true
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = poster
+            this.plot = description
+            if (actors.isNotEmpty()) addActors(actors)
         }
     }
 
-    // Fallback: Tìm thẻ <video> hoặc <source> nếu JSON không có
-    val val embedUrl = document.selectFirst("video")?.attr("src")
-    if (!embedUrl.isNullOrEmpty()) {
-            loadExtractor(embedUrl, data, subtitleCallback, callback)
-        callback.invoke(
-            newExtractorLink(
-                source = "BestHDGayPorn",
-                name = "Normal",
-                url = videoSrc,
-                type = ExtractorLinkType.VIDEO
-            )
-        )
+        override suspend fun loadLinks(
+            data: String,
+            isCasting: Boolean,
+            subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit
+        ): Boolean {
+            val document = app.get(data).document
+            val embedUrl = document.selectFirst("video")?.attr("src")
+
+            if (!embedUrl.isNullOrEmpty()) {
+                loadExtractor(embedUrl, data, subtitleCallback, callback)
+            }
+
+            return true
+        }
     }
-    // Fallback: Tìm thẻ <source> trong player-embed
-    embedDoc.select("source").forEach { source ->
-    val src = source.attr("src")
-    if (src.isNotBlank()) {
-        Log.i("BestHDGayPorn", "Found video src: $src")
-        callback.invoke(
-            newExtractorLink(
-                source = "BestHDGayPorn",
-                name = "Normal",
-                url = src,
-                type = ExtractorLinkType.VIDEO
-            )
-        )
-        return true // Trả về true ngay khi tìm thấy link
-    }
-}
-// Nếu không tìm thấy link nào thì trả về false
-return false
-}
-}
