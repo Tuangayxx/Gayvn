@@ -54,11 +54,12 @@ class GEporner : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
+        val subMainUrl=mainUrl.replace("/cat/gay","")
         val subquery=query.replace(" ","-")
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..10) {
-            val document = app.get("${mainUrl}/search/$subquery/$i").document
+            val document = app.get("${subMainUrl}/search/$subquery/$i").document
             //val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
             val results = document.select("div.mb").mapNotNull {
