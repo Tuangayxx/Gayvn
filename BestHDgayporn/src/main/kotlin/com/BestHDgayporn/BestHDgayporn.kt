@@ -1,31 +1,25 @@
 package com.BestHDgayporn
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import org.jsoup.nodes.Element
-import java.io.IOException
-import com.lagradost.api.Log
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.loadExtractor
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.json.JSONObject
 import org.jsoup.nodes.Element
-
+import org.json.JSONObject
+import org.json.JSONArray
+import java.io.IOException
 
 class BestHDgayporn : MainAPI() {
-    // Main provider information
     override var mainUrl = "https://besthdgayporn.com"
     override var name = "BestHDgayporn"
     override val hasMainPage = true
-    override var lang = "en"
-    override val hasQuickSearch = false
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Main page categories
     override val mainPage = mainPageOf(
         "" to "Latest",
         "/video-tag/onlyfans" to "Onlyfans",
@@ -50,7 +44,6 @@ class BestHDgayporn : MainAPI() {
         }
 
         val document = app.get(url).document
-        // Use the correct selector to find video items
         val responseList = document.select("div.aiovg-item-video")
         val videos = responseList.mapNotNull { it.toSearchResult() }
 
@@ -58,15 +51,10 @@ class BestHDgayporn : MainAPI() {
         val hasNext = document.selectFirst("a.next.page-numbers") != null
 
         return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = responseList,
-                isHorizontalImages = true
-            ),
+            HomePageList(request.name, responseList, isHorizontalImages = true),
             hasNext = responseList.isNotEmpty()
         )
     }
-
 
     // Convert an HTML element to a SearchResponse
     private fun Element.toSearchResult(): SearchResponse? {
