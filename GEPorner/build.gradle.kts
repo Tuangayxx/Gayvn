@@ -2,7 +2,7 @@ version = 1
 
 cloudstream {
     authors     = listOf("Gayvn")
-    language    = "vi"
+    language    = "en"
     description = "Eporner Gay is the best free full length porn video site. Choose from millions of hardcore videos that stream quickly and in high quality and only full length"
 
     /**
