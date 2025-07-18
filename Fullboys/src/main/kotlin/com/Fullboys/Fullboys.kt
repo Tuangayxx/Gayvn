@@ -107,8 +107,8 @@ class Fullboys : MainAPI() {
         val recUrl = fixUrl(aTag.attr("href"))
         val recName = aTag.attr("title") ?: aTag.selectFirst("h2.title")?.text() ?: return@mapNotNull null
         val recPoster = aTag.selectFirst("img")?.attr("src")
-            newMovieSearchResponse( reName, recUrl,TvType.NSFW )
-            posterUrl = recPoster
+            newMovieSearchResponse( recName, recUrl,TvType.NSFW )
+            {this.posterUrl = recPoster}
     }
 
     return MovieLoadResponse(
