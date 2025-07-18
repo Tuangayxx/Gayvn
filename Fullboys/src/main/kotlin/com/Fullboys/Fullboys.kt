@@ -107,22 +107,9 @@ class Fullboys : MainAPI() {
         val recUrl = fixUrl(aTag.attr("href"))
         val recName = aTag.attr("title") ?: aTag.selectFirst("h2.title")?.text() ?: return@mapNotNull null
         val recPoster = aTag.selectFirst("img")?.attr("src")
-            newMovieSearchResponse( recName, recUrl,TvType.NSFW )
+            
+    return  newMovieSearchResponse( recName, recUrl,TvType.NSFW )
             {this.posterUrl = recPoster}
-    }
-
-    return MovieLoadResponse(
-        name = name,
-        url = url,
-        apiName = this.name,
-        type = TvType.NSFW,
-        dataUrl = videoUrl,
-        posterUrl = poster,
-        plot = description,
-        tags = tags
-    ).apply {
-        this.recommendations = recommendations
-        // Nếu muốn, có thể thêm previews vào 1 trường custom nếu app hỗ trợ
     }
 }
     
