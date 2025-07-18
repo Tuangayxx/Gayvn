@@ -58,7 +58,7 @@ class Icegay : MainAPI() {
         }
         val document = app.get(url).document
         val home =
-                document.select("div.b-thumb-list__wrap div.b-thumb-item js-thumb")
+                document.select("div.wrapper div.b-head margin-10b f-left")
                         .mapNotNull {
                             it.toSearchResult()
                         }
@@ -71,7 +71,7 @@ class Icegay : MainAPI() {
                 hasNext = true
         )
     }
-
+x
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("h2.b-thumb-item__title")?.text() ?: return null
         val href = fixUrl(this.selectFirst("a.js-gallery-stats js-gallery-link")!!.attr("href"))
