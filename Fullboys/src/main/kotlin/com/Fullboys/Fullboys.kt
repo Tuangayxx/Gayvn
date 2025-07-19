@@ -52,16 +52,14 @@ class Fullboys : MainAPI() {
     private fun toSearchItem(element: Element): SearchResponse? {
         val aTag = element.selectFirst("a") ?: return null
         val url = fixUrl(aTag.attr("href"))
-        val name = aTag.selectFirst("h2.title")?.text() ?: return null
+        val title = aTag.selectFirst("h2.title")?.text() ?: return null
 
         val posterUrl = aTag.selectFirst(".image-container img")?.attr("src") ?: return null
 
-         return newMovieSearchResponse(
-            name = name,
-            url = url,
-            posterUrl = posterUrl
-            type = TvType.NSFW
-        )
+         return newMovieSearchResponse(title,url,TvType.NSFW){
+            element.posterUrl = posterUrl
+         }
+        
     }
 
 
