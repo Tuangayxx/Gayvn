@@ -37,7 +37,7 @@ class Fullboys : MainAPI() {
         val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
         val document = app.get(pageUrl).document
 
-        val items = document.select("article.movie-item").mapNotNull { it.toSearchResult }
+        val items = document.select("article.movie-item").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             HomePageList(
@@ -51,13 +51,11 @@ class Fullboys : MainAPI() {
 
     private fun Element.toSearchResult() : SearchResponse? {
         val title = this.selectFirst("h2.title")?.text() ?: return null
-        val href  = fixUrlNull(this.selectFirst("a")?.attr("href").toString())
+        val href  = fixUrlNull(this.selectFirst("a")?.attr("href")
         val posterUrl = fixUrlNull(this.selectFirst("a > div.image-container > img")?.attr("src"))
-        val duration = this.selectFirst("span.duration")?.text()
 
-         return newMovieSearchResponse(title,href,TvType.NSFW){
+         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
-            this.duration = duration
          }    
     }
 
