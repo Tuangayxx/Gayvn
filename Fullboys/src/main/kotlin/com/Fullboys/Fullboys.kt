@@ -72,7 +72,7 @@ class Fullboys : MainAPI() {
     }
 
 
-    override suspend fun load(url: String): LoadResponse ? {
+    override suspend fun load(url: String): MovieSearchResponse {
     val doc = app.get(url).document
 
     // Lấy tên video
