@@ -22,6 +22,7 @@ class Fullboys : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
+        ""                         to "Mới nhất",
         "/topic/video/muscle"      to "Muscle",
         "/topic/video/korean"      to "Korean",
         "/topic/video/japanese"    to "Japanese",
@@ -58,6 +59,7 @@ class Fullboys : MainAPI() {
          return newMovieSearchResponse(
             name = name,
             url = url,
+            image = image
             type = TvType.NSFW
         )
     }
