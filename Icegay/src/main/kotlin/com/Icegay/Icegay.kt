@@ -43,7 +43,6 @@ class Icegay : MainAPI() {
             "channels/twink-trade"    to "Twink Trade"
     )
 
-    override suspend fun getMainPage(
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
             "${request.data}page/$page/"
@@ -63,12 +62,10 @@ class Icegay : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("a.title")?.text() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.select("div.img").attr("data-src"))
+        val posterUrl = fixUrlNull(this.select("source").attr("srcset"))
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
-            this.posterHeaders = mapOf(Pair("referer", "${mainUrl}/"))
         }
-
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
