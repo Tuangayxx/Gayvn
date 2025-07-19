@@ -54,7 +54,7 @@ class Fullboys : MainAPI() {
         val href  = fixUrlNull(this.selectFirst("a")?.attr("href"))
         val posterUrl = fixUrlNull(this.selectFirst("a > div.image-container > img")?.attr("src"))
 
-         return newMovieSearchResponse(title, href, TvType.NSFW) {
+         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
          }    
     }
@@ -63,7 +63,7 @@ class Fullboys : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/home?search=$query"
         val document = app.get(url).document
-        return document.select("article.movie-item").mapNotNull { toSearchItem(it) }
+        return document.select("article.movie-item").mapNotNull { it.toSearchResult }
     }
 
 
