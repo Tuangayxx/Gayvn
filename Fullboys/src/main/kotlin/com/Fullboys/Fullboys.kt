@@ -111,6 +111,7 @@ class Fullboys : MainAPI() {
     return  newMovieSearchResponse( recName, recUrl,TvType.NSFW ) {
             this.posterUrl = recPoster}
     }
+    return true
 }
     
     override suspend fun loadLinks(
