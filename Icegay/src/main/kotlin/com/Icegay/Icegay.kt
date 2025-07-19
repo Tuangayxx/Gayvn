@@ -44,31 +44,19 @@ class Icegay : MainAPI() {
     )
 
     override suspend fun getMainPage(
-            page: Int,
-            request: MainPageRequest
-    ): HomePageResponse {
-        var url: String
-        url = if (page == 1) {
-            "$mainUrl/${request.data}/"
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (page > 1) {
+            "${request.data}page/$page/"
         } else {
-            "$mainUrl/${request.data}/${page}/"
+            request.data
         }
-        if (request.data.contains("mode=async")) {
-            url = "$mainUrl/${request.data}${page}"
-        }
+
         val document = app.get(url).document
-        val home =
-                document.select("div.b-thumb-item")
-                        .mapNotNull {
-                            it.toSearchResult()
-                        }
+        val responseList = document.select(".b-thumb-item js-thumb").mapNotNull { it.toSearchResult() }
+
         return newHomePageResponse(
-                list = HomePageList(
-                        name = request.name,
-                        list = home,
-                        isHorizontalImages = true
-                ),
-                hasNext = true
+            HomePageList(request.name, responseList, isHorizontalImages = true),
+            hasNext = responseList.isNotEmpty()
         )
     }
     
