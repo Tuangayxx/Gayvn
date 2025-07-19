@@ -52,7 +52,7 @@ class Fullboys : MainAPI() {
     private fun Element.toSearchResult() : SearchResponse? {
         val title = this.selectFirst("h2.title")?.text() ?: return null
         val href  = fixUrlNull(this.selectFirst("a")?.attr("href")) ?: return null
-        val posterUrl = fixUrlNull(this.selectFirst("a > div.image-container > img")?.attr("src"))
+        val posterUrl = fixUrlNull(this.selectFirst("img.fix-w")?.attr("src"))
 
          return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
