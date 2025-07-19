@@ -71,7 +71,7 @@ class Icegay : MainAPI() {
                 hasNext = true
         )
     }
-x
+    
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("a.title")?.text() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
