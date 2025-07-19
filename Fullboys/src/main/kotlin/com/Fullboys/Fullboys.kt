@@ -76,7 +76,7 @@ class Fullboys : MainAPI() {
     val doc = app.get(url).document
 
     // Lấy tên video
-    val name = doc.selectFirst("h1.title-detail")?.text()?.trim() ?: return null
+    val name = doc.selectFirst("h1.title-detail")?.text()?.trim() ?: ""
 
     // Lấy link video từ iframe
     val iframeSrc = doc.selectFirst("iframe#ifvideo")?.attr("src")
