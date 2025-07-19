@@ -59,7 +59,7 @@ class Fullboys : MainAPI() {
          return newMovieSearchResponse(
             name = name,
             url = url,
-            image = image
+            posterUrl = image
             type = TvType.NSFW
         )
     }
