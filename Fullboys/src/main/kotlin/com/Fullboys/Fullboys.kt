@@ -72,11 +72,11 @@ class Fullboys : MainAPI() {
     }
 
 
-    override suspend fun load(url: String): LoadResponse {
+    override suspend fun load(url: String): LoadResponse? {
     val doc = app.get(url).document
 
     // Lấy tên video
-    val name = doc.selectFirst("h1.title-detail")?.text()?.trim() ?: ""
+    val name = doc.selectFirst("h1.title-detail")?.text()?.trim() ?: return null
 
     // Lấy link video từ iframe
     val iframeSrc = doc.selectFirst("iframe#ifvideo")?.attr("src")
@@ -108,11 +108,17 @@ class Fullboys : MainAPI() {
         val recName = aTag.attr("title") ?: aTag.selectFirst("h2.title")?.text() ?: return@mapNotNull null
         val recPoster = aTag.selectFirst("img")?.attr("src")
             
-    return  newMovieLoadResponse( recName, recUrl,TvType.NSFW ) {
+    return  newMovieSearchResponse( recName, recUrl,TvType.NSFW ) {
             this.posterUrl = recPoster}
         }
+    return  newMovieLoadResponse(name, url,TvType.NSFW){
+            posterUrl=poster   }
+    apply {
+        this.recommendations = recommendations
+    }
     }
     
+
     override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
