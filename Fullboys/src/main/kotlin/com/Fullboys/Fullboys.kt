@@ -14,7 +14,7 @@ class Fullboys : MainAPI() {
     override var mainUrl = "https://fullboys.com"
     override var name = "Fullboys"
     override val hasMainPage = true
-    override var lang = "en"
+    override var lang = "vi"
     override val hasQuickSearch = false
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
@@ -53,9 +53,7 @@ class Fullboys : MainAPI() {
         val url = fixUrl(aTag.attr("href"))
         val name = aTag.selectFirst("h2.title")?.text() ?: return null
 
-        val image = aTag.selectFirst("img")?.let {
-            it.attr("data-cfsrc").takeIf { src -> src.isNotBlank() } ?: it.attr("src")
-        } ?: return null
+        val image = aTag.selectFirst("img")?.attr("src") ?: return null
 
          return newMovieSearchResponse(
             name = name,
