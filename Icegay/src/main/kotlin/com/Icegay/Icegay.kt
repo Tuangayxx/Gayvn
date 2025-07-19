@@ -58,7 +58,7 @@ class Icegay : MainAPI() {
         }
         val document = app.get(url).document
         val home =
-                document.select("div.wrapper div.b-head margin-10b f-left")
+                document.select("div.b-thumb-item")
                         .mapNotNull {
                             it.toSearchResult()
                         }
@@ -73,9 +73,9 @@ class Icegay : MainAPI() {
     }
 x
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("h2.b-thumb-item__title")?.text() ?: return null
-        val href = fixUrl(this.selectFirst("a.js-gallery-stats js-gallery-link")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.select("div.b-thumb-item__img img").attr("data-src"))
+        val title = this.selectFirst("a.title")?.text() ?: return null
+        val href = fixUrl(this.selectFirst("a")!!.attr("href"))
+        val posterUrl = fixUrlNull(this.select("div.img").attr("data-src"))
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.posterHeaders = mapOf(Pair("referer", "${mainUrl}/"))
@@ -94,7 +94,7 @@ x
             val document =
                     app.get(url).document
             val results =
-                    document.select("div.b-thumb-list__wrap div.b-thumb-item js-thumb")
+                    document.select("div.b-thumb-item")
                             .mapNotNull {
                                 it.toSearchResult()
                             }
