@@ -72,7 +72,7 @@ class Fullboys : MainAPI() {
     }
 
 
-    override suspend fun load(url: String): LoadResponse? {
+    override suspend fun load(url: String): LoadResponse ? {
     val doc = app.get(url).document
 
     // Lấy tên video
@@ -108,8 +108,8 @@ class Fullboys : MainAPI() {
         val recName = aTag.attr("title") ?: aTag.selectFirst("h2.title")?.text() ?: return@mapNotNull null
         val recPoster = aTag.selectFirst("img")?.attr("src")
             
-    return  newMovieSearchResponse( recName, recUrl,TvType.NSFW )
-            {this.posterUrl = recPoster}
+    return  newMovieSearchResponse( recName, recUrl,TvType.NSFW ) {
+            this.posterUrl = recPoster}
     }
 }
     
