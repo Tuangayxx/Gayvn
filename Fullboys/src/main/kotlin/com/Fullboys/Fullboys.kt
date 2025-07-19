@@ -31,6 +31,7 @@ class Fullboys : MainAPI() {
         "/topic/video/philippines" to "Philippines",
         "/topic/video/thailand"    to "Thái Lan",
         "/topic/video/group"       to "Tập thể",
+        "/vip"                     to "VIP",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
