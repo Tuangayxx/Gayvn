@@ -51,7 +51,7 @@ class Fullboys : MainAPI() {
 
     private fun Element.toSearchResult() : SearchResponse? {
         val title = this.selectFirst("h2.title")?.text() ?: return null
-        val href  = fixUrlNull(this.selectFirst("a")?.attr("href"))
+        val href  = fixUrlNull(this.selectFirst("a")?.attr("href")) return null
         val posterUrl = fixUrlNull(this.selectFirst("a > div.image-container > img")?.attr("src"))
 
          return newMovieSearchResponse(title, href, TvType.Movie) {
@@ -63,7 +63,7 @@ class Fullboys : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/home?search=$query"
         val document = app.get(url).document
-        return document.select("article.movie-item").mapNotNull { it.toSearchResult }
+        return document.select("article.movie-item").mapNotNull { it.toSearchResult() }
     }
 
 
