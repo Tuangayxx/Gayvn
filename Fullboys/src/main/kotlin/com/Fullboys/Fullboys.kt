@@ -83,10 +83,9 @@ class Fullboys : MainAPI() {
     val videoUrl = iframeSrc?.let {
         Regex("[?&]video=([^&]+)").find(it)?.groupValues?.getOrNull(1)
     }?.let { java.net.URLDecoder.decode(it, "UTF-8") }
-
     if (videoUrl.isNullOrBlank()) return null
 
-    // Lấy poster từ meta hoặc param poster trên iframe
+    // Lấy poster: từ meta hoặc từ tham số poster trên iframe
     val poster = doc.selectFirst("meta[property=og:image]")?.attr("content")
         ?: iframeSrc?.let {
             Regex("[?&]poster=([^&]+)").find(it)?.groupValues?.getOrNull(1)
@@ -98,25 +97,27 @@ class Fullboys : MainAPI() {
     // Tags
     val tags = doc.select("div.video-tags a").map { it.text().trim() }
 
-    // Gợi ý: lấy ảnh preview (nếu muốn)
+    // Previews (nếu có)
     val previews = doc.select("img.preview-image").map { it.attr("src") }
 
-    // Gợi ý: lấy video liên quan
+    // Gợi ý: video liên quan
     val recommendations = doc.select("article.movie-item").mapNotNull { el ->
         val aTag = el.selectFirst("a") ?: return@mapNotNull null
         val recUrl = fixUrl(aTag.attr("href"))
         val recName = aTag.attr("title") ?: aTag.selectFirst("h2.title")?.text() ?: return@mapNotNull null
         val recPoster = aTag.selectFirst("img")?.attr("src")
-            
-    return  newMovieSearchResponse( recName, recUrl,TvType.NSFW ) {
-            this.posterUrl = recPoster}
+        newMovieSearchResponse(recName, recUrl, TvType.NSFW) {
+            this.posterUrl = recPoster
         }
-    return  newMovieLoadResponse(name, url,TvType.NSFW){
-            posterUrl=poster   }
-    apply {
-        this.recommendations = recommendations
     }
+
+    // Chỉ trả về LoadResponse (newMovieLoadResponse) với đủ tham số, gồm dataUrl (ở đây sử dụng url)
+    return newMovieLoadResponse(name, url, TvType.NSFW, url) {
+        posterUrl = poster
+        plot = description
+        // Nếu cần, bạn có thể gán tags, previews vào các thuộc tính khác tại đây.
     }
+}
     
 
     override suspend fun loadLinks(
