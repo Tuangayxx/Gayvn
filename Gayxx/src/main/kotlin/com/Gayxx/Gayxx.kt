@@ -53,7 +53,7 @@ class Gayxx : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse {
         val title = this.select("a").attr("title")
         val href = fixUrl(this.select("a").attr("href"))
-        val posterUrl = fixUrlNull(this.select("img").attr("src"))
+        val posterUrl = fixUrlNull(this.select("img").attr("data-src"))
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
