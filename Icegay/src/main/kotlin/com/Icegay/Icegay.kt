@@ -85,25 +85,26 @@ class Icegay : MainAPI() {
     }
 }
 
-override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val response = app.get(data)
-    val html = response.text
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val response = app.get(data)
+        val html = response.text
 
-    val sourcesRegex = Regex("""var\s+sources\s*=\s*(\[[\s\S]*?]);""")
-    val match = sourcesRegex.find(html) ?: return false
-    val sourcesJsonText = match.groupValues[1].replace("\\/", "/").trim()
+        val sourcesRegex = Regex("""var\s+sources\s*=\s*(\[[\s\S]*?]);""")
+        val match = sourcesRegex.find(html) ?: return false
+        val sourcesJsonText = match.groupValues[1].replace("\\/", "/").trim()
 
-    val sourcesArray = JSONArray(sourcesJsonText)
-    val extlinkList = mutableListOf<ExtractorLink>()
+        val sourcesArray = JSONArray(sourcesJsonText)
+        val extlinkList = mutableListOf<ExtractorLink>()
 
-    for (i in 0 until sourcesArray.length()) {
+        for (i in 0 until sourcesArray.length()) {
         val source = sourcesArray.getJSONObject(i)
-        val videoUrl = source.optString("src") ?: continue
+        val rawUrl = source.optString("src") ?: continue
+        val videoUrl = rawUrl.replace("\\/", "/")
         val qualityLabel = source.optString("desc", "Unknown")
         val isHls = source.optBoolean("hls", false)
 
@@ -124,7 +125,6 @@ override suspend fun loadLinks(
             }
         )
     }
-
     extlinkList.forEach(callback)
     return extlinkList.isNotEmpty()
 }
