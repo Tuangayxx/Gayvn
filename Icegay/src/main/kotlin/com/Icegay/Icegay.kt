@@ -5,11 +5,13 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
+import org.json.JSONArray
 import org.jsoup.Jsoup
 import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
 
 class Icegay : MainAPI() {
+    private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
     override var mainUrl = "https://www.boyfriendtv.com"
     override var name = "Boyfriendtv"
     override val hasMainPage = true
@@ -22,9 +24,6 @@ class Icegay : MainAPI() {
             "/search/?q=Vietnamese"     to "Newest",
             "/search/?q=asian&hot="      to "Asian",
     )
-
-    private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
@@ -117,8 +116,7 @@ override suspend fun loadLinks(
                     newExtractorLink(
                         source = name,
                         name = "BoyfriendTV [$qualityLabel]",
-                        url = videoUrl,
-                        isM3u8 = isHls
+                        url = videoUrl
                     ) {
                         this.referer = "https://www.boyfriendtv.com/"
                         this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)

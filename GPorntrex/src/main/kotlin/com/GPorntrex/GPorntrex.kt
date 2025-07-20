@@ -20,6 +20,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.json.JSONObject
+import org.json.JSONArray
 import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
 
