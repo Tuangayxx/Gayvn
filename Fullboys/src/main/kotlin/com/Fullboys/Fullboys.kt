@@ -24,7 +24,7 @@ class Fullboys : MainAPI() {
     override val mainPage = mainPageOf(
         "/"                         to "Mới nhất",
         "/topic/video/muscle"      to "Muscle",
-        "/topic/video/china"       to "Chinese"
+        "/topic/video/china"       to "Chinese",
         "/topic/video/korean"      to "Korean",
         "/topic/video/japanese"    to "Japanese",
         "/topic/video/taiwanese"   to "Taiwanese",
