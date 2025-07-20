@@ -94,50 +94,45 @@ override suspend fun loadLinks(
     val response = app.get(data)
     val html = response.text
 
-    // Tìm nguồn video trong HTML
-    val sourcesRegex = Regex("""var\s+sources\s*=\s*(\[[\s\S]*?\]);""")
+    // Lấy mảng sources từ embed
+    val sourcesRegex = Regex("""var\s+sources\s*=\s*(\[[\s\S]*?]);""")
     val match = sourcesRegex.find(html) ?: return false
-
     val sourcesJsonText = match.groupValues[1]
-        .replace(Regex("/\\*.*?\\*/"), "") // Loại bỏ comment
+        .replace(Regex("/\\*.*?\\*/"), "") // remove comments
+        .replace("\\/", "/") // unescape slashes
         .trim()
 
-    try {
-        val sourcesArray = JSONArray(sourcesJsonText)
-        val extlinkList = mutableListOf<ExtractorLink>()
-        
-        // Duyệt qua tất cả các nguồn video
-        for (i in 0 until sourcesArray.length()) {
-            val source = sourcesArray.getJSONObject(i)
-            val videoUrl = fixUrl(source.getString("src")).replace("\\/", "/")
-            val qualityLabel = source.optString("desc", "Unknown")
-            val isHls = source.optBoolean("hls", false)
+    val sourcesArray = JSONArray(sourcesJsonText)
+    val extlinkList = mutableListOf<ExtractorLink>()
 
-            if (videoUrl.isNotEmpty()) {
-                extlinkList.add(
-                    newExtractorLink(
-                        source = name,
-                        name = "BoyfriendTV [$qualityLabel]",
-                        url = videoUrl
-                    ) {
-                        this.referer = "https://www.boyfriendtv.com/"
-                        this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)
-                            ?.toIntOrNull() ?: Qualities.Unknown.value
-                            
-                        this.headers = mapOf(
-                            "User-Agent" to USER_AGENT,
-                            "Origin" to "https://www.boyfriendtv.com",
-                            "Referer" to "https://www.boyfriendtv.com/"
-                        )
-                    }
-                )
-            }
+    for (i in 0 until sourcesArray.length()) {
+        val source = sourcesArray.getJSONObject(i)
+        val videoUrl = fixUrl(source.getString("src"))
+        val qualityLabel = source.optString("desc", "Unknown")
+        val isHls = source.optBoolean("hls", false)
+
+        if (videoUrl.isNotEmpty()) {
+            extlinkList.add(
+                newExtractorLink(
+                    source = name,
+                    name = "BoyfriendTV [$qualityLabel]",
+                    url = videoUrl,
+                    type = if (isHls || videoUrl.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
+                ) {
+                    this.referer = "https://www.boyfriendtv.com/"
+                    this.isM3u8 = isHls || videoUrl.contains(".m3u8")
+                    this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)?.toIntOrNull() ?: -1
+                    this.headers = mapOf(
+                        "User-Agent" to USER_AGENT,
+                        "Origin" to "https://www.boyfriendtv.com",
+                        "Referer" to "https://www.boyfriendtv.com/"
+                    )
+                }
+            )
         }
-        
-        extlinkList.forEach(callback)
-        return extlinkList.isNotEmpty()
-    } catch (e: Exception) {
-        return false
     }
+
+    extlinkList.forEach(callback)
+    return extlinkList.isNotEmpty()
 }
 }
