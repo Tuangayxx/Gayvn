@@ -84,18 +84,6 @@ class Icegay : MainAPI() {
     }
 }
 
-
-fun getIndexQuality(label: String?): Int {
-    return when {
-        label == null -> -1
-        label.contains("1080", true) -> 1080
-        label.contains("720", true) -> 720
-        label.contains("480", true) -> 480
-        label.contains("360", true) -> 360
-        else -> -1
-    }
-}
-
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -112,30 +100,37 @@ override suspend fun loadLinks(
     val embedPage = app.get(embedUrl, referer = data).text
 
     // Regex tìm đoạn JS chứa biến sources = [...]
-    val sourcesJsonText = Regex("""var sources\s*=\s*(\[\{.*?}]);""", RegexOption.DOT_MATCHES_ALL)
+    val sourcesJsonText = Regex("""var\s+sources\s*=\s*(\[\{.*?}]);""", RegexOption.DOT_MATCHES_ALL)
         .find(embedPage)
         ?.groupValues?.get(1)
         ?: return false
 
+    // Parse JSON array
     val sourcesArray = JSONArray(sourcesJsonText)
+    val extlinkList = mutableListOf<ExtractorLink>()
 
     for (i in 0 until sourcesArray.length()) {
         val source = sourcesArray.getJSONObject(i)
-        val qualityLabel = source.optString("desc") ?: ""
-        val isHls = source.optBoolean("hls", false)
         val videoUrl = fixUrl(source.getString("src"))
+        val qualityLabel = source.optString("desc")
+        val isHls = source.optBoolean("hls", false)
 
-        callback(
+        extlinkList.add(
             newExtractorLink(
                 source = name,
                 name = "BoyfriendTV [$qualityLabel]",
-                url = videoUrl
+                url = videoUrl,
+                type = if (videoUrl.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
             ) {
                 this.referer = embedUrl
-                this.quality = getIndexQuality(qualityLabel)
+                this.isM3u8 = isHls
+                this.quality = qualityLabel.filter { it.isDigit() }.toIntOrNull() ?: -1
             }
         )
     }
-    return true
+
+    // Trả kết quả qua callback
+    extlinkList.forEach(callback)
+    return extlinkList.isNotEmpty()
 }
 }
