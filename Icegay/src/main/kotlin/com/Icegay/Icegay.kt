@@ -129,12 +129,10 @@ override suspend fun loadLinks(
             newExtractorLink(
                 source = name,
                 name = "BoyfriendTV [$qualityLabel]",
-                url = videoUrl,
-                type = if (videoUrl.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
+                url = videoUrl
             ) {
                 this.referer = embedUrl
                 this.quality = getIndexQuality(qualityLabel)
-                this.isM3u8 = isHls || videoUrl.contains(".m3u8")
             }
         )
     }
