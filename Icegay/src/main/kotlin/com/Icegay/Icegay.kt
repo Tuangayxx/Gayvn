@@ -4,6 +4,7 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.extractors.ExtractorLink
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.internal.StringUtil
@@ -84,7 +85,7 @@ class Icegay : MainAPI() {
 }
 
 
-    fun getIndexQuality(label: String?): Int {
+fun getIndexQuality(label: String?): Int {
     return when {
         label == null -> -1
         label.contains("1080", true) -> 1080
@@ -94,7 +95,6 @@ class Icegay : MainAPI() {
         else -> -1
     }
 }
-
 
 override suspend fun loadLinks(
     data: String,
@@ -117,21 +117,20 @@ override suspend fun loadLinks(
         ?.groupValues?.get(1)
         ?: return false
 
-    // Parse JSON array
     val sourcesArray = JSONArray(sourcesJsonText)
 
     for (i in 0 until sourcesArray.length()) {
         val source = sourcesArray.getJSONObject(i)
-        var videoUrl = fixUrl(source.getString("src"))
         val qualityLabel = source.optString("desc") ?: ""
         val isHls = source.optBoolean("hls", false)
+        val videoUrl = fixUrl(source.getString("src"))
 
         callback(
             newExtractorLink(
                 source = name,
                 name = "BoyfriendTV [$qualityLabel]",
                 url = videoUrl,
-                type = if (url.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
+                type = if (videoUrl.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
             ) {
                 this.referer = embedUrl
                 this.quality = getIndexQuality(qualityLabel)
@@ -140,5 +139,5 @@ override suspend fun loadLinks(
         )
     }
     return true
-    }
+}
 }
