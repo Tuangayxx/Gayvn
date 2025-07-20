@@ -22,9 +22,16 @@ class BoyfriendTV : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-            ""                          to "Home",
-            "/search/?q=Vietnamese"     to "Newest",
-            "/search/?q=asian&hot="      to "Asian",
+            ""                                           to "Trending",
+            "/?filter_quality=hd&s=&sort=newest"         to "Mới nhất",
+            "/?filter_quality=hd&s=&sort=most-popular"   to "Phổ biến",
+            "/search/?q=Vietnamese"                      to "Việt Nam",
+            "/search/?q=asian&hot="                      to "Asian",
+            "/?filter_quality=hd&s=&sort=most-popular"   to "Phổ biến",
+            "/search/?q=chinese&hot=&quality=hd"         to "Tung Của",
+            "/tags/brazilian/?filter_quality=hd"         to "Bờ ra sin",
+            "/tags/gangbang/?filter_quality=hd"          to "Chịch tập thể",
+            "/tags/latinos/?filter_quality=hd"           to "Mỹ da màu",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
