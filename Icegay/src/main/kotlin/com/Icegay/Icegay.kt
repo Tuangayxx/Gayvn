@@ -1,27 +1,15 @@
 package com.Icegay
 
-import com.lagradost.cloudstream3.HomePageList
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.LoadResponse
-import com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.MainPageRequest
-import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.VPNStatus
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.fixUrl
-import com.lagradost.cloudstream3.fixUrlNull
-import com.lagradost.cloudstream3.mainPageOf
-import com.lagradost.cloudstream3.newHomePageResponse
-import com.lagradost.cloudstream3.newMovieLoadResponse
-import com.lagradost.cloudstream3.newMovieSearchResponse
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.newExtractorLink
+import android.util.Log
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
+import org.jsoup.Jsoup
 import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
+import org.json.JSONArray
+
 
 class Icegay : MainAPI() {
     override var mainUrl = "https://www.boyfriendtv.com"
@@ -98,12 +86,12 @@ class Icegay : MainAPI() {
 
     fun getIndexQuality(label: String?): Int {
     return when {
-        label == null -> Qualities.Unknown.value
-        label.contains("1080", true) -> Qualities.P1080.value
-        label.contains("720", true) -> Qualities.P720.value
-        label.contains("480", true) -> Qualities.P480.value
-        label.contains("360", true) -> Qualities.P360.value
-        else -> Qualities.Unknown.value
+        label == null -> -1
+        label.contains("1080", true) -> 1080
+        label.contains("720", true) -> 720
+        label.contains("480", true) -> 480
+        label.contains("360", true) -> 360
+        else -> -1
     }
 }
 
@@ -134,7 +122,7 @@ override suspend fun loadLinks(
 
     for (i in 0 until sourcesArray.length()) {
         val source = sourcesArray.getJSONObject(i)
-        val videoUrl = fixUrl(source.getString("src"))
+        var videoUrl = fixUrl(source.getString("src"))
         val qualityLabel = source.optString("desc") ?: ""
         val isHls = source.optBoolean("hls", false)
 
@@ -143,7 +131,7 @@ override suspend fun loadLinks(
                 source = name,
                 name = "BoyfriendTV [$qualityLabel]",
                 url = videoUrl,
-                type = INFER_TYPE
+                type = if (url.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
             ) {
                 this.referer = embedUrl
                 this.quality = getIndexQuality(qualityLabel)
