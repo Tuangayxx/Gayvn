@@ -108,22 +108,24 @@ class Icegay : MainAPI() {
         val qualityLabel = source.optString("desc", "Unknown")
         val isHls = source.optBoolean("hls", false)
 
-        extlinkList.add(
-            newExtractorLink(
-                source = name,
-                name = "BoyfriendTV [$qualityLabel]",
-                url = videoUrl
-            ) {
-                this.referer = "https://www.boyfriendtv.com/"
-                this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)?.toIntOrNull() ?: -1
-                this.isM3u8 = isHls || videoUrl.contains(".m3u8")
-                this.headers = mapOf(
-                    "User-Agent" to USER_AGENT,
-                    "Origin" to "https://www.boyfriendtv.com",
-                    "Referer" to "https://www.boyfriendtv.com/"
-                )
-            }
-        )
+            extlinkList.add(
+        newExtractorLink(
+            source = name,
+            name = "BoyfriendTV [$qualityLabel]",
+            url = videoUrl
+        ) {
+            this.referer = "https://www.boyfriendtv.com/"
+            this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)?.toIntOrNull()
+                ?: Qualities.Unknown.value
+            this.isM3u8 = isHls || videoUrl.contains(".m3u8")
+            this.headers = mapOf(
+                "User-Agent" to USER_AGENT,
+                "Origin" to "https://www.boyfriendtv.com",
+                "Referer" to "https://www.boyfriendtv.com/"
+            )
+        }
+    )
+
     }
     extlinkList.forEach(callback)
     return extlinkList.isNotEmpty()
