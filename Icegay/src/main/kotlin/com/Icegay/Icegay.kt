@@ -96,50 +96,59 @@ class Icegay : MainAPI() {
 }
 
 
-    override suspend fun loadLinks(
-            data: String,
-            isCasting: Boolean,
-            subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val document = app.get(data).document
-
-        val jsonObject = JSONObject(document.selectXpath("//script[contains(text(),'var flashvars')]").first()?.data()
-                ?.substringAfter("var flashvars = ")
-                ?.substringBefore("var player_obj")
-                ?.replace(";", "") ?: "")
-        val extlinkList = mutableListOf<ExtractorLink>()
-        for (i in 0 until 7) {
-            var url: String
-            var quality: String
-            if (i == 0) {
-                url = jsonObject.optString("video_url") ?: ""
-                quality = jsonObject.optString("video_url_text") ?: ""
-            } else {
-                if (i == 1) {
-                    url = jsonObject.optString("video_alt_url") ?: ""
-                    quality = jsonObject.optString("video_alt_url_text") ?: ""
-                } else {
-                    url = jsonObject.optString("video_alt_url${i}") ?: ""
-                    quality = jsonObject.optString("video_alt_url${i}_text") ?: ""
-                }
-            }
-            if (url == "") {
-                continue
-            }
-            extlinkList.add(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = fixUrl(url)
-                ) {
-                    this.referer = data
-                    this.quality = Regex("(\\d+.)").find(quality)?.groupValues?.get(1)
-                        .let { getQualityFromName(it) }
-                }
-            )
-        }
-        extlinkList.forEach(callback)
-        return true
+    fun getQualityFromName(label: String?): Int {
+    return when {
+        label == null -> Qualities.Unknown.value
+        label.contains("1080", true) || label.equals("Hd", true) -> Qualities.P1080.value
+        label.contains("720", true) || label.equals("High", true) -> Qualities.P720.value
+        label.contains("480", true) || label.equals("Low", true) -> Qualities.P480.value
+        label.contains("360", true) -> Qualities.P360.value
+        else -> Qualities.Unknown.value
     }
+}
+
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+
+    // Lấy embedUrl từ JSON-LD
+    val ldJson = JSONObject(document.selectFirst("script[type=application/ld+json]")?.data() ?: return false)
+    val embedUrl = fixUrl(ldJson.optString("embedUrl") ?: return false)
+
+    // Truy cập embed page
+    val embedDoc = app.get(embedUrl, referer = data).document
+
+    // Lấy script chứa setVideoUrlX()
+    val script = embedDoc.selectFirst("script:containsData(setVideoUrl)")?.data() ?: return false
+
+    // Regex bắt các dòng video
+    val regex = Regex("""setVideoUrl(\w+)\(['"](.+?)['"]\)""")
+    val matches = regex.findAll(script)
+
+    // Duyệt từng video chất lượng
+    matches.forEach { match ->
+        val label = match.groupValues[1] // Low, High, Hd, etc.
+        val url = match.groupValues[2]
+
+        callback(
+            newExtractorLink(
+                source = name,
+                name = "BoyfriendTV [$label]",
+                url = fixUrl(url),
+                type = INFER_TYPE
+            ) {
+                this.referer = embedUrl
+                this.quality = getQualityFromName(label)
+                this.isM3u8 = url.endsWith(".m3u8")
+            }
+        )
+    }
+
+    return true
+}
+
 }
