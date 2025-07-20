@@ -96,16 +96,17 @@ class Icegay : MainAPI() {
 }
 
 
-    fun getQualityFromName(label: String?): Int {
+    fun getIndexQuality(label: String?): Int {
     return when {
         label == null -> Qualities.Unknown.value
-        label.contains("1080", true) || label.equals("Hd", true) -> Qualities.P1080.value
-        label.contains("720", true) || label.equals("High", true) -> Qualities.P720.value
-        label.contains("480", true) || label.equals("Low", true) -> Qualities.P480.value
+        label.contains("1080", true) -> Qualities.P1080.value
+        label.contains("720", true) -> Qualities.P720.value
+        label.contains("480", true) -> Qualities.P480.value
         label.contains("360", true) -> Qualities.P360.value
         else -> Qualities.Unknown.value
     }
 }
+
 
 override suspend fun loadLinks(
     data: String,
@@ -120,35 +121,36 @@ override suspend fun loadLinks(
     val embedUrl = fixUrl(ldJson.optString("embedUrl") ?: return false)
 
     // Truy cập embed page
-    val embedDoc = app.get(embedUrl, referer = data).document
+    val embedPage = app.get(embedUrl, referer = data).text
 
-    // Lấy script chứa setVideoUrlX()
-    val script = embedDoc.selectFirst("script:containsData(setVideoUrl)")?.data() ?: return false
+    // Regex tìm đoạn JS chứa biến sources = [...]
+    val sourcesJsonText = Regex("""var sources\s*=\s*(\[\{.*?}]);""", RegexOption.DOT_MATCHES_ALL)
+        .find(embedPage)
+        ?.groupValues?.get(1)
+        ?: return false
 
-    // Regex bắt các dòng video
-    val regex = Regex("""setVideoUrl(\w+)\(['"](.+?)['"]\)""")
-    val matches = regex.findAll(script)
+    // Parse JSON array
+    val sourcesArray = JSONArray(sourcesJsonText)
 
-    // Duyệt từng video chất lượng
-    matches.forEach { match ->
-        val label = match.groupValues[1] // Low, High, Hd, etc.
-        val url = match.groupValues[2]
+    for (i in 0 until sourcesArray.length()) {
+        val source = sourcesArray.getJSONObject(i)
+        val videoUrl = fixUrl(source.getString("src"))
+        val qualityLabel = source.optString("desc") ?: ""
+        val isHls = source.optBoolean("hls", false)
 
         callback(
             newExtractorLink(
                 source = name,
-                name = "BoyfriendTV [$label]",
-                url = fixUrl(url),
+                name = "BoyfriendTV [$qualityLabel]",
+                url = videoUrl,
                 type = INFER_TYPE
             ) {
                 this.referer = embedUrl
-                this.quality = getQualityFromName(label)
-                this.isM3u8 = url.endsWith(".m3u8")
+                this.quality = getIndexQuality(qualityLabel)
+                this.isM3u8 = isHls || videoUrl.contains(".m3u8")
             }
         )
     }
-
     return true
-}
-
+    }
 }
