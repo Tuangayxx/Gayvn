@@ -122,23 +122,34 @@ class Fxggxt : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
+    val document = app.get(data, headers = mapOf(
+    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Referer" to "https://fxggxt.com/"
+)).document
+        
+    val document = app.get(data, headers = mapOf(
+        "User-Agent" -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Referer" -> "https://fxggxt.com/"
+    )).document
     
-    // Sửa selector chính xác
     val videoUrl = document.selectFirst("meta[itemprop=embedURL]")?.attr("content") 
         ?: return false
     
-    // Lấy tiêu đề video cho tên link
     val title = document.selectFirst("meta[itemprop=name]")?.attr("content") 
         ?: "FXGGXT Video"
 
     callback.invoke(
         newExtractorLink(
             source = this.name,
-            name = title,  // Sử dụng tên thực tế
+            name = title,
             url = videoUrl,
-            referer = "https://fxggxt.com/",  // Thêm referer
         ) {
+            // Thiết lập referer và headers tại đây
+            this.referer = "https://fxggxt.com/"
+            this.headers = mapOf(
+                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+                "Referer" to "https://fxggxt.com/"
+            )
             this.quality = Qualities.Unknown.value
         }
     )
