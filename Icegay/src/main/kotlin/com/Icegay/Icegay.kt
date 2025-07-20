@@ -113,8 +113,7 @@ class Icegay : MainAPI() {
         source = name,
         name = "BoyfriendTV [$qualityLabel]",
         url = videoUrl,
-        type = ExtractorLinkType.VIDEO,
-        isM3u8 = isHls || videoUrl.contains(".m3u8") // Truyền trực tiếp giá trị isM3u8 vào constructor
+        type = ExtractorLinkType.VIDEO
     ) {
         this.referer = "https://www.boyfriendtv.com/"
         this.headers = mapOf(
@@ -122,6 +121,10 @@ class Icegay : MainAPI() {
             "Origin" to "https://www.boyfriendtv.com",
             "Referer" to "https://www.boyfriendtv.com/"
         )
+        // Xử lý isM3u8 bên trong lambda nếu cần
+        if (isHls || videoUrl.contains(".m3u8")) {
+            this.isM3u8 = true
+        }
     }
 )
 
