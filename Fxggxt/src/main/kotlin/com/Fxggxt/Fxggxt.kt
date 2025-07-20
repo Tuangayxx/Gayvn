@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
@@ -18,6 +19,7 @@ class Fxggxt : MainAPI() {
     override val hasChromecastSupport = true
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
+    override val interceptor = CloudflareKiller()
 
     override val mainPage = mainPageOf(
         "$mainUrl/tag/amateur-gay-porn/" to "Amateur",
@@ -122,12 +124,18 @@ class Fxggxt : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        val embedUrl = document.selectFirst("div.responsive-player iframe")?.attr("src")
+        val embedUrl = document.selectFirst("div.responsive-player iframe")?.attr("src") ?:""
 
-        if (!embedUrl.isNullOrEmpty()) {
-            loadExtractor(embedUrl, data, subtitleCallback, callback)
-        }
-
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = this.name,
+                url = embedUrl
+            ) {
+                this.referer = ""
+                this.quality = Qualities.Unknown.value
+            }
+        ) 
         return true
     }
 }
