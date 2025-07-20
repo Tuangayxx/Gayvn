@@ -41,7 +41,7 @@ class Icegay : MainAPI() {
         val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
         val document = app.get(pageUrl).document
 
-        val items = document.select("ul.media-listing-grid main-listing-grid-offset").mapNotNull { it.toSearchResult() }
+        val items = document.select("ul.media-listing-grid.main-listing-grid-offset li").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             HomePageList(
@@ -54,9 +54,9 @@ class Icegay : MainAPI() {
     }
     
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("a.title")?.text() ?: return null
+        val title = this.selectFirst("p.titlevideospot a")?.text() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.select("img").attr("srcset"))
+        val posterUrl = fixUrlNull(this.select("img").attr("src"))
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
