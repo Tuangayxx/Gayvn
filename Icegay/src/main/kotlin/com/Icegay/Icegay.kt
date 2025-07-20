@@ -94,42 +94,35 @@ override suspend fun loadLinks(
     val response = app.get(data)
     val html = response.text
 
-    // Lấy mảng sources từ embed
     val sourcesRegex = Regex("""var\s+sources\s*=\s*(\[[\s\S]*?]);""")
     val match = sourcesRegex.find(html) ?: return false
-    val sourcesJsonText = match.groupValues[1]
-        .replace(Regex("/\\*.*?\\*/"), "") // remove comments
-        .replace("\\/", "/") // unescape slashes
-        .trim()
+    val sourcesJsonText = match.groupValues[1].replace("\\/", "/").trim()
 
     val sourcesArray = JSONArray(sourcesJsonText)
     val extlinkList = mutableListOf<ExtractorLink>()
 
     for (i in 0 until sourcesArray.length()) {
         val source = sourcesArray.getJSONObject(i)
-        val videoUrl = fixUrl(source.getString("src"))
+        val videoUrl = source.optString("src") ?: continue
         val qualityLabel = source.optString("desc", "Unknown")
         val isHls = source.optBoolean("hls", false)
 
-        if (videoUrl.isNotEmpty()) {
-            extlinkList.add(
-                newExtractorLink(
-                    source = name,
-                    name = "BoyfriendTV [$qualityLabel]",
-                    url = videoUrl,
-                    type = if (isHls || videoUrl.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
-                ) {
-                    this.referer = "https://www.boyfriendtv.com/"
-                    this.isM3u8 = isHls || videoUrl.contains(".m3u8")
-                    this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)?.toIntOrNull() ?: -1
-                    this.headers = mapOf(
-                        "User-Agent" to USER_AGENT,
-                        "Origin" to "https://www.boyfriendtv.com",
-                        "Referer" to "https://www.boyfriendtv.com/"
-                    )
-                }
-            )
-        }
+        extlinkList.add(
+            newExtractorLink(
+                source = name,
+                name = "BoyfriendTV [$qualityLabel]",
+                url = videoUrl
+            ) {
+                this.referer = "https://www.boyfriendtv.com/"
+                this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)?.toIntOrNull() ?: -1
+                this.isM3u8 = isHls || videoUrl.contains(".m3u8")
+                this.headers = mapOf(
+                    "User-Agent" to USER_AGENT,
+                    "Origin" to "https://www.boyfriendtv.com",
+                    "Referer" to "https://www.boyfriendtv.com/"
+                )
+            }
+        )
     }
 
     extlinkList.forEach(callback)
