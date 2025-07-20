@@ -62,55 +62,39 @@ class Icegay : MainAPI() {
         }
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-        for (i in 1..15) {
-            val url: String = if (i == 1) {
-                "$mainUrl/search/${query.replace(" ", "-")}/"
-            } else {
-                "$mainUrl/search/${query.replace(" ", "-")}/$i/"
-            }
-            val document =
-                    app.get(url).document
-            val results =
-                    document.select("ul.media-listing-grid main-listing-grid-offset")
-                            .mapNotNull {
-                                it.toSearchResult()
-                            }
-            searchResponse.addAll(results)
-            if (results.isEmpty()) break
-        }
-        return searchResponse
+     override suspend fun search(query: String): List<SearchResponse> {
+        val url = "$mainUrl/home?search=$query"
+        val document = app.get(url).document
+        return document.select("ul.media-listing-grid.main-listing-grid-offset li").mapNotNull { it.toSearchResult() }
     }
+
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+    val document = app.get(url).document
 
-        val jsonObject = JSONObject(document.selectXpath("//script[contains(text(),'var flashvars')]").first()?.data()
-                ?.substringAfter("var flashvars = ")
-                ?.substringBefore("var player_obj")
-                ?.replace(";", "") ?: "")
+    // Parse từ application/ld+json
+    val ldJson = JSONObject(document.selectFirst("script[type=application/ld+json]")?.data() ?: return null)
 
-        val title = jsonObject.getString("video_title")
-        val poster =
-                fixUrlNull(jsonObject.getString("preview_url"))
+    val title = ldJson.getString("name")
+    val description = ldJson.optString("description", "")
+    val poster = fixUrlNull(ldJson.getJSONArray("thumbnailUrl").optString(0))
 
-        val tags = jsonObject.getString("video_tags").split(", ").map { it.replace("-", "") }.filter { it.isNotBlank() && !StringUtil.isNumeric(it) }
-        val description = jsonObject.getString("video_title")
+    val tags = description
+        .split(",")
+        .map { it.trim().replace("-", "") }
+        .filter { it.isNotBlank() && !StringUtil.isNumeric(it) }
 
-        val recommendations =
-                document.select("div#list_videos_related_videos div.video-list div.video-item").mapNotNull {
-                    it.toSearchResult()
-                }
+    val recommendations = document.select("div#list_videos_related_videos div.video-list div.video-item")
+        .mapNotNull { it.toSearchResult() }
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.posterHeaders = mapOf(Pair("referer", "${mainUrl}/"))
-            this.plot = description
-            this.tags = tags
-            this.recommendations = recommendations
-        }
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        this.posterUrl = poster
+        this.plot = description
+        this.tags = tags
+        this.recommendations = recommendations
     }
+}
+
 
     override suspend fun loadLinks(
             data: String,
