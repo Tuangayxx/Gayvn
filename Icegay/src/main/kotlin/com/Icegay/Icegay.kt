@@ -24,7 +24,7 @@ import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
 
 class Icegay : MainAPI() {
-    override var mainUrl = "https://www.boyfriendtv.com"
+    override var mainUrl = "https://www.m.boyfriendtv.com"
     override var name = "Icegay"
     override val hasMainPage = true
     override val hasDownloadSupport = true
