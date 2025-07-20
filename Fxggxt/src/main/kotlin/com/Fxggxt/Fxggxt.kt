@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.network.CloudflareKiller
 import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
+import org.jsoup.nodes.Document
 
 class Fxggxt : MainAPI() {
     override var mainUrl = "https://fxggxt.com"
@@ -117,42 +118,47 @@ class Fxggxt : MainAPI() {
 }
 
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data, headers = mapOf(
-    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "Referer" to "https://fxggxt.com/"
-)).document
-        
-    val document = app.get(data, headers = mapOf(
-        "User-Agent" -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Referer" -> "https://fxggxt.com/"
-    )).document
-    
-    val videoUrl = document.selectFirst("meta[itemprop=embedURL]")?.attr("content") 
-        ?: return false
-    
-    val title = document.selectFirst("meta[itemprop=name]")?.attr("content") 
-        ?: "FXGGXT Video"
-
-    callback.invoke(
-        newExtractorLink(
-            source = this.name,
-            name = title,
-            url = videoUrl,
-        ) {
-            // Thiết lập referer và headers tại đây
-            this.referer = "https://fxggxt.com/"
-            this.headers = mapOf(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        try {
+            val headers = mapOf(
                 "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                "Referer" to "https://fxggxt.com/"
+                "Referer" to "https://fxggxt.com/",
+                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
             )
-            this.quality = Qualities.Unknown.value
+            
+            val doc = app.get(data, headers = headers).document
+            
+            // Lấy URL video từ meta embedURL
+            val videoUrl = doc.select("meta[itemprop=embedURL]")
+                .firstOrNull()
+                ?.attr("content")
+                ?: throw ErrorLoadingException("No video URL found")
+            
+            // Lấy tiêu đề cho tên link
+            val title = doc.select("meta[itemprop=name]")
+                .firstOrNull()
+                ?.attr("content")
+                ?: "FXGGXT Video"
+
+            // Tạo ExtractorLink
+            callback.invoke(
+                ExtractorLink(
+                    source = this.name,
+                    name = title,
+                    url = videoUrl,
+                    referer = "https://fxggxt.com/",
+                    quality = Qualities.Unknown.value
+                )
+            )
+            
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
         }
-    )
-    return true
     }
 }
