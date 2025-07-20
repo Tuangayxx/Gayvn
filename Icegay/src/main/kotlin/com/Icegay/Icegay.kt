@@ -121,10 +121,7 @@ class Icegay : MainAPI() {
             "Origin" to "https://www.boyfriendtv.com",
             "Referer" to "https://www.boyfriendtv.com/"
         )
-        // Xử lý isM3u8 bên trong lambda nếu cần
-        if (isHls || videoUrl.contains(".m3u8")) {
-            this.isM3u8 = true
-        }
+        // KHÔNG gán lại isM3u8 ở đây!
     }
 )
 
