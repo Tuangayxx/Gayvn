@@ -117,24 +117,31 @@ class Fxggxt : MainAPI() {
 }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val document = app.get(data).document
-        val embedUrl = document.selectFirst("div.responsive-player iframe")?.attr("src") ?:""
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+    
+    // Sửa selector chính xác
+    val videoUrl = document.selectFirst("meta[itemprop=embedURL]")?.attr("content") 
+        ?: return false
+    
+    // Lấy tiêu đề video cho tên link
+    val title = document.selectFirst("meta[itemprop=name]")?.attr("content") 
+        ?: "FXGGXT Video"
 
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = embedUrl
-            ) {
-                this.referer = ""
-                this.quality = Qualities.Unknown.value
-            }
-        ) 
-        return true
+    callback.invoke(
+        newExtractorLink(
+            source = this.name,
+            name = title,  // Sử dụng tên thực tế
+            url = videoUrl,
+            referer = "https://fxggxt.com/",  // Thêm referer
+        ) {
+            this.quality = Qualities.Unknown.value
+        }
+    )
+    return true
     }
 }
