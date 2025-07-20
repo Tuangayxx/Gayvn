@@ -8,8 +8,6 @@ import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
-import org.json.JSONArray
-
 
 class Icegay : MainAPI() {
     override var mainUrl = "https://www.boyfriendtv.com"
@@ -24,6 +22,9 @@ class Icegay : MainAPI() {
             "/search/?q=Vietnamese"     to "Newest",
             "/search/?q=asian&hot="      to "Asian",
     )
+
+    private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
@@ -92,7 +93,7 @@ override suspend fun loadLinks(
     val response = app.get(data)
     val html = response.text
 
-    // Tìm nguồn video trực tiếp trong HTML gốc
+    // Tìm nguồn video trong HTML
     val sourcesRegex = Regex("""var\s+sources\s*=\s*(\[[\s\S]*?\]);""")
     val match = sourcesRegex.find(html) ?: return false
 
@@ -103,30 +104,36 @@ override suspend fun loadLinks(
     try {
         val sourcesArray = JSONArray(sourcesJsonText)
         val extlinkList = mutableListOf<ExtractorLink>()
-
+        
+        // Duyệt qua tất cả các nguồn video
         for (i in 0 until sourcesArray.length()) {
             val source = sourcesArray.getJSONObject(i)
             val videoUrl = fixUrl(source.getString("src")).replace("\\/", "/")
             val qualityLabel = source.optString("desc", "Unknown")
+            val isHls = source.optBoolean("hls", false)
 
-            extlinkList.add(
-                newExtractorLink(
-                    source = name,
-                    name = "BoyfriendTV [$qualityLabel]",
-                    url = videoUrl
-                ) {
-                    this.referer = data
-                    this.quality = when {
-                        qualityLabel.contains("1080") -> 1080
-                        qualityLabel.contains("720") -> 720
-                        qualityLabel.contains("480") -> 480
-                        qualityLabel.contains("360") -> 360
-                        else -> Qualities.Unknown.value
+            if (videoUrl.isNotEmpty()) {
+                extlinkList.add(
+                    newExtractorLink(
+                        source = name,
+                        name = "BoyfriendTV [$qualityLabel]",
+                        url = videoUrl,
+                        isM3u8 = isHls
+                    ) {
+                        this.referer = "https://www.boyfriendtv.com/"
+                        this.quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)
+                            ?.toIntOrNull() ?: Qualities.Unknown.value
+                            
+                        this.headers = mapOf(
+                            "User-Agent" to USER_AGENT,
+                            "Origin" to "https://www.boyfriendtv.com",
+                            "Referer" to "https://www.boyfriendtv.com/"
+                        )
                     }
-                }
-            )
+                )
+            }
         }
-
+        
         extlinkList.forEach(callback)
         return extlinkList.isNotEmpty()
     } catch (e: Exception) {
