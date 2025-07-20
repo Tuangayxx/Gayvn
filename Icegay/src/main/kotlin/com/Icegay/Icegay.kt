@@ -113,7 +113,9 @@ class Icegay : MainAPI() {
         source = name,
         name = "BoyfriendTV [$qualityLabel]",
         url = videoUrl,
-        type = ExtractorLinkType.VIDEO
+        type = ExtractorLinkType.VIDEO,
+        quality = Regex("(\\d+)").find(qualityLabel)?.groupValues?.get(1)?.toIntOrNull()
+            ?: Qualities.Unknown.value // Nếu không tìm thấy chất lượng, gán giá trị mặc định
     ) {
         this.referer = "https://www.boyfriendtv.com/"
         this.isM3u8 = isHls || videoUrl.contains(".m3u8")
