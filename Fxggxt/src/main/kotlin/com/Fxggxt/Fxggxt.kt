@@ -19,7 +19,6 @@ class Fxggxt : MainAPI() {
     override val hasChromecastSupport = true
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
-    override val interceptor = CloudflareKiller()
 
     override val mainPage = mainPageOf(
         "$mainUrl/tag/amateur-gay-porn/" to "Amateur",
