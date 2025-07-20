@@ -1,4 +1,4 @@
-package com.Icegay
+package com.BoyfriendTV
 
 import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element
 
 private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
-class Icegay : MainAPI() {
+class BoyfriendTV : MainAPI() {
     override var mainUrl = "https://www.boyfriendtv.com"
     override var name = "Boyfriendtv"
     override val hasMainPage = true
