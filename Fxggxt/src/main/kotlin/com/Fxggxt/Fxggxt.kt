@@ -117,7 +117,7 @@ class Fxggxt : MainAPI() {
     }
 }
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -132,27 +132,25 @@ class Fxggxt : MainAPI() {
             
             val doc = app.get(data, headers = headers).document
             
-            // Lấy URL video từ meta embedURL
             val videoUrl = doc.select("meta[itemprop=embedURL]")
                 .firstOrNull()
                 ?.attr("content")
-                ?: throw ErrorLoadingException("No video URL found")
+                ?: return false
             
-            // Lấy tiêu đề cho tên link
             val title = doc.select("meta[itemprop=name]")
                 .firstOrNull()
                 ?.attr("content")
                 ?: "FXGGXT Video"
 
-            // Tạo ExtractorLink
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     source = this.name,
                     name = title,
                     url = videoUrl,
-                    referer = "https://fxggxt.com/",
-                    quality = Qualities.Unknown.value
-                )
+                ) {
+                    this.referer = "https://fxggxt.com/"
+                    this.quality = Qualities.Unknown.value
+                }
             )
             
             return true
