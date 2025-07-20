@@ -32,15 +32,15 @@ class Icegay : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-            ""                   to "Popular",
-            "newest"             to "Newest",
-            "top-rated"          to "Top Rated",
-            "category/threesome" to "Most Favourited",
-            "category/asian"          to "Asian",
-            "category/reality"        to "Reality",
-            "category/hot"            to "Hot",
-            "channels/latinleche"     to "Latinleche",
-            "channels/twink-trade"    to "Twink Trade"
+            "/"                   to "Popular",
+            "/newest"             to "Newest",
+            "/top-rated"          to "Top Rated",
+            "/category/threesome" to "Most Favourited",
+            "/category/asian"          to "Asian",
+            "/category/reality"        to "Reality",
+            "/category/hot"            to "Hot",
+            "/channels/latinleche"     to "Latinleche",
+            "/channels/twink-trade"    to "Twink Trade"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
