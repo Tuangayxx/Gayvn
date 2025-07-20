@@ -24,7 +24,7 @@ import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
 
 class Icegay : MainAPI() {
-    override var mainUrl = "https://www.icegay.tv"
+    override var mainUrl = "https://www.boyfriendtv.com"
     override var name = "Icegay"
     override val hasMainPage = true
     override val hasDownloadSupport = true
@@ -32,9 +32,9 @@ class Icegay : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-            "/"                   to "Popular",
-            "/newest"             to "Newest",
-            "/top-rated"          to "Top Rated",
+            "/?s=&amp;sort=newest"              to "Popular",
+            "/search/?q=Vietnamese"             to "Newest",
+            "/tags/anal"                  to "Top Rated",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -45,7 +45,7 @@ class Icegay : MainAPI() {
         }
 
         val document = app.get(url).document
-        val responseList = document.select(".b-thumb-item js-thumb").mapNotNull { it.toSearchResult() }
+        val responseList = document.select("div.container").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             HomePageList(request.name, responseList, isHorizontalImages = true),
@@ -73,7 +73,7 @@ class Icegay : MainAPI() {
             val document =
                     app.get(url).document
             val results =
-                    document.select("div.b-thumb-item")
+                    document.select("div.container")
                             .mapNotNull {
                                 it.toSearchResult()
                             }
