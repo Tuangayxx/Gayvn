@@ -4,7 +4,6 @@ import android.util.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.extractors.ExtractorLink
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.internal.StringUtil
@@ -119,11 +118,9 @@ override suspend fun loadLinks(
             newExtractorLink(
                 source = name,
                 name = "BoyfriendTV [$qualityLabel]",
-                url = videoUrl,
-                type = if (videoUrl.contains(".m3u8")) ExtractorLink.Type.M3U8 else ExtractorLink.Type.MP4
+                url = videoUrl
             ) {
                 this.referer = embedUrl
-                this.isM3u8 = isHls
                 this.quality = qualityLabel.filter { it.isDigit() }.toIntOrNull() ?: -1
             }
         )
