@@ -89,45 +89,48 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
+    val response = app.get(data)
+    val html = response.text
 
-    // Lấy embedUrl từ JSON-LD
-    val ldJson = JSONObject(document.selectFirst("script[type=application/ld+json]")?.data() ?: return false)
-    val embedUrl = fixUrl(ldJson.optString("embedUrl") ?: return false)
+    // Tìm nguồn video trực tiếp trong HTML gốc
+    val sourcesRegex = Regex("""var\s+sources\s*=\s*(\[[\s\S]*?\]);""")
+    val match = sourcesRegex.find(html) ?: return false
 
-    // Truy cập embed page
-    val embedPage = app.get(embedUrl, referer = data).text
+    val sourcesJsonText = match.groupValues[1]
+        .replace(Regex("/\\*.*?\\*/"), "") // Loại bỏ comment
+        .trim()
 
-    // Regex tìm đoạn JS chứa biến sources = [...]
-    val sourcesJsonText = Regex("""var\s+sources\s*=\s*(\[\{.*?}]);""", RegexOption.DOT_MATCHES_ALL)
-        .find(embedPage)
-        ?.groupValues?.get(1)
-        ?: return false
+    try {
+        val sourcesArray = JSONArray(sourcesJsonText)
+        val extlinkList = mutableListOf<ExtractorLink>()
 
-    // Parse JSON array
-    val sourcesArray = JSONArray(sourcesJsonText)
-    val extlinkList = mutableListOf<ExtractorLink>()
+        for (i in 0 until sourcesArray.length()) {
+            val source = sourcesArray.getJSONObject(i)
+            val videoUrl = fixUrl(source.getString("src")).replace("\\/", "/")
+            val qualityLabel = source.optString("desc", "Unknown")
 
-    for (i in 0 until sourcesArray.length()) {
-        val source = sourcesArray.getJSONObject(i)
-        val videoUrl = fixUrl(source.getString("src"))
-        val qualityLabel = source.optString("desc")
-        val isHls = source.optBoolean("hls", false)
+            extlinkList.add(
+                newExtractorLink(
+                    source = name,
+                    name = "BoyfriendTV [$qualityLabel]",
+                    url = videoUrl
+                ) {
+                    this.referer = data
+                    this.quality = when {
+                        qualityLabel.contains("1080") -> 1080
+                        qualityLabel.contains("720") -> 720
+                        qualityLabel.contains("480") -> 480
+                        qualityLabel.contains("360") -> 360
+                        else -> Qualities.Unknown.value
+                    }
+                }
+            )
+        }
 
-        extlinkList.add(
-            newExtractorLink(
-                source = name,
-                name = "BoyfriendTV [$qualityLabel]",
-                url = videoUrl
-            ) {
-                this.referer = embedUrl
-                this.quality = qualityLabel.filter { it.isDigit() }.toIntOrNull() ?: -1
-            }
-        )
+        extlinkList.forEach(callback)
+        return extlinkList.isNotEmpty()
+    } catch (e: Exception) {
+        return false
     }
-
-    // Trả kết quả qua callback
-    extlinkList.forEach(callback)
-    return extlinkList.isNotEmpty()
 }
 }
