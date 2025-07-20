@@ -24,7 +24,7 @@ import org.jsoup.internal.StringUtil
 import org.jsoup.nodes.Element
 
 class Icegay : MainAPI() {
-    override var mainUrl = "https://www.m.boyfriendtv.com"
+    override var mainUrl = "https://www.boyfriendtv.com"
     override var name = "Icegay"
     override val hasMainPage = true
     override val hasDownloadSupport = true
@@ -32,31 +32,31 @@ class Icegay : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-            "/?s=&amp;sort=newest"              to "Popular",
-            "/search/?q=Vietnamese"             to "Newest",
-            "/tags/anal"                  to "Top Rated",
+            ""                          to "Home",
+            "/search/?q=Vietnamese"     to "Newest",
+            "/search/?q=asian&hot="      to "Asian",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page > 1) {
-            "${request.data}page/$page/"
-        } else {
-            request.data
-        }
+        val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
+        val document = app.get(pageUrl).document
 
-        val document = app.get(url).document
-        val responseList = document.select("div.container").mapNotNull { it.toSearchResult() }
+        val items = document.select("ul.media-listing-grid main-listing-grid-offset").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
-            HomePageList(request.name, responseList, isHorizontalImages = true),
-            hasNext = responseList.isNotEmpty()
+            HomePageList(
+                name = request.name,
+                list = items,
+                isHorizontalImages = true
+            ),
+            hasNext = items.isNotEmpty()
         )
     }
     
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.selectFirst("a.title")?.text() ?: return null
         val href = fixUrl(this.selectFirst("a")!!.attr("href"))
-        val posterUrl = fixUrlNull(this.select("source").attr("srcset"))
+        val posterUrl = fixUrlNull(this.select("img").attr("srcset"))
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
@@ -73,7 +73,7 @@ class Icegay : MainAPI() {
             val document =
                     app.get(url).document
             val results =
-                    document.select("div.container")
+                    document.select("ul.media-listing-grid main-listing-grid-offset")
                             .mapNotNull {
                                 it.toSearchResult()
                             }
