@@ -25,7 +25,7 @@ import org.jsoup.nodes.Element
 
 class Icegay : MainAPI() {
     override var mainUrl = "https://www.boyfriendtv.com"
-    override var name = "Icegay"
+    override var name = "Boyfriendtv"
     override val hasMainPage = true
     override val hasDownloadSupport = true
     override val vpnStatus = VPNStatus.MightBeNeeded
@@ -69,7 +69,7 @@ class Icegay : MainAPI() {
     }
 
 
-    override suspend fun load(url: String): LoadResponse {
+    override suspend fun load(url: String): LoadResponse? {
     val document = app.get(url).document
 
     // Parse từ application/ld+json
