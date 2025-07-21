@@ -118,6 +118,7 @@ class Gayxx : MainAPI() {
     if (iframes.isEmpty()) return false
 
     iframes.forEach { url ->
+        Log.i("Gayxx", "Found iframe: $url")
         loadExtractor(url, subtitleCallback, callback)
     }
     return true
