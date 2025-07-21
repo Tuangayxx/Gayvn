@@ -107,21 +107,21 @@ class Gayxx : MainAPI() {
         "vide0.net", "voe.sx", "mixdrop", 
         "streamtape", "doodstream.com", "abyss.to"
     )
-    
-    app.get(data).document
-        .select("iframe[src]")
-        .mapNotNull { it.attr("src").takeIf(String::isNotBlank) }
-        .filter { url ->
-            supportedDomains.any { domain -> domain in url }.also {
-                if (!it) println("Skipped unsupported URL: $url")
-            }
-        }
-        .forEach { url ->
-            loadExtractor(url, subtitleCallback, callback)
-                }
-    
+
+    val document = app.get(data).document
+
+    // Chỉ lấy các iframe trong khối .videohere (tránh quảng cáo sidebar)
+    val iframes = document.select("div.videohere iframe[src]")
+        .mapNotNull { it.attr("src").takeIf { src -> src.isNotBlank() } }
+        .filter { url -> supportedDomains.any { domain -> domain in url } }
+
+    if (iframes.isEmpty()) return false
+
+    iframes.forEach { url ->
+        loadExtractor(url, subtitleCallback, callback)
+    }
     return true
-        }
+}
 }
 
 
