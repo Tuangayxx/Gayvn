@@ -1,14 +1,14 @@
-package com.GXtapes
+package com.Nurgay
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
-import com.GXtapes.GXtapes
+import com.Nurgay.Nurgay
 
 @CloudstreamPlugin
-class GXtapesProvider: Plugin() {
+class NurgayProvider: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(GXtapes())
+        registerMainAPI(Nurgay())
         registerExtractorAPI(Stream())
         registerExtractorAPI(VID())
         registerExtractorAPI(GXtapesExtractor())
