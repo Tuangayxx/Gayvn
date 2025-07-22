@@ -20,11 +20,6 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import org.json.JSONObject
 
 
-class Stream : Filesim() {
-    override var mainUrl = "https://88z.io"
-}
-
-
 open class VID : ExtractorApi() {
     override var name = "VID Xtapes"
     override var mainUrl = "https://vid.xtapes.in"
@@ -47,9 +42,9 @@ open class VID : ExtractorApi() {
     }
 }
 
-class GXtapesExtractor(
-    override val name: String = "GXtapes",
-    override val mainUrl: String = "https://74k.io/e/",
+class Bigwarp(
+    override val name: String = "Bigwarp",
+    override val mainUrl: String = "https://bigwarp.cc/",
     override val requiresReferer: Boolean = false
 ) : ExtractorApi() {
     override suspend fun getUrl(
@@ -58,19 +53,18 @@ class GXtapesExtractor(
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val response = app.get(url).document
-        val script = response.select("script").find { it.data().contains("eval") }?.data() ?: return
-        val unpackedScript = getAndUnpack(script)
-        val links = "{" + unpackedScript.substringAfter("var links={").substringBefore("};") + "}"
-        val obj = JSONObject(links)
-        obj.keys().forEach {
-            var finalUrl = obj.getString(it)
-            if (!finalUrl.startsWith("http")) finalUrl = fixUrl(finalUrl)
-            callback(
+        val document = app.get(url).document
+        var found = false
+
+        document.select("div.notranslate a").forEach { a ->
+            val src = a.attr("href")
+            val videoHash = href.substringAfter("/")
+            val directUrl = "$mainUrl/$videoHash"
+        callback(
                 newExtractorLink(
                     this.name,
                     this.name,
-                    finalUrl,
+                    directUrl,
                     ExtractorLinkType.M3U8
                 )
             )

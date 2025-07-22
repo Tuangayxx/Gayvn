@@ -11,7 +11,7 @@ class NurgayProvider: Plugin() {
         registerMainAPI(Nurgay())
         registerExtractorAPI(Stream())
         registerExtractorAPI(VID())
-        registerExtractorAPI(GXtapesExtractor())
+        registerExtractorAPI(Bigwarp())
         registerExtractorAPI(GXtapesnewExtractor())
         registerExtractorAPI(GXtape44Extractor())
         registerExtractorAPI(DoodExtractor())

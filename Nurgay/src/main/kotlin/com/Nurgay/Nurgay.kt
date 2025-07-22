@@ -48,7 +48,7 @@ class Nurgay : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse {
         val title = this.select("a").attr("title")
         val href = fixUrl(this.select("a").attr("href"))
-        val posterUrl = fixUrlNull(this.select("img").attr("src"))
+        val posterUrl = fixUrlNull(this.select("img").attr("data-src"))
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
@@ -96,7 +96,7 @@ class Nurgay : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         val document = app.get(data).document
-        document.select("#video-code iframe").forEach { links ->
+        document.select("#responsive-player iframe").forEach { links ->
             val url = links.attr("src")
             Log.d("Tuangayxx Test", url)
             loadExtractor(url, subtitleCallback, callback)
