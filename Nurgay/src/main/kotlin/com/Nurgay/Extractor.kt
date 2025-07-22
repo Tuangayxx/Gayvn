@@ -58,14 +58,17 @@ open class Bigwarp : ExtractorApi() {
         val mp4Url = fileUrlRegex.find(soup)?.groupValues?.get(1) ?: return
 
         callback.invoke(
-            newExtractorLink(
-                this.name,
-                this.name,
-                mp4Url ?: return,
-                )
+            ExtractorLink(
+                source = this.name,
+                name = this.name,
+                url = mp4Url,
+                referer = referer ?: "",
+                quality = Qualities.Unknown.value,
+                isM3u8 = false
             )
-        }
+        )
     }
+}
 
 class GXtapesnewExtractor(
     override val name: String = "88z.io",
