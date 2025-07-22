@@ -1,4 +1,4 @@
-package com.GXtapes
+package com.Nurgay
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -9,8 +9,8 @@ import com.lagradost.api.Log
 
 
 class GXtapes : MainAPI() {
-    override var mainUrl = "https://gay.xtapes.in"
-    override var name = "G_Xtapes"
+    override var mainUrl = "https://nurgay.to"
+    override var name = "Nurgay"
     override val hasMainPage = true
     override var lang = "en"
     override val hasQuickSearch = false
@@ -21,25 +21,18 @@ class GXtapes : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "/?filtre=date&cat=0"                     to "Latest",
-        "/category/porn-movies-214660"            to "Full Movies",
-        "/category/groupsex-gangbang-porn-189457" to "Gang bang & Group",
-        "/category/860425"                        to "Corbin Fisher",
-        "/category/139616"                        to "Timtales",
-        "/category/68780"                         to "Bel Ami",
-        "/category/651571"                        to "Broke Straight Boys",
-        "/category/835056"                        to "BroMo",
-        "/category/845926"                        to "CockyBoys",
-        "/category/346893" to "Sean Cody",
-        "/category/62478"  to "Fraternity X",
-        "/category/416510" to "Falcon Studio",
-        "/category/37433"  to "Gay Hoopla",
-        "/category/621576" to "Onlyfans",
+        "?filter=latest"                         to "Latest",
+        "?filter=random"                         to "Random",
+        "?filter=most-viewed"                    to "Most Viewed",
+        "asiaten"                                to "Asian",
+        "gruppensex"                             to "Group Sex",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}/page/$page/").document
-        val home = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+        val pageUrl = if (page == 1) "$mainUrl${request.data}" else
+                                     "$mainUrl$/page/$page/${request.data}"
+        val document = app.get(pageUrl).document
+        val home = document.select("div.videos-list").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -53,7 +46,7 @@ class GXtapes : MainAPI() {
 
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("img").attr("title")
+        val title = this.select("a").attr("title")
         val href = fixUrl(this.select("a").attr("href"))
         val posterUrl = fixUrlNull(this.select("img").attr("src"))
         
