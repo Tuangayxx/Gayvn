@@ -43,9 +43,9 @@ open class VID : ExtractorApi() {
 }
 
 open class Bigwarp : ExtractorApi() {
-    override val name: String = "Bigwarp",
-    override val mainUrl: String = "https://bigwarp.cc/",
-    override val requiresReferer: Boolean = false
+    override val name = "Bigwarp",
+    override val mainUrl = "https://bigwarp.cc/",
+    override val requiresReferer = false
     
     override suspend fun getUrl(
         url: String,
@@ -66,7 +66,6 @@ open class Bigwarp : ExtractorApi() {
             )
         }
     }
-    
 
 class GXtapesnewExtractor(
     override val name: String = "88z.io",
