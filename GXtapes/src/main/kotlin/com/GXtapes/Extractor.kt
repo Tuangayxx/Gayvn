@@ -108,6 +108,36 @@ class GXtapesnewExtractor(
     }
 }
 
+class GXtape44Extractor(
+    override val name: String = "44x.io",
+    override val mainUrl: String = "https://vi.44x.io/e",
+    override val requiresReferer: Boolean = false
+) : ExtractorApi() {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val document = app.get(url).document
+        var found = false
+
+        document.select("#video-code iframe").forEach { iframe ->
+            val src = iframe.attr("src")
+            val videoHash = src.substringAfter("/")
+            val directUrl = "$mainUrl/$videoHash"
+        callback(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    directUrl,
+                    ExtractorLinkType.M3U8
+                )
+            )
+        }
+    }
+}
+
 class DoodExtractor : ExtractorApi() {
     override var name = "DoodStream"
     override var mainUrl = "https://doodstream.com"

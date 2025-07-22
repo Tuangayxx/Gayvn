@@ -13,6 +13,7 @@ class GXtapesProvider: Plugin() {
         registerExtractorAPI(VID())
         registerExtractorAPI(GXtapesExtractor())
         registerExtractorAPI(GXtapesnewExtractor())
+        registerExtractorAPI(GXtape44Extractor())
         registerExtractorAPI(DoodExtractor())
     }
 }
