@@ -32,10 +32,14 @@ class BoyfriendTV : MainAPI() {
             "/tags/brazilian/?filter_quality=hd"         to "Bờ ra sin",
             "/tags/gangbang/?filter_quality=hd"          to "Chịch tập thể",
             "/tags/latinos/?filter_quality=hd"           to "Mỹ da màu",
+            "/search/?q=facedownassup&quality=hd"        to "Face down Ass up",
+            "/search/?q=sketchysex&quality=hd"           to "Sketchy Sex",
+            "/search/?q=fraternity&quality=hd"           to "Fraternity X",
+            "/search/?q=slamrush"                        to "Slam Rush",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
+        val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}/?page=$page"
         val document = app.get(pageUrl).document
 
         val items = document.select("ul.media-listing-grid.main-listing-grid-offset li").mapNotNull { it.toSearchResult() }
