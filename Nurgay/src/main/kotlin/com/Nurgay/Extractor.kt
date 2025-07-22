@@ -59,13 +59,13 @@ open class Bigwarp : ExtractorApi() {
 
         callback.invoke(
             newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = mp4Url,
+                this.name,
+                this.name,
+                mp4Url ?: return,
+                )
             )
-        )
+        }
     }
-}
 
 class GXtapesnewExtractor(
     override val name: String = "88z.io",
