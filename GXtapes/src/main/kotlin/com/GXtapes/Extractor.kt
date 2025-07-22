@@ -80,7 +80,7 @@ class GXtapesExtractor(
 
 class GXtapesnewExtractor(
     override val name: String = "88z.io",
-    override val mainUrl: String = "https://88z.io/",
+    override val mainUrl: String = "https://88z.io",
     override val requiresReferer: Boolean = false
 ) : ExtractorApi() {
     override suspend fun getUrl(
@@ -110,7 +110,7 @@ class GXtapesnewExtractor(
 
 class GXtape44Extractor(
     override val name: String = "44x.io",
-    override val mainUrl: String = "https://vi.44x.io/e",
+    override val mainUrl: String = "https://vi.44x.io",
     override val requiresReferer: Boolean = false
 ) : ExtractorApi() {
     override suspend fun getUrl(
