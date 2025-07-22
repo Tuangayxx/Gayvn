@@ -58,7 +58,7 @@ class Bigwarp(
 
         document.select("div.notranslate a").forEach { a ->
             val src = a.attr("href")
-            val videoHash = href.substringAfter("/")
+            val videoHash = src.substringAfter("/")
             val directUrl = "$mainUrl/$videoHash"
         callback(
                 newExtractorLink(
