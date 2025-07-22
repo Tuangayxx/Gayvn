@@ -8,7 +8,7 @@ import java.io.IOException
 import com.lagradost.api.Log
 
 
-class GXtapes : MainAPI() {
+class Nurgay : MainAPI() {
     override var mainUrl = "https://nurgay.to"
     override var name = "Nurgay"
     override val hasMainPage = true
@@ -61,7 +61,7 @@ class GXtapes : MainAPI() {
         for (i in 1..5) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.videos-list").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
