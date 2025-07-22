@@ -29,7 +29,7 @@ class Nurgay : MainAPI() {
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val pageUrl = if (page == 1) "$mainUrl${request.data}" else
+        val pageUrl = if (page == 1) "$mainUrl$/{request.data}" else
                                      "$mainUrl$/page/$page/${request.data}"
         val document = app.get(pageUrl).document
         val home = document.select("div.videos-list").mapNotNull { it.toSearchResult() }
