@@ -1,9 +1,9 @@
-version = 2
+version = 1
 
 cloudstream {
     authors     = listOf("Gayvn")
     language    = "en"
-    description = "Xtapes is the best free full length porn video site. Choose from millions of hardcore videos that stream quickly and in high quality and only full length"
+    description = "Nurgay is the best free full movies porn video site."
 
     /**
      * Status int as the following:
@@ -14,5 +14,5 @@ cloudstream {
     **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://gay.xtapes.in/wp-content/uploads/logo6.png"
+    iconUrl = "https://nurgay.to/wp-content/uploads/2023/10/logo.png"
 }
