@@ -89,16 +89,37 @@ class Nurgay : MainAPI() {
         }
     }
 
+
+
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+
+        val supportedDomains = listOf(
+            "bigwarp.io", "voe.sx", "mixdrop", 
+            "streamtape", "doodstream.com", "abyss.to", "vinovo.to",
+            "vide0.net",  // Thêm domain Doodstream thực tế Thêm domain download
+        )
+        
         val document = app.get(data).document
-        document.select("#responsive-player iframe").forEach { links ->
-            val url = links.attr("src")
-            Log.d("Tuangayxx Test", url)
+
+        // Lấy tất cả link hợp lệ trong cả 2 khu vực:
+        val links = document.select("""
+            div.notranslate a[href],
+            div.desc a[href]
+        """).mapNotNull { it.attr("href").takeIf { href -> href.isNotBlank() } }
+            .filter { url -> 
+                supportedDomains.any { domain -> domain in url } 
+            }
+            .distinct()
+
+        if (links.isEmpty()) return false
+
+        links.forEach { url ->
+            Log.i("Gayxx", "Processing URL: $url")
             loadExtractor(url, subtitleCallback, callback)
         }
         return true

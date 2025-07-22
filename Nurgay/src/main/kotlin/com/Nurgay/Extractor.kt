@@ -42,35 +42,31 @@ open class VID : ExtractorApi() {
     }
 }
 
-class Bigwarp(
+open class Bigwarp : ExtractorApi() {
     override val name: String = "Bigwarp",
     override val mainUrl: String = "https://bigwarp.cc/",
     override val requiresReferer: Boolean = false
-) : ExtractorApi() {
+    
     override suspend fun getUrl(
         url: String,
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val document = app.get(url).document
-        var found = false
+        val soup = app.get(url, allowRedirects = true).text
+        val fileUrlRegex = Regex("""file:"(https?://[^"]+)"""")
+        val mp4Url = fileUrlRegex.find(soup)?.groupValues?.get(1)
 
-        document.select("div.notranslate a").forEach { a ->
-            val src = a.attr("href")
-            val videoHash = src.substringAfter("/")
-            val directUrl = "$mainUrl/$videoHash"
-        callback(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    directUrl,
-                    ExtractorLinkType.M3U8
+        callback.invoke(
+            newExtractorLink(
+                this.name,
+                this.name,
+                mp4Url ?: return,
                 )
             )
         }
     }
-}
+    
 
 class GXtapesnewExtractor(
     override val name: String = "88z.io",
