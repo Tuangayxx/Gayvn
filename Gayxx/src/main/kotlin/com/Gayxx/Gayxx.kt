@@ -121,9 +121,8 @@ class Gayxx : MainAPI() {
     val document = app.get(data).document
 
     // Chỉ lấy các iframe trong khối .videohere (tránh quảng cáo sidebar)
-    val iframes = document.select("div.videohere iframe")
-        .mapNotNull { it.attr("data-src").ifBlank { it.attr("src") }}
-        .filter { url -> supportedDomains.any { domain -> domain in url } }
+    val iframes = document.select("div.videohere iframe").mapNotNull {
+        it.attr("data-src").ifBlank { it.attr("src") }}.filter { url -> supportedDomains.any { domain -> domain in url } }
 
     if (iframes.isEmpty()) return false
 
