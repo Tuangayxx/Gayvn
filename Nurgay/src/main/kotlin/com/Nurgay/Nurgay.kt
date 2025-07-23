@@ -34,52 +34,48 @@ class Nurgay : MainAPI() {
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val pageUrl = if (page == 1) "$mainUrl${request.data}" else 
-                                     "$mainUrl${request.data}?page=$page"
+    val pageUrl = if (page == 1) 
+        "$mainUrl${request.data}" 
+    else 
+        "$mainUrl${request.data}page/$page/" // ✅ Sửa pagination
 
-        val document = app.get(pageUrl).document
-        val home = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
+    val document = app.get(pageUrl).document
+    val home = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
 
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = true
-        )
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = true
+        ),
+        hasNext = true
+    )
+}
+
+private fun Element.toSearchResult(): SearchResponse {
+    val title = this.select("header.entry-header span").text() // ✅ Sửa lấy text
+    val href = fixUrl(this.select("a").attr("href"))
+    val posterUrl = fixUrlNull(this.select("img").attr("data-src"))
+    
+    return newMovieSearchResponse(title, href, TvType.NSFW) {
+        this.posterUrl = posterUrl
+    }
+}
+
+override suspend fun search(query: String): List<SearchResponse> {
+    val searchResponse = mutableListOf<SearchResponse>()
+
+    for (i in 1..5) {
+        // ✅ Sửa URL search: thêm `&page=i`
+        val document = app.get("$mainUrl/?s=$query&page=$i").document
+        val results = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
+
+        if (results.isEmpty()) break
+        searchResponse.addAll(results)
     }
 
-
-    private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("header.entry-header span").attr("")
-        val href = fixUrl(this.select("a").attr("href"))
-        val posterUrl = fixUrlNull(this.select("img").attr("data-src"))
-        
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    }
-
-   override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-
-        for (i in 1..5) {
-            val document = app.get("${mainUrl}/page/$i/?s=$query").document
-
-            val results = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
-
-            if (!searchResponse.containsAll(results)) {
-                searchResponse.addAll(results)
-            } else {
-                break
-            }
-
-            if (results.isEmpty()) break
-        }
-
-        return searchResponse
-    }
+    return searchResponse
+}
    
 
     override suspend fun load(url: String): LoadResponse {
