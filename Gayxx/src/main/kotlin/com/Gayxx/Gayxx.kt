@@ -104,8 +104,14 @@ class Gayxx : MainAPI() {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val supportedDomains = listOf(
-        "vide0.net", "voe.sx", "mixdrop", 
-        "streamtape", "doodstream.com", "abyss.to"
+        "bigwarp.io",
+        "voe.sx",
+        "mixdrop",        
+        "streamtape",
+        "doodstream.com",
+        "abyss.to",
+        "vinovo.to",
+        "vide0.net",
     )
 
     val document = app.get(data).document
