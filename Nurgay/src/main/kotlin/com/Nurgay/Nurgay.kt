@@ -52,7 +52,7 @@ class Nurgay : MainAPI() {
 
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("header.entry-header span").attr("span")
+        val title = this.select("header.entry-header span").attr("")
         val href = fixUrl(this.select("a").attr("href"))
         val posterUrl = fixUrlNull(this.select("img").attr("data-src"))
         
