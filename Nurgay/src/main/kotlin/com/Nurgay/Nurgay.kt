@@ -31,9 +31,9 @@ class Nurgay : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val pageUrl = if (page == 1) "$mainUrl${request.data}" else 
                                      "$mainUrl${request.data}?page=$page"
-                                     
+
         val document = app.get(pageUrl).document
-        val home = document.select("article.data-video-uid").mapNotNull { it.toSearchResult() }
+        val home = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -47,7 +47,7 @@ class Nurgay : MainAPI() {
 
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("a").attr("title")
+        val title = this.select("header.entry-header span").attr("title")
         val href = fixUrl(this.select("a").attr("href"))
         val posterUrl = fixUrlNull(this.select("img").attr("data-src"))
         
@@ -62,7 +62,7 @@ class Nurgay : MainAPI() {
         for (i in 1..5) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("article.data-video-uid").mapNotNull { it.toSearchResult() }
+            val results = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
