@@ -112,6 +112,7 @@ class Gayxx : MainAPI() {
         "abyss.to",
         "vinovo.to",
         "vide0.net",
+        "cloudatacdn.com",
     )
 
     val document = app.get(data).document
