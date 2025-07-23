@@ -26,6 +26,11 @@ class Nurgay : MainAPI() {
         "/?filter=most-viewed"                    to "Most Viewed",
         "/asiaten"                                to "Asian",
         "/gruppensex"                             to "Group Sex",
+        "/bisex"                                  to "Bisexual",
+        "/hunks"                                  to "Hunks",
+        "/latino"                                 to "Latino",
+        "/muskeln"                                to "Muscle",
+        "/bareback"                               to "Bareback",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
