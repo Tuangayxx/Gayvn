@@ -32,7 +32,7 @@ class Nurgay : MainAPI() {
         val pageUrl = if (page == 1) "$mainUrl/${request.data}" else
                                      "$mainUrl$/page/$page/${request.data}"
         val document = app.get(pageUrl).document
-        val home = document.select("div.videos-list").mapNotNull { it.toSearchResult() }
+        val home = document.select("article.data-video-uid").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -61,7 +61,7 @@ class Nurgay : MainAPI() {
         for (i in 1..5) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("div.videos-list").mapNotNull { it.toSearchResult() }
+            val results = document.select("article.data-video-uid").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
