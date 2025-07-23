@@ -21,11 +21,11 @@ class Nurgay : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "?filter=latest"                         to "Latest",
-        "?filter=random"                         to "Random",
-        "?filter=most-viewed"                    to "Most Viewed",
-        "asiaten"                                to "Asian",
-        "gruppensex"                             to "Group Sex",
+        "/?filter=latest"                         to "Latest",
+        "/?filter=random"                         to "Random",
+        "/?filter=most-viewed"                    to "Most Viewed",
+        "/asiaten"                                to "Asian",
+        "/gruppensex"                             to "Group Sex",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
