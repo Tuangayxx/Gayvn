@@ -37,7 +37,7 @@ class Nurgay : MainAPI() {
     val pageUrl = if (page == 1) 
         "$mainUrl${request.data}" 
     else 
-        "$mainUrl${request.data}page/$page/" // ✅ Sửa pagination
+        "$mainUrl/page/$page${request.data}" // ✅ Sửa pagination
 
     val document = app.get(pageUrl).document
     val home = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
@@ -65,7 +65,7 @@ private fun Element.toSearchResult(): SearchResponse {
 override suspend fun search(query: String): List<SearchResponse> {
     val searchResponse = mutableListOf<SearchResponse>()
 
-    for (i in 1..5) {
+    for (i in 1..7) {
         // ✅ Sửa URL search: thêm `&page=i`
         val document = app.get("$mainUrl/?s=$query&page=$i").document
         val results = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
@@ -121,7 +121,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         if (links.isEmpty()) return false
 
         links.forEach { url ->
-            Log.i("Gayxx", "Processing URL: $url")
+            Log.i("Tuanxx", "Processing URL: $url")
             loadExtractor(url, subtitleCallback, callback)
         }
         return true
