@@ -14,6 +14,90 @@ import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.JsUnpacker
 import org.jsoup.nodes.Document
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.*
+import java.util.*
+import kotlin.random.Random
+
+suspend fun getVideoUrl(pageUrl: String): String {
+    val client = HttpClient(CIO) {
+        install(UserAgent) {
+            agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30000
+        }
+        expectSuccess = true
+    }
+
+    try {
+        // 1. Fetch the HTML page
+        val htmlResponse = client.get(pageUrl)
+        val htmlContent = htmlResponse.bodyAsText()
+
+        // 2. Extract API path from JavaScript code
+        val apiPath = extractApiPath(htmlContent)
+        if (apiPath.isEmpty()) throw Exception("API path not found in HTML")
+
+        // 3. Get base URL from pass_md5 API
+        val apiUrl = "https://vide0.net$apiPath"
+        val baseUrl = client.get(apiUrl) {
+            headers {
+                append(HttpHeaders.Referrer, pageUrl)
+            }
+        }.bodyAsText().trim()
+
+        // 4. Generate random parameters
+        val token = extractToken(apiPath)
+        val expiry = System.currentTimeMillis()
+        val randomStr = generateRandomString(10)
+
+        // 5. Construct final video URL
+        return "$baseUrl$randomStr?token=$token&expiry=$expiry"
+    } finally {
+        client.close()
+    }
+}
+
+private fun extractApiPath(html: String): String {
+    val regex = """pass_md5/([^']+)""".toRegex()
+    return regex.find(html)?.value ?: ""
+}
+
+private fun extractToken(apiPath: String): String {
+    return apiPath.split('/').last()
+}
+
+private fun generateRandomString(length: Int): String {
+    val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+    return (1..length)
+        .map { Random.nextInt(0, charPool.size) }
+        .map(charPool::get)
+        .joinToString("")
+}
+
+fun main() = runBlocking {
+    try {
+        val pageUrl = "https://vide0.net/e/wnln6jvnukao"
+        val videoUrl = getVideoUrl(pageUrl) -> 
+                {listOf(
+                    newExtractorLink(
+                        name = name,
+                        source = name,
+                        url = videoUrl,
+                        type = INFER_TYPE
+                    )
+                
+                )
+    }
+}
+}
+
 
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
@@ -56,41 +140,7 @@ class VoeExtractor : BaseVideoExtractor() {
     }
 }
 
-class Vide0Extractor : BaseVideoExtractor() {
-    override val name = "Vide0"
-    override val domain = "vide0.net"
-    override val mainUrl = "https://$domain/e"
-    override val requiresReferer = false
 
-    private data class VideoSource(
-        @JsonProperty("hls") val url: String?,
-        @JsonProperty("video_height") val height: Int?
-    )
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
-        val response = app.get(url)
-        if (response.code == 404) return emptyList()
-
-        val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
-            .find(response.text)
-            ?.groupValues?.get(1)
-            ?.replace("0,", "0")
-            ?: return emptyList()
-
-        return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
-            source.url?.let { videoUrl ->
-                listOf(
-                    newExtractorLink(
-                        name = name,
-                        source = name,
-                        url = videoUrl,
-                        type = INFER_TYPE
-                    )
-                )
-            } ?: emptyList()
-        } ?: emptyList()
-    }
-}
 
 class DoodUrlExtractor : ExtractorApi() {
     override var name = "vide0.com"
