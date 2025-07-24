@@ -145,6 +145,7 @@ class Fxggxt : MainAPI() {
             rawUrl == null -> return false
             "'" in rawUrl -> rawUrl.substringBefore("'") // Loại bỏ phần sau dấu '
             else -> rawUrl
+        val doodUrl = "https://vide0.net/e/" + videoUrl.substringAfterLast("/")
         }
 
         val title = doc.select("meta[itemprop=name]")
@@ -156,7 +157,7 @@ class Fxggxt : MainAPI() {
             newExtractorLink(
                 source = this.name,
                 name = title,
-                url = videoUrl,
+                url = doodUrl,
             ) {
                 this.referer = "https://fxggxt.com/"
                 this.quality = Qualities.Unknown.value
