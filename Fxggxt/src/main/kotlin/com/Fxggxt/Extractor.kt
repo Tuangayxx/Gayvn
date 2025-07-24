@@ -2,9 +2,9 @@ package com.Fxggxt
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
-import com.lagradost.cloudstream3*
+import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils*
+import com.lagradost.cloudstream3.utils.*
 import org.json.JSONObject
 
 
