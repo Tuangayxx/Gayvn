@@ -260,7 +260,7 @@ class DoodExtractor : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val response0 = app.get(url).text
         // Tìm đường dẫn pass_md5 và token
-        val passMd5Path = Regex("/pass_md5/[^']*").find(response0)?.value ?: return null
+        val passMd5Path = Regex("/pass_md5/[^']*").find(response0)?.value ?: return emptyList
         val token = passMd5Path.substringAfterLast("/")
         
         // Lấy dữ liệu video từ API

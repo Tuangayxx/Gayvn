@@ -103,36 +103,48 @@ class Gayxx : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val supportedDomains = listOf(
-        "bigwarp.io",
-        "voe.sx",
-        "mixdrop",        
-        "streamtape",
-        "doodstream.com",
-        "abyss.to",
-        "vinovo.to",
-        "vide0.net",
-        "cloudatacdn.com",
-        "jilliandescribecompany.com",
-        "gaydam.net",
-        "short.icu"
-    )
+    try {
+        val headers = mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+            "Referer" to "https://fxggxt.com/",
+            "Accept" to "text/html,application/xhtml+xml..."
+        )
 
-    val document = app.get(data).document
+        val doc = app.get(data, headers = headers).document
 
-    // Chỉ lấy các iframe trong khối .videohere (tránh quảng cáo sidebar)
-    val iframes = document.select("div.videohere iframe").mapNotNull {
-        it.attr("data-src").ifBlank { it.attr("src") }}.filter { url -> supportedDomains.any { domain -> domain in url } }
+        // Ưu tiên lấy URL từ iframe
+        val videoUrl = doc.select("div.responsive-player iframe")
+            .firstOrNull()
+            ?.attr("src")
+            ?: run {
+                // Fallback: xử lý meta tag nếu không tìm thấy iframe
+                doc.select("meta[itemprop=embedURL]")
+                    .firstOrNull()
+                    ?.attr("content")
+                    ?.substringBefore("'") // Cắt bỏ phần thừa sau '
+            }
+            ?: return false
 
-    if (iframes.isEmpty()) return false
+        val title = doc.select("meta[itemprop=name]")
+            .firstOrNull()
+            ?.attr("content")
+            ?: "FXGGXT Video"
 
-    iframes.forEach { url ->
-        Log.i("Gayxx", "Found iframe: $url")
-        loadExtractor(url, subtitleCallback, callback)
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = title,
+                url = videoUrl,
+            ) {
+                this.referer = "https://fxggxt.com/"
+                this.quality = Qualities.Unknown.value
+            }
+        )
+
+        return true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return false
     }
-    return true
 }
 }
-
-
-
