@@ -232,16 +232,18 @@ open class StreamTapeExtractor: ExtractorApi() {
             ?.data()
             ?.substringAfter("$targetLine.innerHTML = '")
             ?: return
-        val videoUrl = "https:" + script.substringBefore("'") +
+        val trueUrl = "https:" + script.substringBefore("'") +
                 script.substringAfter("+ ('xcd").substringBefore("'")
 
-        callback.invoke(
-            ExtractorLink(
-                name,
-                name,
-                videoUrl,
-                "",
-                Qualities.Unknown.value
+        return listOf(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = trueUrl,
+                type = INFER_TYPE
+            ) {
+                this.referer = mainUrl
+            }
             )
         )
 
