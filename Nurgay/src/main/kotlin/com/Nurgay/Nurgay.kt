@@ -102,7 +102,7 @@ override suspend fun search(query: String): List<SearchResponse> {
 
         val supportedDomains = listOf(
             "bigwarp.io", "voe.sx", "mixdrop", 
-            "streamtape", "doodstream.com", "dooood.com", "vinovo.to",
+            "streamtape", "doodstream.com", "dooood.com", "doods.pro", "d0000d.com", "vinovo.to",
             "vide0.net",  "abyss.to", "vinovo.to", // Thêm domain Doodstream thực tế Thêm domain download
         )
         

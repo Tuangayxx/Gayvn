@@ -130,7 +130,7 @@ class GXtape44Extractor(
 
 open class DoodExtractor : ExtractorApi() {
     override var name = "DoodStream"
-    override var mainUrl = "https://doooodstream.com"
+    override var mainUrl = "https://d0000d.com"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
