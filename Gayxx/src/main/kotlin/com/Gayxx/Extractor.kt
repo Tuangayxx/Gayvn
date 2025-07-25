@@ -144,8 +144,7 @@ open class DoodLaExtractor : ExtractorApi() {
             newExtractorLink(
                 source = name,
                 name = name,
-                url = videoUrl,
-                type = INFER_TYPE
+                url = videoUrl
             )
         ) // links are valid in 8h
 
@@ -208,8 +207,7 @@ open class MixDrop : ExtractorApi() {
                         newExtractorLink(
                 source = name,
                 name = name,
-                url = videoUrl,
-                type = INFER_TYPE
+                url = videoUrl
                     )
                 )
             }
@@ -248,11 +246,9 @@ open class StreamTape : ExtractorApi() {
                     "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
                 return listOf(
                     newExtractorLink(
-                        name,
-                        name,
-                        extractedUrl,
-                        url,
-                        type = INFER_TYPE
+                        source = name,
+                        name = name,
+                        url = extractedUrl
                     )
                 )
             }
