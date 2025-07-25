@@ -30,7 +30,7 @@ open class DoodExtractor(
                     this.name,
                     this.name,
                     directUrl,
-                    ExtractorLinkType.M3U8
+                    ExtractorLinkType.mp4
                 )
             )
         }
