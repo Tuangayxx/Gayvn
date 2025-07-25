@@ -1,24 +1,20 @@
 package com.Fxggxt
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils.*
-import org.json.JSONObject
 
-class DoodExtractor(
-    override val name: String = "doodstream",
-    override val mainUrl: String = "https://vide0.net/e/",
-    override val requiresReferer: Boolean = false
-) : ExtractorApi() {
+class DoodExtractor : ExtractorApi() {
+    override val name = "doodstream"
+    override val mainUrl = "https://vide0.net"
+    override val requiresReferer = false
+
     override suspend fun getUrl(
         url: String,
         referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        // Chuyển đổi URL từ doodstream.com sang vide0.net
+        // Chuyển đổi domain từ doodstream.com sang vide0.net
         val convertedUrl = url.replace(
             oldValue = "doodstream.com",
             newValue = "vide0.net",
@@ -26,21 +22,30 @@ class DoodExtractor(
         )
         
         val document = app.get(convertedUrl).document
-        var found = false
 
         document.select("div.responsive-player iframe").forEach { iframe ->
             val src = iframe.attr("src")
-            val videoHash = src.substringAfter("/")
-            val directUrl = "$mainUrl$videoHash"
+            
+            // Xử lý cả URL tương đối và tuyệt đối
+            val videoPath = when {
+                src.startsWith("http") -> src.substringAfter("//").substringAfter("/")
+                src.startsWith("//") -> src.substringAfter("//").substringAfter("/")
+                else -> src
+            }
+            
+            // Tạo URL stream cuối cùng
+            val streamUrl = "$mainUrl/e/$videoPath"
             
             callback(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    directUrl,
-                    ExtractorLinkType.M3U8
+                ExtractorLink(
+                    source = name,
+                    name = name,
+                    url = streamUrl,
+                    referer = mainUrl,
+                    quality = Qualities.Unknown.value,
+                    type = ExtractorLinkType.M3U8
                 )
             )
+        }
     }
-}
 }
