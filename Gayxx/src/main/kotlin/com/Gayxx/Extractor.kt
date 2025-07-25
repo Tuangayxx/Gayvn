@@ -110,6 +110,10 @@ class DoodYtExtractor : DoodLaExtractor() {
     override var mainUrl = "https://dood.yt"
 }
 
+class vide0Extractor : DoodLaExtractor() {
+    override var mainUrl = "https://vide0.net"
+}
+
 open class DoodLaExtractor : ExtractorApi() {
     override var name = "DoodStream"
     override var mainUrl = "https://dood.la"
@@ -130,7 +134,6 @@ open class DoodLaExtractor : ExtractorApi() {
                 this.name,
                 this.name,
                 trueUrl,
-                mainUrl,
                 getQualityFromName(quality),
                 false
             )
@@ -143,6 +146,24 @@ open class DoodLaExtractor : ExtractorApi() {
 
 
 
+package com.Gayxx
+
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.SubtitleFile
+import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.JsUnpacker
+import org.jsoup.nodes.Document
+import kotlinx.coroutines.delay 
+
 class MixDropBz : MixDrop(){
     override var mainUrl = "https://mixdrop.bz"
 }
@@ -150,37 +171,62 @@ class MixDropBz : MixDrop(){
 class MixDropCh : MixDrop(){
     override var mainUrl = "https://mixdrop.ch"
 }
-class MixDropTo : MixDrop(){
+
+class MixDropTo : MixDrop() { 
     override var mainUrl = "https://mixdrop.to"
 }
 
 open class MixDrop : ExtractorApi() {
     override var name = "MixDrop"
     override var mainUrl = "https://mixdrop.co"
-    private val srcRegex = Regex("""wurl.*?=.*?"(.*?)";""")
+    private val srcRegex = Regex("""(?:wurl|MDCore\.wurl)\s*=\s*['"]([^'"]+)['"]""") // REGEX TỐT HƠN
     override val requiresReferer = false
 
     override fun getExtractorUrl(id: String): String {
         return "$mainUrl/e/$id"
     }
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        with(app.get(url)) {
-            getAndUnpack(this.text).let { unpackedText ->
-                srcRegex.find(unpackedText)?.groupValues?.get(1)?.let { link ->
-                    return listOf(
-                        newExtractorLink(
-                            name,
-                            name,
-                            httpsify(link),
-                            url,
-                            Qualities.Unknown.value,
-                        )
+    // THÊM PHƯƠNG THỨC XỬ LÝ LINK
+    override suspend fun getExtractorLinks(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val response = app.get(url, referer = referer)
+        val doc = response.document
+        
+        // Tìm và giải mã script
+        val script = doc.selectFirst("script:containsData(wurl)")?.data() ?: return false
+        val unpacker = JsUnpacker(script)
+        val unpacked = unpacker.unpackIfNeeded() ?: script
+        
+        // Trích xuất URL video
+        val videoPath = srcRegex.find(unpacked)?.groupValues?.get(1) ?: return false
+        val videoUrl = "https:${videoPath.replace("\\/", "/")}"
+
+        // Xử lý HLS/Direct
+        when {
+            videoUrl.contains(".m3u8") -> {
+                M3u8Helper.generateM3u8(
+                    name,
+                    videoUrl,
+                    mainUrl,
+                ).forEach(callback)
+            }
+            else -> {
+                callback(
+                    newExtractorLink(
+                        name,
+                        videoUrl,
+                        mainUrl,
+                        Qualities.Unknown.value,
+                        type = ExtractorLinkType.VIDEO
                     )
-                }
+                )
             }
         }
-        return null
+        return true
     }
 }
 

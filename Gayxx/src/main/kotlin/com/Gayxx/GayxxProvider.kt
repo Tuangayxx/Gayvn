@@ -10,7 +10,6 @@ class GayxxProvider: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Gayxx())
         registerExtractorAPI(VoeExtractor())
-        registerExtractorAPI(Vide0Extractor())
         registerExtractorAPI(MixDrop())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(DoodLaExtractor())
