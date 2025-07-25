@@ -12,7 +12,6 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.extractors.StreamTape
-import com.lagradost.cloudstream3.utils
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Document
 import kotlinx.coroutines.delay
