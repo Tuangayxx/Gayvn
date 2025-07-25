@@ -1,9 +1,24 @@
 package com.Gayxx
 
-import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.*
+import android.annotation.SuppressLint
 import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.extractors.VidhideExtractor
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors.Filesim
+import com.lagradost.cloudstream3.extractors.MixDrop
+import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.INFER_TYPE
+import com.lagradost.cloudstream3.utils.JsUnpacker
+import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.api.Log
+import com.lagradost.cloudstream3.SubtitleFile
+import com.lagradost.cloudstream3.USER_AGENT
+import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.utils.*
+import org.jsoup.nodes.Element
 
 
 abstract class BaseVideoExtractor : ExtractorApi() {
