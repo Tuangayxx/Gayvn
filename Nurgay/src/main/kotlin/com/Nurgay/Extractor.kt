@@ -22,7 +22,7 @@ import org.json.JSONObject
 
 open class VID : ExtractorApi() {
     override var name = "VID Xtapes"
-    override var mainUrl = "https://vid.xtapes.in"
+    override var mainUrl = "https://vid.nurgay.to"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
@@ -127,9 +127,9 @@ class GXtape44Extractor(
     }
 }
 
-class DoodExtractor : ExtractorApi() {
+open class DoodExtractor : ExtractorApi() {
     override var name = "DoodStream"
-    override var mainUrl = "https://doodstream.com"
+    override var mainUrl = "https://doooodstream.com"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
@@ -165,5 +165,74 @@ class DoodExtractor : ExtractorApi() {
                 this.quality = getQualityFromName(quality)
             }
         )
+    }
+}
+
+open class vide0Extractor : ExtractorApi() {
+    override var name = "vide0"
+    override var mainUrl = "https://doooodstream.com"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        val response0 = app.get(url).text
+        // Tìm đường dẫn pass_md5 và token
+        val passMd5Path = Regex("/pass_md5/[^']*").find(response0)?.value ?: return null
+        val token = passMd5Path.substringAfterLast("/")
+        
+        // Lấy dữ liệu video từ API
+        val md5Url = mainUrl + passMd5Path
+        val res = app.get(md5Url, referer = mainUrl + url.substringAfterLast("/"))
+        val videoData = res.text
+        
+        // Tạo URL hoàn chỉnh với token và tham số ngẫu nhiên
+        val randomStr = List(10) { 
+            ('a'..'z') + ('A'..'Z') + ('0'..'9')
+        }.joinToString("")
+        val trueUrl = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
+
+        // Lấy chất lượng video từ title
+        val quality = Regex("\\d{3,4}p")
+            .find(response0.substringAfter("<title>").substringBefore("</title>"))
+            ?.value
+
+        return listOf(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = trueUrl,
+                type = INFER_TYPE
+            ) {
+                this.referer = mainUrl
+                this.quality = getQualityFromName(quality)
+            }
+        )
+    }
+}
+
+open class StreamTape : ExtractorApi() {
+    override var name = "StreamTape"
+    override var mainUrl = "https://streamtape.com"
+    override val requiresReferer = false
+
+    private val linkRegex =
+        Regex("""'robotlink'\)\.innerHTML = '(.+?)'\+ \('(.+?)'\)""")
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        with(app.get(url)) {
+            linkRegex.find(this.text)?.let {
+                val extractedUrl =
+                    "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
+                return listOf(
+                    ExtractorLink(
+                        name,
+                        name,
+                        extractedUrl,
+                        url,
+                        Qualities.Unknown.value,
+                    )
+                )
+            }
+        }
+        return null
     }
 }
