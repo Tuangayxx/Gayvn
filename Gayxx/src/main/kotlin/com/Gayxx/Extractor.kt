@@ -145,57 +145,13 @@ open class DoodLaExtractor : ExtractorApi() {
             newExtractorLink(
                 source = name,
                 name = name,
-                url = videoUrl
+                url = trueUrl
             )
         ) // links are valid in 8h
 
     }
 }
  
-
-class MixDropBz : MixDrop(){
-    override var mainUrl = "https://mixdrop.bz"
-}
-
-class MixDropCh : MixDrop(){
-    override var mainUrl = "https://mixdrop.ch"
-}
-
-class MixDropTo : MixDrop() { 
-    override var mainUrl = "https://mixdrop.to"
-}
-
-open class MixDrop : ExtractorApi() {
-    override var name = "MixDrop"
-    override var mainUrl = "https://mixdrop.co"
-    private val srcRegex = Regex("""wurl.*?=.*?"(.*?)";""")
-    override val requiresReferer = false
-
-    override fun getExtractorUrl(id: String): String {
-        return "$mainUrl/e/$id"
-    }
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        with(app.get(url)) {
-            getAndUnpack(this.text).let { unpackedText ->
-                srcRegex.find(unpackedText)?.groupValues?.get(1)?.let { link ->
-                    return listOf(
-
-                        newExtractorLink(
-                source = name,
-                name = name,
-                url = url
-                    )
-                )
-            }
-        }
-        }
-        return null
-    }
-}
-
-
-
 
 class StreamTapeNet : StreamTape() {
     override var mainUrl = "https://streamtape.net"
