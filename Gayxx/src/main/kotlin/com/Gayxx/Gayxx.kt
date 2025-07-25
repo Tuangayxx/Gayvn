@@ -103,48 +103,26 @@ class Gayxx : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    try {
-        val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
-            "Referer" to "https://fxggxt.com/",
-            "Accept" to "text/html,application/xhtml+xml..."
+
+    val supportedDomains = listOf(
+            "bigwarp.io", "voe.sx", "mixdrop", 
+            "streamtape", "doodstream.com", "dooood.com", "vinovo.to",
+            "vide0.net",  "abyss.to", "vinovo.to", // Thêm domain Doodstream thực tế Thêm domain download
         )
 
-        val doc = app.get(data, headers = headers).document
+    val document = app.get(data).document
 
-        // Ưu tiên lấy URL từ iframe
-        val videoUrl = doc.select("div.responsive-player iframe")
-            .firstOrNull()
-            ?.attr("src")
-            ?: run {
-                // Fallback: xử lý meta tag nếu không tìm thấy iframe
-                doc.select("meta[itemprop=embedURL]")
-                    .firstOrNull()
-                    ?.attr("content")
-                    ?.substringBefore("'") // Cắt bỏ phần thừa sau '
-            }
-            ?: return false
+    // Chỉ lấy các iframe trong khối .videohere (tránh quảng cáo sidebar)
+    val iframes = document.select("div.videohere iframe[src]")
+        .mapNotNull { it.attr("src").takeIf { src -> src.isNotBlank() } }
+        .filter { url -> supportedDomains.any { domain -> domain in url } }
 
-        val title = doc.select("meta[itemprop=name]")
-            .firstOrNull()
-            ?.attr("content")
-            ?: "FXGGXT Video"
+    if (iframes.isEmpty()) return false
 
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = title,
-                url = videoUrl,
-            ) {
-                this.referer = "https://fxggxt.com/"
-                this.quality = Qualities.Unknown.value
-            }
-        )
-
-        return true
-    } catch (e: Exception) {
-        e.printStackTrace()
-        return false
+    iframes.forEach { url ->
+        Log.i("Tuangayxx", "Found iframe: $url")
+        loadExtractor(url, subtitleCallback, callback)
     }
+    return true
 }
 }
