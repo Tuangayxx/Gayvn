@@ -45,7 +45,8 @@ class Nurgay : MainAPI() {
     return newHomePageResponse(
         list = HomePageList(
             name = request.name,
-            list = home
+            list = home,
+            isHorizontalImages = false
         ),
         hasNext = true
     )

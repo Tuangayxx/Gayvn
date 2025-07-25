@@ -235,7 +235,7 @@ open class StreamTapeExtractor: ExtractorApi() {
         val trueUrl = "https:" + script.substringBefore("'") +
                 script.substringAfter("+ ('xcd").substringBefore("'")
 
-        return listOf(
+        callback.invoke(
             newExtractorLink(
                 source = name,
                 name = name,
@@ -243,6 +243,5 @@ open class StreamTapeExtractor: ExtractorApi() {
                 type = INFER_TYPE
             )
         )
-
     }
 }
