@@ -17,7 +17,7 @@ open class DoodExtractor(
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val document = app.get(convertedUrl).document
+        val document = app.get(url).document
         var found = false
 
         document.select("div.responsive-player iframe").forEach { iframe ->
