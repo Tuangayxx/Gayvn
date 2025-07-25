@@ -41,11 +41,6 @@ class DoodExtractor(
                     ExtractorLinkType.M3U8
                 )
             )
-            found = true
-        }
-        
-        if (!found) {
-            Log.warn("Không tìm thấy iframe phát video trong trang")
-        }
     }
+}
 }
