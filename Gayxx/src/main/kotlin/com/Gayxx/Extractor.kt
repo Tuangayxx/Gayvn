@@ -168,52 +168,29 @@ class MixDropTo : MixDrop() {
 open class MixDrop : ExtractorApi() {
     override var name = "MixDrop"
     override var mainUrl = "https://mixdrop.co"
-    private val srcRegex = Regex("""(?:wurl|MDCore\.wurl)\s*=\s*['"]([^'"]+)['"]""") // REGEX TỐT HƠN
+    private val srcRegex = Regex("""wurl.*?=.*?"(.*?)";""")
     override val requiresReferer = false
 
     override fun getExtractorUrl(id: String): String {
         return "$mainUrl/e/$id"
     }
 
-    // THÊM PHƯƠNG THỨC XỬ LÝ LINK
-    override suspend fun getExtractorLinks(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val response = app.get(url, referer = referer)
-        val doc = response.document
-        
-        // Tìm và giải mã script
-        val script = doc.selectFirst("script:containsData(wurl)")?.data() ?: return false
-        val unpacker = JsUnpacker(script)
-        val unpacked = unpacker.unpackIfNeeded() ?: script
-        
-        // Trích xuất URL video
-        val videoPath = srcRegex.find(unpacked)?.groupValues?.get(1) ?: return false
-        val videoUrl = "https:${videoPath.replace("\\/", "/")}"
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        with(app.get(url)) {
+            getAndUnpack(this.text).let { unpackedText ->
+                srcRegex.find(unpackedText)?.groupValues?.get(1)?.let { link ->
+                    return listOf(
 
-        // Xử lý HLS/Direct
-        when {
-            videoUrl.contains(".m3u8") -> {
-                M3u8Helper.generateM3u8(
-                    name,
-                    videoUrl,
-                    mainUrl,
-                ).forEach(callback)
-            }
-            else -> {
-                callback(
                         newExtractorLink(
                 source = name,
                 name = name,
-                url = videoUrl
+                url = url
                     )
                 )
             }
         }
-        return true
+        }
+        return null
     }
 }
 
