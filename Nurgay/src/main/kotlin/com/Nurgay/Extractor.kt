@@ -17,6 +17,7 @@ import com.lagradost.cloudstream3.utils.fixUrl
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.extractors.StreamTape
 import org.json.JSONObject
 
 
@@ -209,28 +210,40 @@ open class vide0Extractor : ExtractorApi() {
     }
 }
 
-open class StreamTape : ExtractorApi() {
-    override var name = "StreamTape"
-    override var mainUrl = "https://streamtape.com"
+open class StreamTapeExtractor: ExtractorApi() {
+    override val mainUrl = "https://streamtape.com/e/"
+    override val name = "StreamTape"
     override val requiresReferer = false
 
-    private val linkRegex =
-        Regex("""'robotlink'\)\.innerHTML = '(.+?)'\+ \('(.+?)'\)""")
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ){
+        val newUrl = if (!url.startsWith(mainUrl)) {
+            val id = url.split("/").getOrNull(4) ?: return
+            mainUrl + id
+        } else { url }
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        with(app.get(url)) {
-            linkRegex.find(this.text)?.let {
-                val extractedUrl =
-                    "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
-                return listOf(
-                    newExtractorLink(
-                        source = name
-                        name = name
-                        url = extractedUrl
-                    )
-                )
-            }
-        }
-        return null
+        val document = app.get(newUrl).document
+        val targetLine = "document.getElementById('robotlink')"
+        val script = document.selectFirst("script:containsData($targetLine)")
+            ?.data()
+            ?.substringAfter("$targetLine.innerHTML = '")
+            ?: return
+        val videoUrl = "https:" + script.substringBefore("'") +
+                script.substringAfter("+ ('xcd").substringBefore("'")
+
+        callback.invoke(
+            ExtractorLink(
+                name,
+                name,
+                videoUrl,
+                "",
+                Qualities.Unknown.value
+            )
+        )
+
     }
 }
