@@ -1,6 +1,5 @@
 package com.Gayxx
 
-import android.annotation.SuppressLint
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -9,10 +8,11 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.Filesim
-import com.lagradost.cloudstream3.extractors.MixDrop
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.JsUnpacker
 import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.lagradost.cloudstream3.extractors.MixDrop
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.USER_AGENT
@@ -20,6 +20,13 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Document
 import kotlinx.coroutines.delay
+import java.util.Base64
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.NativeJSON
+import org.mozilla.javascript.NativeObject
+import org.mozilla.javascript.Scriptable
+import android.util.Log
+import android.annotation.SuppressLint
 
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
@@ -138,7 +145,7 @@ open class DoodLaExtractor : ExtractorApi() {
                 source = name,
                 name = name,
                 url = videoUrl,
-                type = ExtractorLinkType.VIDEO
+                type = INFER_TYPE
             )
         ) // links are valid in 8h
 
@@ -202,7 +209,7 @@ open class MixDrop : ExtractorApi() {
                 source = name,
                 name = name,
                 url = videoUrl,
-                type = ExtractorLinkType.VIDEO
+                type = INFER_TYPE
                     )
                 )
             }
@@ -245,7 +252,7 @@ open class StreamTape : ExtractorApi() {
                         name,
                         extractedUrl,
                         url,
-                        type = ExtractorLinkType.VIDEO
+                        type = INFER_TYPE
                     )
                 )
             }
