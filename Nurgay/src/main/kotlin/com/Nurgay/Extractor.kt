@@ -241,9 +241,6 @@ open class StreamTapeExtractor: ExtractorApi() {
                 name = name,
                 url = trueUrl,
                 type = INFER_TYPE
-            ) {
-                this.referer = mainUrl
-            }
             )
         )
 
