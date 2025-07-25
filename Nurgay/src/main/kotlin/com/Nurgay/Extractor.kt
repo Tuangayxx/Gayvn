@@ -223,12 +223,10 @@ open class StreamTape : ExtractorApi() {
                 val extractedUrl =
                     "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
                 return listOf(
-                    ExtractorLink(
-                        name,
-                        name,
-                        extractedUrl,
-                        url,
-                        Qualities.Unknown.value,
+                    newExtractorLink(
+                        source = name
+                        name = name
+                        url = extractedUrl
                     )
                 )
             }
