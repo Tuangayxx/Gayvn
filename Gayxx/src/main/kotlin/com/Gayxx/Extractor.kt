@@ -126,7 +126,7 @@ open class DoodLaExtractor : ExtractorApi() {
         val trueUrl = app.get(md5, referer = newUrl).text + "zUEJeL3mUN?token=" + md5.substringAfterLast("/")   //direct link to extract  (zUEJeL3mUN is random)
         val quality = Regex("\\d{3,4}p").find(response0.substringAfter("<title>").substringBefore("</title>"))?.groupValues?.get(0)
         return listOf(
-            ExtractorLink(
+            newExtractorLink(
                 this.name,
                 this.name,
                 trueUrl,
@@ -169,7 +169,7 @@ open class MixDrop : ExtractorApi() {
             getAndUnpack(this.text).let { unpackedText ->
                 srcRegex.find(unpackedText)?.groupValues?.get(1)?.let { link ->
                     return listOf(
-                        ExtractorLink(
+                        newExtractorLink(
                             name,
                             name,
                             httpsify(link),
@@ -213,7 +213,7 @@ open class StreamTape : ExtractorApi() {
                 val extractedUrl =
                     "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
                 return listOf(
-                    ExtractorLink(
+                    newExtractorLink(
                         name,
                         name,
                         extractedUrl,
