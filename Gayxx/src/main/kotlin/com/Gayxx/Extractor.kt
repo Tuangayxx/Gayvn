@@ -5,21 +5,17 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.extractors.MixDrop
-import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.JsUnpacker
-import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.extractors.StreamTape
-import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils
 import org.jsoup.nodes.Element
-
+import org.jsoup.nodes.Document
+import kotlinx.coroutines.delay
 
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
@@ -135,38 +131,16 @@ open class DoodLaExtractor : ExtractorApi() {
         val quality = Regex("\\d{3,4}p").find(response0.substringAfter("<title>").substringBefore("</title>"))?.groupValues?.get(0)
         return listOf(
             newExtractorLink(
-                this.name,
-                this.name,
-                trueUrl,
-                getQualityFromName(quality),
-                false
+                source = name,
+                name = name,
+                url = videoUrl,
+                type = ExtractorLinkType.VIDEO
             )
         ) // links are valid in 8h
 
     }
 }
-
-
-
-
-
-package com.Gayxx
-
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.SubtitleFile
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import com.lagradost.cloudstream3.utils.M3u8Helper
-import com.lagradost.cloudstream3.utils.INFER_TYPE
-import com.lagradost.cloudstream3.utils.getQualityFromName
-import com.lagradost.cloudstream3.utils.JsUnpacker
-import org.jsoup.nodes.Document
-import kotlinx.coroutines.delay 
+ 
 
 class MixDropBz : MixDrop(){
     override var mainUrl = "https://mixdrop.bz"
