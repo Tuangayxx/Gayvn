@@ -198,12 +198,11 @@ open class MixDrop : ExtractorApi() {
             }
             else -> {
                 callback(
-                    newExtractorLink(
-                        name,
-                        videoUrl,
-                        mainUrl,
-                        Qualities.Unknown.value,
-                        type = ExtractorLinkType.VIDEO
+                        newExtractorLink(
+                source = name,
+                name = name,
+                url = videoUrl,
+                type = ExtractorLinkType.VIDEO
                     )
                 )
             }
@@ -246,7 +245,7 @@ open class StreamTape : ExtractorApi() {
                         name,
                         extractedUrl,
                         url,
-                        Qualities.Unknown.value,
+                        type = ExtractorLinkType.VIDEO
                     )
                 )
             }
