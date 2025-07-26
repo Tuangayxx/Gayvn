@@ -71,8 +71,6 @@ open class vide0Extractor : ExtractorApi() {
                 source = name,
                 name = "${quality ?: "unknown"}p",
                 url = trueUrl,
-                referer = mainUrl,
-                quality = quality?.toIntOrNull() ?: 480,
                 type = INFER_TYPE
             )
         )
