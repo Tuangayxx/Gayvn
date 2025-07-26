@@ -145,7 +145,7 @@ class Fxggxt : MainAPI() {
                 ?: return false
 
             val videoHash = videoUrl.substringAfterLast("/")
-                directUrl = "https://vide0.net/e/$videoHash"
+            val directUrl = "https://vide0.net/e/$videoHash"
             
             val title = doc.select("meta[itemprop=name]")
                 .firstOrNull()
