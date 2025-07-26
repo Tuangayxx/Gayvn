@@ -22,7 +22,6 @@ class Nurgay : MainAPI() {
 
     override val mainPage = mainPageOf(
         "/?filter=latest"                         to "Latest",
-        "page/2/?filter=latest"                   to "Next",
         "/?filter=most-viewed"                    to "Most Viewed",
         "/asiaten"                                to "Asian",
         "/gruppensex"                             to "Group Sex",
