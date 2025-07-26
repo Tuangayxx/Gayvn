@@ -29,8 +29,7 @@ open class DoodExtractor(
                 newExtractorLink(
                     this.name,
                     this.name,
-                    directUrl,
-                    ExtractorLinkType.mp4
+                    directUrl
                 )
             )
         }
