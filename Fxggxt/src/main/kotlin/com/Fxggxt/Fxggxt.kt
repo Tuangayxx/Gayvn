@@ -143,6 +143,9 @@ class Fxggxt : MainAPI() {
                 .firstOrNull()
                 ?.attr("content")
                 ?: return false
+
+            val videoHash = videoUrl.substringAfterLast("/")
+                directUrl = "https://vide0.net/e/$videoHash"
             
             val title = doc.select("meta[itemprop=name]")
                 .firstOrNull()
@@ -153,7 +156,7 @@ class Fxggxt : MainAPI() {
                 newExtractorLink(
                     source = this.name,
                     name = title,
-                    url = videoUrl,
+                    url = directUrl,
                 ) {
                     this.referer = "https://fxggxt.com/"
                     this.quality = Qualities.Unknown.value
