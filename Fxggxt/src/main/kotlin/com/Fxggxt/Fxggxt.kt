@@ -145,24 +145,13 @@ class Fxggxt : MainAPI() {
                 ?: return false
 
             val videoHash = videoUrl.substringAfterLast("/")
-            val directUrl = "https://vide0.net/e/$videoHash"
+            val directUrl = "https://vide0.net/e/$videoHash" 
             
-            val title = doc.select("meta[itemprop=name]")
-                .firstOrNull()
-                ?.attr("content")
-                ?: "FXGGXT Video"
-
-            callback.invoke(
-                newExtractorLink(
-                    source = this.name,
-                    name = title,
-                    url = directUrl,
-                ) {
-                    this.referer = "https://fxggxt.com/"
-                    this.quality = Qualities.Unknown.value
-                }
-            )
-            
-            return true
+            directUrl.forEach { 
+            val url -> videoUrl.attr("content")
+            Log.i("Tuanxx", "Processing URL: $url")
+            loadExtractor(url, subtitleCallback, callback)
+        }
+        return true
         }
     }
