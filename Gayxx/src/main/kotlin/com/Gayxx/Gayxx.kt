@@ -107,7 +107,7 @@ class Gayxx : MainAPI() {
     val supportedDomains = listOf(
             "bigwarp.io", "voe.sx", "mixdrop", 
             "streamtape", "doodstream.com", "dooood.com", "vinovo.to",
-            "vide0.net", "vvide0.net", "abyss.to", "vinovo.to", // Thêm domain Doodstream thực tế Thêm domain download
+            "vide0.net", "vvide0.com", "abyss.to", "vinovo.to", // Thêm domain Doodstream thực tế Thêm domain download
         )
 
     val document = app.get(data).document
