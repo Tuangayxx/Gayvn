@@ -148,10 +148,8 @@ class Fxggxt : MainAPI() {
             val videoHash = videoUrl.substringAfterLast("/")
             val directUrl = "https://vide0.net/e/$videoHash" 
             
-            directUrl.forEach { 
-            val url -> videoUrl.attr("content")
-            Log.i("Tuanxx", "Processing URL: $url")
-            loadExtractor(url, subtitleCallback, callback)
+            directUrl.forEach {
+            loadExtractor( directUrl , subtitleCallback, callback)
         }
         return true
         }
