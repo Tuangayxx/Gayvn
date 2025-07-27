@@ -94,7 +94,7 @@ open class vvide0Extractor : ExtractorApi() {
                 }.joinToString("")
         
         // Tạo URL hoàn chỉnh
-        val trueUrl = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
+        val link = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
         
         // Lấy chất lượng video (cải tiến regex)
         val quality = Regex("(\\d{3,4})[pP]")
@@ -105,7 +105,7 @@ open class vvide0Extractor : ExtractorApi() {
             newExtractorLink(
                 source = name,
                 name = name,
-                url = trueUrl,
+                url = link,
                 type = INFER_TYPE
             ) {
                 this.referer = mainUrl

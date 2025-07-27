@@ -98,18 +98,15 @@ class Gayxx : MainAPI() {
     }
 
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit): Boolean {
 
-    val document = app.get(data).document
-
-        document.select("div#videohere iframe").map {
-            val link = it.attr("src")
-
-        loadExtractor(link, subtitleCallback, callback)
+            val document = app.get(data).document
+                document.select("iframe[data-src]").forEach {
+            val url = it.attr("data-src")
+        loadExtractor(url, subtitleCallback, callback)
     }
     return true
 }
