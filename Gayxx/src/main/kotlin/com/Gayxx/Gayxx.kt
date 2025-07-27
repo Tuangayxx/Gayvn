@@ -104,18 +104,12 @@ class Gayxx : MainAPI() {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
 
-    val supportedDomains = listOf(
-            "bigwarp.io", "voe.sx", "mixdrop", 
-            "streamtape", "doodstream.com", "dooood.com", "vinovo.to",
-            "vide0.net", "vvide0.com", "abyss.to", "vinovo.to", // Thêm domain Doodstream thực tế Thêm domain download
-        )
-
     val document = app.get(data).document
 
-        document.select("div.videohere iframe[src]").forEach {
-            val url = it.attr("src")
+        document.select("div#videohere iframe").map {
+            val link = it.attr("src")
 
-        loadExtractor(url, subtitleCallback, callback)
+        loadExtractor(link, subtitleCallback, callback)
     }
     return true
 }
