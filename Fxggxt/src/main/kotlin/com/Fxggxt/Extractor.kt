@@ -69,10 +69,13 @@ open class vide0Extractor : ExtractorApi() {
         return listOf(
             newExtractorLink(
                 source = name,
-                name = "${quality ?: "unknown"}p",
+                name = name,
                 url = trueUrl,
                 type = INFER_TYPE
-            )
+            ) {
+                this.referer = mainUrl
+                this.quality = getQualityFromName(quality)
+            }
         )
     }
 }
