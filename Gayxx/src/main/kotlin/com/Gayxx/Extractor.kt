@@ -71,122 +71,46 @@ class VoeExtractor : BaseVideoExtractor() {
 }
 
 
-class D0000d : DoodLaExtractor() {
-    override var mainUrl = "https://d0000d.com"
-}
+open class vvide0Extractor : ExtractorApi() {
+        override var name = "vvide0"
+        override var mainUrl = "https://vvide0.net"
+        override val requiresReferer = true // Bật yêu cầu referer
 
-class D000dCom : DoodLaExtractor() {
-    override var mainUrl = "https://d000d.com"
-}
+        override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+            val response0 = app.get(url, referer = referer).text
+        
+        // Tìm đường dẫn pass_md5
+            val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
+            val token = passMd5Path.substringAfterLast("/")
+        
+        // Lấy dữ liệu video
+            val md5Url = mainUrl + passMd5Path
+            val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
+            val videoData = res.text
+            
+        // Tạo chuỗi ngẫu nhiên chính xác
+            val randomStr = (1..10).map { 
+            (('a'..'z') + ('A'..'Z') + ('0'..'9')).random() 
+                }.joinToString("")
+        
+        // Tạo URL hoàn chỉnh
+        val trueUrl = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
+        
+        // Lấy chất lượng video (cải tiến regex)
+        val quality = Regex("(\\d{3,4})[pP]")
+            .find(response0.substringAfter("<title>").substringBefore("</title>"))
+            ?.groupValues?.get(1)
 
-class DoodstreamCom : DoodLaExtractor() {
-    override var mainUrl = "https://doodstream.com"
-}
-
-class Dooood : DoodLaExtractor() {
-    override var mainUrl = "https://dooood.com"
-}
-
-class DoodWfExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.wf"
-}
-
-class DoodCxExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.cx"
-}
-
-class DoodShExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.sh"
-}
-class DoodWatchExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.watch"
-}
-
-class DoodPmExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.pm"
-}
-
-class DoodToExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.to"
-}
-
-class DoodSoExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.so"
-}
-
-class DoodWsExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.ws"
-}
-
-class DoodYtExtractor : DoodLaExtractor() {
-    override var mainUrl = "https://dood.yt"
-}
-
-class vide0Extractor : DoodLaExtractor() {
-    override var mainUrl = "https://vide0.net"
-}
-
-open class DoodLaExtractor : ExtractorApi() {
-    override var name = "DoodStream"
-    override var mainUrl = "https://dood.la"
-    override val requiresReferer = false
-
-    override fun getExtractorUrl(id: String): String {
-        return "$mainUrl/d/$id"
-    }
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val newUrl= url.replace(mainUrl, "https://d0000d.com")
-        val response0 = app.get(newUrl).text // html of DoodStream page to look for /pass_md5/...
-        val md5 ="https://d0000d.com"+(Regex("/pass_md5/[^']*").find(response0)?.value ?: return null)  // get https://dood.ws/pass_md5/...
-        val trueUrl = app.get(md5, referer = newUrl).text + "zUEJeL3mUN?token=" + md5.substringAfterLast("/")   //direct link to extract  (zUEJeL3mUN is random)
-        val quality = Regex("\\d{3,4}p").find(response0.substringAfter("<title>").substringBefore("</title>"))?.groupValues?.get(0)
         return listOf(
             newExtractorLink(
                 source = name,
                 name = name,
-                url = trueUrl
-            )
-        ) // links are valid in 8h
-
-    }
-}
- 
-
-class StreamTapeNet : StreamTape() {
-    override var mainUrl = "https://streamtape.net"
-}
-
-class StreamTapeXyz : StreamTape() {
-    override var mainUrl = "https://streamtape.xyz"
-}
-
-class ShaveTape : StreamTape(){
-    override var mainUrl = "https://shavetape.cash"
-}
-
-open class StreamTape : ExtractorApi() {
-    override var name = "StreamTape"
-    override var mainUrl = "https://streamtape.com"
-    override val requiresReferer = false
-
-    private val linkRegex =
-        Regex("""'robotlink'\)\.innerHTML = '(.+?)'\+ \('(.+?)'\)""")
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        with(app.get(url)) {
-            linkRegex.find(this.text)?.let {
-                val extractedUrl =
-                    "https:${it.groups[1]!!.value + it.groups[2]!!.value.substring(3)}"
-                return listOf(
-                    newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = extractedUrl
-                    )
-                )
+                url = trueUrl,
+                type = INFER_TYPE
+            ) {
+                this.referer = mainUrl
+                this.quality = getQualityFromName(quality)
             }
-        }
-        return null
+        )
     }
 }
