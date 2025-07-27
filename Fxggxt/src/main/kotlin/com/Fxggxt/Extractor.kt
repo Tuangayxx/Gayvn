@@ -23,7 +23,7 @@ open class DoodExtractor(
         document.select("div.responsive-player iframe").forEach { iframe ->
             val src = iframe.attr("src")
             val videoHash = src.substringAfter("/")
-            val directUrl = "http://vide0.net/e/$videoHash"
+            val directUrl = "http://vvide0.net/e/$videoHash"
             
             callback(
                 newExtractorLink(
