@@ -12,7 +12,7 @@ open class vvide0Extractor : ExtractorApi() {
         override val requiresReferer = true // Bật yêu cầu referer
 
         override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-            val response0 = app.get(url, referer = referer).text
+            val response0 = app.get(url, referer = mainUrl).text
         
         // Tìm đường dẫn pass_md5
             val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
