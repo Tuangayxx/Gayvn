@@ -107,12 +107,11 @@ class Gayxx : MainAPI() {
     val supportedDomains = listOf(
             "bigwarp.io", "voe.sx", "mixdrop", 
             "streamtape", "doodstream.com", "dooood.com", "vinovo.to",
-            "vide0.net",  "abyss.to", "vinovo.to", // Thêm domain Doodstream thực tế Thêm domain download
+            "vide0.net", "vvide0.net", "abyss.to", "vinovo.to", // Thêm domain Doodstream thực tế Thêm domain download
         )
 
     val document = app.get(data).document
 
-    // Chỉ lấy các iframe trong khối .videohere (tránh quảng cáo sidebar)
     val iframes = document.select("div.videohere iframe[src]")
         .mapNotNull { it.attr("src").takeIf { src -> src.isNotBlank() } }
         .filter { url -> supportedDomains.any { domain -> domain in url } }
