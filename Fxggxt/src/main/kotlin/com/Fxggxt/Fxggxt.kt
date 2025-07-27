@@ -23,6 +23,7 @@ class Fxggxt : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
+        "$mainUrl/?filter=latest/" to "Amateur",
         "$mainUrl/tag/amateur-gay-porn/" to "Amateur",
         "$mainUrl/tag/bareback-gay-porn/" to "Bareback",
         "$mainUrl/tag/big-dick-gay-porn/" to "Big Dick",
