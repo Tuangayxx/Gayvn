@@ -112,15 +112,10 @@ class Gayxx : MainAPI() {
 
     val document = app.get(data).document
 
-    val iframes = document.select("div.videohere iframe[src]")
-        .mapNotNull { it.attr("src").takeIf { src -> src.isNotBlank() } }
-        .filter { url -> supportedDomains.any { domain -> domain in url } }
+        document.select("div.videohere iframe).forEach {
+            val link=it.attr("src")
 
-    if (iframes.isEmpty()) return false
-
-    iframes.forEach { url ->
-        Log.i("Tuangayxx", "Found iframe: $url")
-        loadExtractor(url, subtitleCallback, callback)
+        loadExtractor(link, subtitleCallback, callback)
     }
     return true
 }
