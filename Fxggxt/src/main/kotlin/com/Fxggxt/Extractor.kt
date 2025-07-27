@@ -8,7 +8,7 @@ import org.json.JSONObject
 
 open class vvide0Extractor : ExtractorApi() {
         override var name = "vvide0"
-        override var mainUrl = "https://vvide0.net"
+        override var mainUrl = "https://vvide0.com"
         override val requiresReferer = true // Bật yêu cầu referer
 
         override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {

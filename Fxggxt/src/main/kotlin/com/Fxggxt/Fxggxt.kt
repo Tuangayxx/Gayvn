@@ -146,7 +146,7 @@ class Fxggxt : MainAPI() {
     val supportedDomains = listOf(
         "bigwarp.io", "voe.sx", "mixdrop", 
         "streamtape", "doodstream.com", "abyss.to", "vinovo.to",
-        "vide0.net", "vvide0.net" // Đảm bảo cả hai domain đều được hỗ trợ
+        "vide0.net", "vvide0.com" // Đảm bảo cả hai domain đều được hỗ trợ
     )
 
     val doc = app.get(data, headers = headers).document
@@ -162,7 +162,7 @@ class Fxggxt : MainAPI() {
     // Tạo cả hai URL cho tất cả các nguồn
     val baseUrls = listOf(
         "https://vide0.net/e/",
-        "https://vvide0.net/e/"
+        "https://vvide0.com/e/"
     )
     
     baseUrls.forEach { baseUrl ->
