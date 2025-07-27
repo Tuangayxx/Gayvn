@@ -112,7 +112,7 @@ class Gayxx : MainAPI() {
 
     val document = app.get(data).document
 
-        document.select("div.videohere iframe).forEach {
+        document.select("div.videohere iframe").forEach {
             val link=it.attr("src")
 
         loadExtractor(link, subtitleCallback, callback)
