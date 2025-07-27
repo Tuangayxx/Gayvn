@@ -9,7 +9,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 class FxggxtPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Fxggxt())
-        registerExtractorAPI(DoodExtractor())
+        registerExtractorAPI(vvide0Extractor())
         registerExtractorAPI(vide0Extractor())
     }
 }

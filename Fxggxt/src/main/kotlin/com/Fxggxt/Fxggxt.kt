@@ -120,37 +120,46 @@ class Fxggxt : MainAPI() {
 
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
 
-        val headers = mapOf(
-                "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-                "Referer" to "https://fxggxt.com/",
-                "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-            )
-        
-        val supportedDomains = listOf(
-            "bigwarp.io", "voe.sx", "mixdrop", 
-            "streamtape", "doodstream.com", "abyss.to", "vinovo.to",
-            "vide0.net",
-        )
+    val headers = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Referer" to "https://fxggxt.com/",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+    )
+    
+    val supportedDomains = listOf(
+        "bigwarp.io", "voe.sx", "mixdrop", 
+        "streamtape", "doodstream.com", "abyss.to", "vinovo.to",
+        "vide0.net", "vvide0.net" // Đảm bảo cả hai domain đều được hỗ trợ
+    )
 
-            val doc = app.get(data, headers = headers).document
-            
-            val videoUrl = doc.select("meta[itemprop=embedURL]")
-                .firstOrNull()
-                ?.attr("content")
-                ?: return false
+    val doc = app.get(data, headers = headers).document
+    
+    val videoUrl = doc.select("meta[itemprop=embedURL]")
+        .firstOrNull()
+        ?.attr("content")
+        ?: return false
 
-            val videoHash = videoUrl.substringAfterLast("/")
-            val directUrl = "https://vide0.net/e/$videoHash" 
-            
-            directUrl.forEach {
-            loadExtractor( directUrl , subtitleCallback, callback)
-        }
-        return true
-        }
+    // Trích xuất video ID từ URL (phần sau cùng sau dấu '/')
+    val videoId = videoUrl.substringAfterLast("/")
+    
+    // Tạo cả hai URL cho tất cả các nguồn
+    val baseUrls = listOf(
+        "https://vide0.net/e/",
+        "https://vvide0.net/e/"
+    )
+    
+    baseUrls.forEach { baseUrl ->
+        val newUrl = baseUrl + videoId
+        loadExtractor(newUrl, subtitleCallback, callback)
     }
+    
+    return true
+    }
+}
+
