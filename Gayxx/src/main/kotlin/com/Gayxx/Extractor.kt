@@ -138,8 +138,7 @@ open class Hdplayer : ExtractorApi() {
                         type = INFER_TYPE
                     ) {
                         this.referer = mainUrl
-                        this.quality = Qualities.Unknown.value
-                        isM3u8 = true
+                        this.quality = getQualityFromName(quality)
                     }
                 )
         }
