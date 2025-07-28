@@ -96,27 +96,30 @@ open class dood : ExtractorApi() {
     }
 }
 
-open class vvide0Extractor : ExtractorApi() {
-        override var name = "vvide0"
-        override var mainUrl = "https://vvide0.com"
-        override val requiresReferer = true // Bật yêu cầu referer
+open class vide0Extractor : ExtractorApi() {
+    override var name = "vide0"
+    override var mainUrl = "https://vide0.net"
+    override val requiresReferer = true // Bật yêu cầu referer
 
-        override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-            val response0 = app.get(url, referer = mainUrl).text
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         
+        val changeurl=url.replace("doodstream.com","vide0.net")
+        val response0 = app.get(changeurl, referer = referer).text
+
+
         // Tìm đường dẫn pass_md5
-            val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
-            val token = passMd5Path.substringAfterLast("/")
+        val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
+        val token = passMd5Path.substringAfterLast("/")
         
         // Lấy dữ liệu video
-            val md5Url = mainUrl + passMd5Path
-            val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
-            val videoData = res.text
-            
+        val md5Url = mainUrl + passMd5Path
+        val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
+        val videoData = res.text
+        
         // Tạo chuỗi ngẫu nhiên chính xác
-            val randomStr = (1..10).map { 
+        val randomStr = (1..10).map { 
             (('a'..'z') + ('A'..'Z') + ('0'..'9')).random() 
-                }.joinToString("")
+        }.joinToString("")
         
         // Tạo URL hoàn chỉnh
         val trueUrl = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
@@ -138,4 +141,4 @@ open class vvide0Extractor : ExtractorApi() {
             }
         )
     }
-}
+}   
