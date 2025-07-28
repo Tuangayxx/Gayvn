@@ -25,13 +25,13 @@ class Gayxx : MainAPI() {
         "/2025/06" to "Tháng sáu",
         "/2025/05" to "Tháng năm",
         "/2025/04" to "Tháng bốn",
-        "/2025/03" to "Tháng ba",
-        "/2025/02" to "Tháng hai",
-        "/2025/01" to "Tháng một",
-        "/2024"    to "Năm ngoái",
+        "/category/asian-gay-sex" to "Asian",
+        "/hottest-gay-porn-sex/?type=month" to "Hottest",
+        "/category/gay-thailand" to "Thailand",
+        "/tag/of/"               to "Onlyfans",
         "/hottest-gay-porn-sex" to "Hot Videos",
         "/category/group" to "Càng đông càng vui",
-        "category/gay-viet" to "Việt Nam ngày nay",
+        "/category/gay-viet" to "Việt Nam ngày nay",
         "/category/sex-gay-onlyfans-chinese" to "Tung Của",
     )    
 

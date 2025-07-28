@@ -115,30 +115,3 @@ open class vvide0Extractor : ExtractorApi() {
     }
 }
 
-open class Hdplayer : ExtractorApi() {
-    override val name = "Hdplayer"
-    override val mainUrl = "https://player.hdgay.net"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-    ): List<ExtractorLink>? {
-        val response =app.get(url).document
-        //val response = app.get(url, referer = referer)
-        val script = response.selectFirst("script:containsData(sources)")?.data().toString()
-        //Log.d("Test9871",script)
-        Regex("sources:.\\[.file:\"(.*)\".*").find(script)?.groupValues?.get(1)?.let { link ->
-            if (link.contains("m3u8"))
-                return listOf(
-                    newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = link,
-                        type = INFER_TYPE
-                    ) 
-                )
-        }
-        return null
-    }
-}
