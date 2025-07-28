@@ -152,7 +152,7 @@ class Fxggxt : MainAPI() {
     val document = app.get(data, headers = headers).document
     
         document.select("meta[itemprop=embedURL]").forEach {
-            val url it.attr("content")
+            val url = it.attr("content")
         
          loadExtractor(url, subtitleCallback, callback)
     }
