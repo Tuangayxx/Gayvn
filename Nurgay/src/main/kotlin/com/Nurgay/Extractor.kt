@@ -171,7 +171,7 @@ open class DoodExtractor : ExtractorApi() {
 
 open class vide0Extractor : ExtractorApi() {
     override var name = "vide0"
-    override var mainUrl = "https://vide0.net"
+    override var mainUrl = "https://doooodstream.com"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
