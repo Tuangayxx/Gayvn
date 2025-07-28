@@ -149,28 +149,14 @@ class Fxggxt : MainAPI() {
         "vide0.net", "vvide0.com" // Đảm bảo cả hai domain đều được hỗ trợ
     )
 
-    val doc = app.get(data, headers = headers).document
+    val document = app.get(data, headers = headers).document
     
-    val videoUrl = doc.select("meta[itemprop=embedURL]")
-        .firstOrNull()
-        ?.attr("content")
-        ?: return false
-
-    // Trích xuất video ID từ URL (phần sau cùng sau dấu '/')
-    val videoId = videoUrl.substringAfterLast("/")
-    
-    // Tạo cả hai URL cho tất cả các nguồn
-    val baseUrls = listOf(
-        "https://vide0.net/e/",
-        "https://vvide0.com/e/"
-    )
-    
-    baseUrls.forEach { baseUrl ->
-        val newUrl = baseUrl + videoId
-        loadExtractor(newUrl, subtitleCallback, callback)
+        document.select("meta[itemprop=embedURL]").forEach {
+            val url it.attr("content")
+        
+         loadExtractor(url, subtitleCallback, callback)
     }
-    
     return true
-    }
+}
 }
 
