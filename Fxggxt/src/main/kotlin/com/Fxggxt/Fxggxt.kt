@@ -122,7 +122,16 @@ class Fxggxt : MainAPI() {
 
     val actors = doc.select("#video-actors a").mapNotNull { it.text() }.filter { it.isNotBlank() }
 
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+    val recommendations = doc.select("article.loop-video.thumb-block").mapNotNull { el ->
+        val aTag = el.selectFirst("a") ?: return@mapNotNull null
+        val recUrl = fixUrl(aTag.attr("href"))
+        val recName = aTag.attr("title") ?: aTag.selectFirst("header.entry-header span")?.text() ?: return@mapNotNull null
+        val recPoster = aTag.selectFirst(".post-thumbnail-container img")?.attr("data-src")
+        newMovieSearchResponse(recName, recUrl, TvType.NSFW) {
+            this.posterUrl = recPoster
+        }
+    }  
+    return newMovieLoadResponse(tit le, url, TvType.NSFW, url) {
         this.posterUrl = poster
         this.plot = description
         if (actors.isNotEmpty()) addActors(actors)
