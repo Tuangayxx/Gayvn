@@ -131,7 +131,7 @@ class Fxggxt : MainAPI() {
             this.posterUrl = recPoster
         }
     }  
-    return newMovieLoadResponse(tit le, url, TvType.NSFW, url) {
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
         this.posterUrl = poster
         this.plot = description
         if (actors.isNotEmpty()) addActors(actors)
