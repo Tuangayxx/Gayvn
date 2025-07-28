@@ -12,7 +12,7 @@ cloudstream {
      * 2: Slow
      * 3: Beta only
     **/
-    status  = 0 // will be 3 if unspecified
+    status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
     iconUrl = "https://besthdgayporn.com/wp-content/uploads/2023/11/cropped-New-Logo-Site-110423-32x32.png"
 }

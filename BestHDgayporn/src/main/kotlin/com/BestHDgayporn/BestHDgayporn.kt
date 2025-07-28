@@ -83,26 +83,12 @@ class BestHDgayporn : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        
         val document = app.get(data).document
-        // Thử lấy link embed từ iframe
-        val embedUrl = document.selectFirst("div.responsive-player iframe")?.attr("src")
-        if (!embedUrl.isNullOrEmpty()) {
-            loadExtractor(embedUrl, data, subtitleCallback, callback)
-            return true
-        }
-        // Fallback: nếu không có iframe, thử lấy link trực tiếp từ thẻ <video>
-        val videoSrc = document.selectFirst("video")?.attr("src")
-        if (!videoSrc.isNullOrEmpty()) {
-            callback.invoke(
-                newExtractorLink(
-                    source = name,
-                    name = "Normal",
-                    url = videoSrc,
-                    type = ExtractorLinkType.VIDEO
-                )
-            )
-            return true
-        }
-        return false
+                document.select("video[src]").forEach {
+            val url = it.attr("src")
+        loadExtractor(url, subtitleCallback, callback)
     }
+    return true
+}
 }
