@@ -136,9 +136,7 @@ open class Hdplayer : ExtractorApi() {
                         name = name,
                         url = link,
                         type = INFER_TYPE
-                    ) {
-                        this.referer = mainUrl
-                    }
+                    ) 
                 )
         }
         return null
