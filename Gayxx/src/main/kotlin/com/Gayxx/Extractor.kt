@@ -131,14 +131,16 @@ open class Hdplayer : ExtractorApi() {
         Regex("sources:.\\[.file:\"(.*)\".*").find(script)?.groupValues?.get(1)?.let { link ->
             if (link.contains("m3u8"))
                 return listOf(
-                    ExtractorLink(
+                    newExtractorLink(
                         source = name,
                         name = name,
                         url = link,
-                        referer = referer ?: "$mainUrl/",
-                        quality = Qualities.Unknown.value,
+                        type = INFER_TYPE
+                    ) {
+                        this.referer = mainUrl
+                        this.quality = Qualities.Unknown.value
                         isM3u8 = true
-                    )
+                    }
                 )
         }
         return null
