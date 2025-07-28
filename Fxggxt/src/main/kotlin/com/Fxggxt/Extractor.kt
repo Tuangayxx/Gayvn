@@ -13,7 +13,7 @@ open class dood : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val changeurl=url.replace("doodstream.com","vvide0.com")
-        val response0 = app.get(changeurl, referer = referer).text
+        val response0 = app.get(changeurl, referer = mainUrl).text
         
         // Tìm đường dẫn pass_md5
         val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
