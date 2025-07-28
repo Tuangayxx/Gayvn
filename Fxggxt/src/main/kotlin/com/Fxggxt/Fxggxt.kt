@@ -14,7 +14,7 @@ import org.json.JSONArray
 import org.jsoup.nodes.Document
 
 class Fxggxt : MainAPI() {
-    override var mainUrl = "https://fxggxt.com"
+    override var mainUrl = "https://fxggxt.org"
     override var name = "Fxggxt"
     override val hasMainPage = true
     override val hasDownloadSupport = true
@@ -23,7 +23,7 @@ class Fxggxt : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/?filter=latest/"             to "Latest",
+        "$mainUrl/category/gay-porn-videos/"   to "Latest",
         "$mainUrl/tag/amateur-gay-porn/"       to "Amateur",
         "$mainUrl/tag/bareback-gay-porn/"      to "Bareback",
         "$mainUrl/tag/big-dick-gay-porn/"      to "Big Dick",
@@ -46,11 +46,12 @@ class Fxggxt : MainAPI() {
         "$mainUrl/category/cumdumpsluts/"      to "Cumdumpsluts",
         "$mainUrl/category/ericvideos/"        to "Eric videos",
         "$mainUrl/category/facedownassup/"          to "Face down ass up",
+        "$mainUrl/category/falcon-studios/"         to "Falcon Studios",
         "$mainUrl/category/fraternity-x/"           to "Fraternity X",
         "$mainUrl/category/just-for-fans/"          to "Just For Fans",
         "$mainUrl/category/kristenbjorn/"           to "Kristen Bjorn",
         "$mainUrl/category/bi-guys-fuck/"           to "Bi Guys Fuck",
-        "$mainUrl/category/falcon-studios/"         to "Falcon Studios",
+        "$mainUrl/category/onlyfans-gay/"           to "Onlyfans",
         "$mainUrl/category/treasure-island-media/"  to "Treasure Island Media",
         "$mainUrl/category/slamrush/"               to "Slam Rush",
         "$mainUrl/category/seehimfuck/"             to "See Him Fuck",
