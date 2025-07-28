@@ -138,7 +138,6 @@ open class Hdplayer : ExtractorApi() {
                         type = INFER_TYPE
                     ) {
                         this.referer = mainUrl
-                        this.quality = getQualityFromName(quality)
                     }
                 )
         }
