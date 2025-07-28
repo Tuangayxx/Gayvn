@@ -23,12 +23,11 @@ class Fxggxt : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/category/gay-porn-videos/"   to "Latest",
-        "$mainUrl/?s=group"                    to "Group",
-        "$mainUrl/category/adulttime/"         to "Adulttime",
-        "$mainUrl/category/asgmax/"            to "ASGmax",
-        "$mainUrl/category/bel-ami/"           to "Bel Ami",
-        "$mainUrl/category/bi-guys-fuck/"      to "Bi Guys Fuck",
+        "$mainUrl/category/gay-porn-videos/"                    to "Latest",
+        "$mainUrl/category/gay-porn-videos/activeduty/"         to "Active Duty",
+        "$mainUrl/category/gay-porn-videos/adulttime/"          to "Adulttime",
+        "$mainUrl/category/gay-porn-videos/asgmax/"             to "ASGmax",
+        "$mainUrl/category/gay-porn-videos/belami/"           to "Bel Ami",
         "$mainUrl/category/breederbros/"       to "Breeder Bros",
         "$mainUrl/category/clubbangboys/"      to "Club Bang Boys",
         "$mainUrl/category/cocksuremen/"       to "Cock Sure Men",
