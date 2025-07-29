@@ -74,8 +74,8 @@ class VoeExtractor : BaseVideoExtractor() {
 class dsio : BaseVideoExtractor() {
     override val name = "dsio"
     override val domain = "d-s.io"
-    override val mainUrl = "https://$domain/e"
-    override val requiresReferer = false
+    override val mainUrl = "https://$domain"
+    override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
             val response0 = app.get(url).text
@@ -104,6 +104,7 @@ class dsio : BaseVideoExtractor() {
                         url = link,
                         type = INFER_TYPE
                                     ) {
+                        this.referer = mainUrl
                         this.quality = getQualityFromName(quality)
             }
         )

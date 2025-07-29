@@ -95,6 +95,7 @@ class Gayxx : MainAPI() {
             this.posterUrl = poster
             this.plot = description
         }
+
     }
 
     override suspend fun loadLinks(
