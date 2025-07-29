@@ -21,6 +21,7 @@ import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.extractors.StreamTape
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Document
+import org.jsoup.Jsoup
 import kotlinx.coroutines.delay
 import java.util.Base64
 import org.mozilla.javascript.Context
@@ -28,6 +29,7 @@ import org.mozilla.javascript.NativeJSON
 import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
 import android.annotation.SuppressLint
+
 
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
@@ -155,3 +157,39 @@ open class vvide0Extractor : ExtractorApi() {
     }
 }
 
+
+open class HdgayPlayer : ExtractorApi() {
+    override var name = "HdgayPlayer"
+    override var mainUrl = "https://player.hdgay.net"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        val ref = referer ?: "https://gayxx.net"
+        val response = app.get(url, referer = ref).text
+        
+        // Tìm script chứa dữ liệu video
+        val scriptContent = Regex("""<script type="text/javascript">(.*?)</script>""")
+            .find(response)?.groupValues?.get(1)
+            ?: return null
+
+        // Giải nén nếu cần và tìm URL video
+        JsUnpacker(scriptContent).unpack()?.let { unpacked ->
+            Regex("""sources:\s*\[\{\s*file:\s*"(https?[^"]+)""")
+                .find(unpacked)?.groupValues?.get(1)?.let { videoUrl ->
+                    
+                    return listOf(
+                        ExtractorLink(
+                            source = name,
+                            name = name,
+                            url = videoUrl,
+                            type = INFER_TYPE,
+                            quality = Qualities.Unknown.value,
+                            referer = ref,
+                            isM3u8 = videoUrl.contains(".m3u8")
+                        )
+                    )
+                }
+        }
+        return null
+    }
+}
