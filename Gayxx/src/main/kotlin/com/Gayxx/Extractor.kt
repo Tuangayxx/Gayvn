@@ -71,6 +71,46 @@ class VoeExtractor : BaseVideoExtractor() {
 }
 
 
+class dsio : BaseVideoExtractor() {
+    override val name = "dsio"
+    override val domain = "d-s.io"
+    override val mainUrl = "https://$domain/e"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+            val response0 = app.get(url).text
+            if (response.code == 404) return emptyList()
+
+            val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
+            val token = passMd5Path.substringAfterLast("/")
+        
+            val md5Url = mainUrl + passMd5Path
+            val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
+            val videoData = res.text
+
+            val randomStr = (1..10).map { 
+            (('a'..'z') + ('A'..'Z') + ('0'..'9')).random() 
+                }.joinToString("")
+
+            val link = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}
+
+            val quality = Regex("(\\d{3,4})[pP]")
+            .find(response0.substringAfter("<title>").substringBefore("</title>"))
+            ?.groupValues?.get(1)
+
+                return listOf(
+                    newExtractorLink(
+                        source = name,
+                        name = name,
+                        url = link,
+                        type = INFER_TYPE
+                                    ) {
+                        this.quality = getQualityFromName(quality)
+            }
+        )
+    }
+}
+
 open class vvide0Extractor : ExtractorApi() {
         override var name = "vvide0"
         override var mainUrl = "https://vvide0.com"

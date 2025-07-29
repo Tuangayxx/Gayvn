@@ -104,10 +104,22 @@ class Gayxx : MainAPI() {
         callback: (ExtractorLink) -> Unit): Boolean {
 
             val document = app.get(data).document
-                document.select("iframe[data-src]").forEach {
+            val iframes = document.select("iframe[data-src]")
+
+                if (iframes.isNotEmpty()) {
+                    iframes.forEach {
             val url = it.attr("data-src")
-        loadExtractor(url, subtitleCallback, callback)
+                loadExtractor(url, subtitleCallback, callback)
+        }
+        
+    } else {
+        
+                document.select("iframe[src]").forEach {
+            val url = it.attr("src")
+                loadExtractor(url, subtitleCallback, callback)
+        }
     }
+
     return true
-}
+    }
 }
