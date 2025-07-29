@@ -79,7 +79,7 @@ class dsio : BaseVideoExtractor() {
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
             val response0 = app.get(url).text
-            if (response.code == 404) return emptyList()
+            if (response0.code == 404) return emptyList()
 
             val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
             val token = passMd5Path.substringAfterLast("/")
