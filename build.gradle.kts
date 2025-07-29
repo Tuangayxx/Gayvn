@@ -84,6 +84,7 @@ subprojects {
         implementation("me.xdrop:fuzzywuzzy:1.4.0")
         implementation("com.google.code.gson:gson:2.11.0")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+        implementation("org.json:json:20231013")
 
     }
 }
