@@ -167,25 +167,29 @@ open class HdgayPlayer : ExtractorApi() {
         val ref = referer ?: "https://gayxx.net"
         val response = app.get(url, referer = ref).text
         
-        // Tìm script chứa dữ liệu video
-        val scriptContent = Regex("""<script type="text/javascript">(.*?)</script>""")
-            .find(response)?.groupValues?.get(1)
-            ?: return null
-
-        // Giải nén nếu cần và tìm URL video 
-            JsUnpacker(scriptContent).unpack()?.let { unpacked ->
-                Regex("""sources:\s*\[\{\s*file:\s*"(https?[^"]+)""")
-                    .find(unpacked)?.groupValues?.get(1)?.let { videoUrl ->
-                    
-                   return listOf(
-                        newExtractorLink(
-                            name = name,
-                            source = name,
-                            url = videoUrl,
-                            type = INFER_TYPE
-                    )
-                )
-            } ?: emptyList()
-        } ?: emptyList()
+        return Regex("""<script type="text/javascript">(.*?)</script>""")
+            .find(response)
+            ?.groupValues
+            ?.get(1)
+            ?.let { scriptContent ->
+                JsUnpacker(scriptContent).unpack()
+                    ?.let { unpacked ->
+                        Regex("""sources:\s*\[\{\s*file:\s*"(https?[^"]+)""")
+                            .find(unpacked)
+                            ?.groupValues
+                            ?.get(1)
+                            ?.let { videoUrl ->
+                                listOf(
+                                    newExtractorLink(
+                                        source = name,
+                                        name = name,
+                                        url = videoUrl,
+                                        type = INFER_TYPE,
+                                        quality = Qualities.Unknown.value
+                                    )
+                                )
+                            }
+                    }
+            }
     }
 }
