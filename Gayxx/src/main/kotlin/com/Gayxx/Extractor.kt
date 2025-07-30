@@ -172,6 +172,22 @@ open class vvide0Extractor : ExtractorApi() {
         val response = app.get(url)
         if (response.code == 404) return emptyList()
 
+        // Tìm link m3u8 trong response
+        val m3u8Regex = Regex("""https?://[^\s'"]+\.m3u8""")
+        val m3u8Link = m3u8Regex.find(response.text)?.value
+
+        if (m3u8Link != null) {
+            return listOf(
+                newExtractorLink(
+                    name = name,
+                    source = name,
+                    url = m3u8Link,
+                    type = INFER_TYPE
+                )
+            )
+        }
+
+        // Nếu không có, fallback về cách cũ
         val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
             .find(response.text)
             ?.groupValues?.get(1)
