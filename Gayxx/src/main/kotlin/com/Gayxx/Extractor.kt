@@ -158,16 +158,6 @@ open class vvide0Extractor : ExtractorApi() {
 }
 
 
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.anggrayudi.website.extractor.ExtractorApi
-import com.anggrayudi.website.extractor.newExtractorLink
-import com.anggrayudi.website.utils.tryParseJson
-
-abstract class BaseVideoExtractor : ExtractorApi() {
-    protected abstract val domain: String
-    override val mainUrl: String get() = "https://$domain"
-}
-
 class HdgayPlayer : BaseVideoExtractor() {
     override val name = "HdgayPlayer"
     override val domain = "player.hdgay.net"
