@@ -168,8 +168,8 @@ abstract class BaseVideoExtractor : ExtractorApi() {
     override val mainUrl: String get() = "https://$domain"
 }
 
-class HdgayExtractor : BaseVideoExtractor() {
-    override val name = "Hdgay"
+class HdgayPlayer : BaseVideoExtractor() {
+    override val name = "HdgayPlayer"
     override val domain = "player.hdgay.net"
     override val mainUrl = "https://$domain"
     override val requiresReferer = true
@@ -211,14 +211,10 @@ class HdgayExtractor : BaseVideoExtractor() {
                     name = name,
                     source = name,
                     url = videoUrl,
-                    quality = quality,
-                    type = when {
-                        source.type.contains("hls", true) -> VIDEO_TYPE_HLS
-                        videoUrl.contains(".m3u8", true) -> VIDEO_TYPE_HLS
-                        else -> VIDEO_TYPE_M3U8
-                    },
+                    type = INFER_TYPE
+                    ) {
                     headers = mapOf("Referer" to url)
-                )
+                
             }
         } ?: emptyList()
     }
@@ -226,4 +222,5 @@ class HdgayExtractor : BaseVideoExtractor() {
     private fun extractQualityFromUrl(url: String): Int {
         return Regex("""/(\d+)p/""").find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 720
     }
+}
 }
