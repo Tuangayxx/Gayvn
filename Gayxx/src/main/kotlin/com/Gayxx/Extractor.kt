@@ -177,18 +177,15 @@ open class HdgayPlayer : ExtractorApi() {
             Regex("""sources:\s*\[\{\s*file:\s*"(https?[^"]+)""")
                 .find(unpacked)?.groupValues?.get(1)?.let { videoUrl ->
                     
-                    return listOf(
-            newExtractorLink(
-                source = name,
-                name = name,
-                url = link,
-                type = INFER_TYPE
-            ) {
-                this.referer = mainUrl
-                this.quality = getQualityFromName(quality)
-            }
-        )
+                    listOf(
+                    newExtractorLink(
+                        name = name,
+                        source = name,
+                        url = videoUrl,
+                        type = INFER_TYPE
+                    )
+                )
+            } ?: emptyList()
+        } ?: emptyList()
     }
- }
-}}
-    
+}
