@@ -155,7 +155,7 @@ class Fxggxt : MainAPI() {
     val supportedDomains = listOf(
         "bigwarp.io", "voe.sx", "mixdrop", 
         "streamtape", "doodstream.com", "abyss.to", "vinovo.to",
-        "vide0.net", "vvide0.com" // Đảm bảo cả hai domain đều được hỗ trợ
+        "vide0.net", "vvide0.com", "d-s.io" // Đảm bảo cả hai domain đều được hỗ trợ
     )
 
     val document = app.get(data, headers = headers).document
@@ -167,7 +167,7 @@ class Fxggxt : MainAPI() {
                 loadExtractor(url, subtitleCallback, callback)
         
         } else {
-        
+                
                 document.select("iframe[src]").forEach {
             val url = it.attr("src")
                 loadExtractor(url, subtitleCallback, callback)
