@@ -11,5 +11,6 @@ class FxggxtPlugin : Plugin() {
         registerMainAPI(Fxggxt())
         registerExtractorAPI(vide0Extractor())
         registerExtractorAPI(dood())
+        registerExtractorAPI(dsio())
     }
 }
