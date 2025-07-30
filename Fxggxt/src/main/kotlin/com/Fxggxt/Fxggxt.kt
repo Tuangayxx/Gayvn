@@ -162,10 +162,21 @@ class Fxggxt : MainAPI() {
     
         document.select("meta[itemprop=embedURL]").forEach {
             val url = it.attr("content")
+
+             if (!url.isNullOrEmpty() && url.startsWith("http")) {
+                loadExtractor(url, subtitleCallback, callback)
+        }
         
-         loadExtractor(url, subtitleCallback, callback)
+        
+    } else {
+        
+                document.select("iframe[src]").forEach {
+            val url = it.attr("src")
+                loadExtractor(url, subtitleCallback, callback)
+        }
     }
+
     return true
-}
+    }
 }
 
