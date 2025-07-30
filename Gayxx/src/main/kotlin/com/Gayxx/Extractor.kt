@@ -170,7 +170,7 @@ class HdgayPlayer : BaseVideoExtractor() {
         @JsonProperty("label") val qualityLabel: String?
     )
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val response = app.get(
             url = url,
             referer = referer ?: "https://gayxx.net/",
