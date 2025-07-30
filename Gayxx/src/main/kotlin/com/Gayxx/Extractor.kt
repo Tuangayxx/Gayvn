@@ -208,9 +208,5 @@ class HdgayPlayer : BaseVideoExtractor() {
             }
         } ?: emptyList()
     }
-
-    private fun extractQualityFromUrl(url: String): Int {
-        return Regex("""/(\d+)p/""").find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 720
-    }
 }
 }
