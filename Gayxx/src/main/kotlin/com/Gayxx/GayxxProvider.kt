@@ -12,5 +12,6 @@ class GayxxProvider: Plugin() {
         registerExtractorAPI(VoeExtractor())
         registerExtractorAPI(vvide0Extractor())
         registerExtractorAPI(dsio())
+        registerExtractorAPI(HdgayPlayer())
     }
 }
