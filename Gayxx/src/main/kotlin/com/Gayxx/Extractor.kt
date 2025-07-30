@@ -194,7 +194,7 @@ class HdgayPlayer : BaseVideoExtractor() {
             source.url.takeIf { it.isNotBlank() }?.let { videoUrl ->
                 val quality = when {
                     source.qualityLabel != null -> source.qualityLabel.removeSuffix("p").toIntOrNull() ?: 720
-                    else -> extractQualityFromUrl(videoUrl)
+                    else -> getQualityFromName(videoUrl)
                 }
                 newExtractorLink(
                     name = name,
