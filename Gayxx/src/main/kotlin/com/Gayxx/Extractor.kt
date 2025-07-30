@@ -196,17 +196,16 @@ class HdgayPlayer : BaseVideoExtractor() {
                     source.qualityLabel != null -> source.qualityLabel.removeSuffix("p").toIntOrNull() ?: 720
                     else -> extractQualityFromUrl(videoUrl)
                 }
-                
                 newExtractorLink(
                     name = name,
                     source = name,
                     url = videoUrl,
                     type = INFER_TYPE
-                    ) {
-                    headers = mapOf("Referer" to url)
-                
+                ) {
+                    this.headers = mapOf("Referer" to url)
+                    this.quality = quality
+                }
             }
         } ?: emptyList()
     }
-}
 }
