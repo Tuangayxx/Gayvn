@@ -163,20 +163,26 @@ open class vvide0Extractor : ExtractorApi() {
     override val mainUrl = "https://player.hdgay.net"
     override val requiresReferer = false
 
-    private data class VideoSource(
-        @JsonProperty("hls") val url: String?,
+     private data class VideoSource(
+        @JsonProperty("file") val file: String?,
+        @JsonProperty("hls") val hls: String?,
+        @JsonProperty("url") val url: String?,
         @JsonProperty("video_height") val height: Int?
-    )
+    ) {
+        fun getVideoUrl(): String? {
+            return hls ?: file ?: url
+        }
+    }
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
         val response = app.get(url)
         if (response.code == 404) return emptyList()
 
-        // Tìm link m3u8 trong response
-        val m3u8Regex = Regex("""https?://[^\s'"]+\.m3u8""")
-        val m3u8Link = m3u8Regex.find(response.text)?.value
-
-        if (m3u8Link != null) {
+        // Cách 1: Tìm link m3u8 trong response (regex cải tiến)
+        val m3u8Regex = Regex("""(https?://[^\s"']+\.m3u8[^\s"']*)""")
+        val m3u8Matches = m3u8Regex.findAll(response.text)
+        m3u8Matches.forEach { match ->
+            val m3u8Link = match.value
             return listOf(
                 newExtractorLink(
                     name = name,
@@ -187,24 +193,67 @@ open class vvide0Extractor : ExtractorApi() {
             )
         }
 
-        // Nếu không có, fallback về cách cũ
-        val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
-            .find(response.text)
-            ?.groupValues?.get(1)
-            ?.replace("0,", "0")
-            ?: return emptyList()
+        val sources = listOf(
+            // Mẫu 1: const sources = {...};
+            Regex("""const\s+sources\s*=\s*(\{.*?\});""", RegexOption.DOT_MATCHES_ALL),
+            // Mẫu 2: playerInstance.setup({...})
+            Regex("""playerInstance\.setup\(\s*(\{.*?\})\s*\)""", RegexOption.DOT_MATCHES_ALL),
+            // Mẫu 3: JWPlayer setup
+            Regex("""jwplayer\s*\(\s*['"]\w+['"]\s*\)\.setup\(\s*(\{.*?\})\s*\)""")
+        )
 
-        return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
-            source.url?.let { videoUrl ->
-                listOf(
-                    newExtractorLink(
-                        name = name,
-                        source = name,
-                        url = videoUrl,
-                        type = INFER_TYPE
+        sources.forEach { regex ->
+            val match = regex.find(response.text)
+            match?.groupValues?.get(1)?.let { jsonStr ->
+                tryParseJson<VideoSource>(fixJson(jsonStr))?.getVideoUrl()?.let { videoUrl ->
+                    return listOf(
+                        newExtractorLink(
+                            name = name,
+                            source = name,
+                            url = videoUrl,
+                            type = INFER_TYPE
+                        )
                     )
+                }
+            }
+        }
+
+
+ val document = Jsoup.parse(response.text)
+        document.select("script").forEach { script ->
+            val scriptData = script.data()
+            if (scriptData.contains("sources")) {
+                val patterns = listOf(
+                    Regex("""sources\s*:\s*\[\s*(\{.*?\})\s*\]""", RegexOption.DOT_MATCHES_ALL),
+                    Regex("""sources\s*:\s*(\{.*?\})""", RegexOption.DOT_MATCHES_ALL)
                 )
-            } ?: emptyList()
-        } ?: emptyList()
+                
+                patterns.forEach { pattern ->
+                    pattern.find(scriptData)?.groupValues?.get(1)?.let { jsonStr ->
+                        tryParseJson<VideoSource>(fixJson(jsonStr))?.getVideoUrl()?.let { videoUrl ->
+                            return listOf(
+                                newExtractorLink(
+                                    name = name,
+                                    source = name,
+                                    url = videoUrl,
+                                    type = INFER_TYPE
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        return emptyList()
+    }
+
+    // Hàm sửa lỗi JSON phổ biến
+    private fun fixJson(json: String): String {
+        return json
+            .replace(Regex(""",\s*\}"""), "}")
+            .replace(Regex(""",\s*\]"""), "]")
+            .replace(Regex("""(\w+)\s*:\s*('[^']*')"""), "$1:$2")
+            .replace(Regex("""(\w+)\s*:\s*("[^"]*")"""), "$1:$2")
     }
 }
