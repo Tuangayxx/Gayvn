@@ -160,7 +160,8 @@ class Fxggxt : MainAPI() {
 
     val document = app.get(data, headers = headers).document
     
-    val url = document.select("meta[itemprop=embedURL]")?.attr("content")
+    val embedURL = document.select("meta[itemprop=embedURL]")?.attr("content")
+    val url      = embedURL?.trim('\'')
 
              if (!url.isNullOrEmpty() && url.startsWith("http")) {
                 loadExtractor(url, subtitleCallback, callback)
