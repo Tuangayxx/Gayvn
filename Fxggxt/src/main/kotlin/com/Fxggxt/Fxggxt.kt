@@ -14,7 +14,7 @@ import org.json.JSONArray
 import org.jsoup.nodes.Document
 
 class Fxggxt : MainAPI() {
-    override var mainUrl = "https://fxggxt.org"
+    override var mainUrl = "https://fxggxt.com"
     override var name = "Fxggxt"
     override val hasMainPage = true
     override val hasDownloadSupport = true
@@ -23,11 +23,20 @@ class Fxggxt : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     override val mainPage = mainPageOf(
-        "$mainUrl/category/gay-porn-videos/"                    to "Latest",
-        "$mainUrl/category/gay-porn-videos/activeduty/"         to "Active Duty",
-        "$mainUrl/category/gay-porn-videos/adulttime/"          to "Adulttime",
-        "$mainUrl/category/gay-porn-videos/asgmax/"             to "ASGmax",
-        "$mainUrl/category/gay-porn-videos/belami/"           to "Bel Ami",
+        "$mainUrl/?filter=latest/"             to "Latest",
+        "$mainUrl/tag/amateur-gay-porn/"       to "Amateur",
+        "$mainUrl/tag/bareback-gay-porn/"      to "Bareback",
+        "$mainUrl/tag/big-dick-gay-porn/"      to "Big Dick",
+        "$mainUrl/tag/bisexual-porn/"          to "Bisexual",
+        "$mainUrl/tag/group-gay-porn/"         to "Group",
+        "$mainUrl/tag/hunk-gay-porn-videos/"   to "Hunk",
+        "$mainUrl/tag/interracial-gay-porn/"   to "Interracial",
+        "$mainUrl/tag/muscle-gay-porn/"        to "Muscle",
+        "$mainUrl/tag/straight-guys-gay-porn/" to "Straight",
+        "$mainUrl/tag/twink-gay-porn/"         to "Twink",
+        "$mainUrl/category/adulttime/"         to "Adulttime",
+        "$mainUrl/category/asgmax/"            to "ASGmax",
+        "$mainUrl/category/bel-ami/"           to "Bel Ami",
         "$mainUrl/category/breederbros/"       to "Breeder Bros",
         "$mainUrl/category/clubbangboys/"      to "Club Bang Boys",
         "$mainUrl/category/cocksuremen/"       to "Cock Sure Men",
@@ -37,19 +46,14 @@ class Fxggxt : MainAPI() {
         "$mainUrl/category/cumdumpsluts/"      to "Cumdumpsluts",
         "$mainUrl/category/ericvideos/"        to "Eric videos",
         "$mainUrl/category/facedownassup/"          to "Face down ass up",
-        "$mainUrl/category/falcon-studios/"         to "Falcon Studios",
         "$mainUrl/category/fraternity-x/"           to "Fraternity X",
-        "$mainUrl/category/just-for-fans/"                          to "Just For Fans",
-        "$mainUrl/category/kristenbjorn/"                           to "Kristen Bjorn",
-        "$mainUrl/category/gay-porn-videos/lucasentertainment/"     to "Lucas Entertainment",
-        "$mainUrl/category/gay-porn-videos/hotguysfuck/"            to "Hot Guys Fuck",
-        "$mainUrl/category/gay-porn-videos/nakedsword/"             to "Naked Sword",
-        "$mainUrl/category/onlyfans-gay/"                           to "Onlyfans",
-        "$mainUrl/category/treasure-island-media/"                  to "Treasure Island Media",
-        "$mainUrl/category/slamrush/"                               to "Slam Rush",
-        "$mainUrl/category/gay-porn-videos/sketchysex/"             to "Sketchy Sex",
-        "$mainUrl/category/seehimfuck/"                             to "See Him Fuck",
-        "$mainUrl/category/gay-porn-videos/voyr/"                   to "Voyr",
+        "$mainUrl/category/just-for-fans/"          to "Just For Fans",
+        "$mainUrl/category/kristenbjorn/"           to "Kristen Bjorn",
+        "$mainUrl/category/bi-guys-fuck/"           to "Bi Guys Fuck",
+        "$mainUrl/category/falcon-studios/"         to "Falcon Studios",
+        "$mainUrl/category/treasure-island-media/"  to "Treasure Island Media",
+        "$mainUrl/category/slamrush/"               to "Slam Rush",
+        "$mainUrl/category/seehimfuck/"             to "See Him Fuck",
     )
 
 
