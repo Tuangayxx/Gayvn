@@ -178,18 +178,17 @@ open class HdgayPlayer : ExtractorApi() {
                 .find(unpacked)?.groupValues?.get(1)?.let { videoUrl ->
                     
                     return listOf(
-                        ExtractorLink(
-                            source = name,
-                            name = name,
-                            url = videoUrl,
-                            type = INFER_TYPE,
-                            quality = Qualities.Unknown.value,
-                            referer = ref,
-                            isM3u8 = videoUrl.contains(".m3u8")
-                        )
-                    )
-                }
-        }
-        return null
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = link,
+                type = INFER_TYPE
+            ) {
+                this.referer = mainUrl
+                this.quality = getQualityFromName(quality)
+            }
+        )
     }
-}
+ }
+}}
+    
