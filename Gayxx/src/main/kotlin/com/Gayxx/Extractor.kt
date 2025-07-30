@@ -158,54 +158,37 @@ open class vvide0Extractor : ExtractorApi() {
 }
 
 
-class HdgayPlayer : BaseVideoExtractor() {
+ open class HdgayPlayer : ExtractorApi() {
     override val name = "HdgayPlayer"
-    override val domain = "player.hdgay.net"
-    override val mainUrl = "https://$domain"
-    override val requiresReferer = true
+    override val mainUrl = "https://api.hdgay.net/api/source"
+    override val requiresReferer = false
 
     private data class VideoSource(
-        @JsonProperty("file") val url: String,
-        @JsonProperty("type") val type: String,
-        @JsonProperty("label") val qualityLabel: String?
+        @JsonProperty("hls") val url: String?,
+        @JsonProperty("video_height") val height: Int?
     )
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val response = app.get(
-            url = url,
-            referer = referer ?: "https://gayxx.net/",
-            headers = mapOf("User-Agent" to "Mozilla/5.0")
-        )
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+        val response = app.get(url)
+        if (response.code == 404) return emptyList()
 
-        if (!response.isSuccessful) return emptyList()
-
-        // Tìm kiếm nguồn video trong script
-        val scriptMatch = Regex("""sources:\s*\[(.*?)\]""", RegexOption.DOT_MATCHES_ALL)
-            .find(response.text ?: "")
+        val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
+            .find(response.text)
             ?.groupValues?.get(1)
+            ?.replace("0,", "0")
             ?: return emptyList()
 
-        // Xử lý dữ liệu JSON không chuẩn
-        val normalizedJson = scriptMatch
-            .replace("'", "\"")
-            .replace(Regex("""\s*(\w+)\s*:""")) { "\"${it.groupValues[1]}\":" }
-
-        return tryParseJson<List<VideoSource>>("[$normalizedJson]")?.mapNotNull { source ->
-            source.url.takeIf { it.isNotBlank() }?.let { videoUrl ->
-                val quality = when {
-                    source.qualityLabel != null -> source.qualityLabel.removeSuffix("p").toIntOrNull() ?: 720
-                    else -> getQualityFromName(videoUrl)
-                }
-                newExtractorLink(
-                    name = name,
-                    source = name,
-                    url = videoUrl,
-                    type = INFER_TYPE
-                ) {
-                    this.headers = mapOf("Referer" to url)
-                    this.quality = quality
-                }
-            }
+        return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
+            source.url?.let { videoUrl ->
+                listOf(
+                    newExtractorLink(
+                        name = name,
+                        source = name,
+                        url = videoUrl,
+                        type = INFER_TYPE
+                    )
+                )
+            } ?: emptyList()
         } ?: emptyList()
     }
 }
