@@ -184,8 +184,7 @@ open class HdgayPlayer : ExtractorApi() {
                                         source = name,
                                         name = name,
                                         url = videoUrl,
-                                        type = INFER_TYPE,
-                                        quality = Qualities.Unknown.value
+                                        type = INFER_TYPE
                                     )
                                 )
                             }
