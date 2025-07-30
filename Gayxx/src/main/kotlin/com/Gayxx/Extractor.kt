@@ -158,38 +158,72 @@ open class vvide0Extractor : ExtractorApi() {
 }
 
 
-class HdgayPlayer : BaseVideoExtractor() {
-    override var name = "HdgayPlayer"
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.anggrayudi.website.extractor.ExtractorApi
+import com.anggrayudi.website.extractor.newExtractorLink
+import com.anggrayudi.website.utils.tryParseJson
+
+abstract class BaseVideoExtractor : ExtractorApi() {
+    protected abstract val domain: String
+    override val mainUrl: String get() = "https://$domain"
+}
+
+class HdgayExtractor : BaseVideoExtractor() {
+    override val name = "Hdgay"
     override val domain = "player.hdgay.net"
     override val mainUrl = "https://$domain"
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-    
-        val response = app.get(url, referer = "https://gayxx.net"" ).text
-        
-        return Regex("""<script type="text/javascript">(.*?)</script>""")
-            .find(response)
-            ?.groupValues
-            ?.get(1)
-            ?.let { scriptContent ->
-                JsUnpacker(scriptContent).unpack()
-                    ?.let { unpacked ->
-                        Regex("""sources:\s*\[\{\s*file:\s*"(https?[^"]+)""")
-                            .find(unpacked)
-                            ?.groupValues
-                            ?.get(1)
-                            ?.let { videoUrl ->
-                                listOf(
-                                    newExtractorLink(
-                                        source = name,
-                                        name = name,
-                                        url = videoUrl,
-                                        type = INFER_TYPE
-                                    )
-                                )
-                            }
-                    }
+    private data class VideoSource(
+        @JsonProperty("file") val url: String,
+        @JsonProperty("type") val type: String,
+        @JsonProperty("label") val qualityLabel: String?
+    )
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+        val response = app.get(
+            url = url,
+            referer = referer ?: "https://gayxx.net/",
+            headers = mapOf("User-Agent" to "Mozilla/5.0")
+        )
+
+        if (!response.isSuccessful) return emptyList()
+
+        // Tìm kiếm nguồn video trong script
+        val scriptMatch = Regex("""sources:\s*\[(.*?)\]""", RegexOption.DOT_MATCHES_ALL)
+            .find(response.text ?: "")
+            ?.groupValues?.get(1)
+            ?: return emptyList()
+
+        // Xử lý dữ liệu JSON không chuẩn
+        val normalizedJson = scriptMatch
+            .replace("'", "\"")
+            .replace(Regex("""\s*(\w+)\s*:""")) { "\"${it.groupValues[1]}\":" }
+
+        return tryParseJson<List<VideoSource>>("[$normalizedJson]")?.mapNotNull { source ->
+            source.url.takeIf { it.isNotBlank() }?.let { videoUrl ->
+                val quality = when {
+                    source.qualityLabel != null -> source.qualityLabel.removeSuffix("p").toIntOrNull() ?: 720
+                    else -> extractQualityFromUrl(videoUrl)
+                }
+                
+                newExtractorLink(
+                    name = name,
+                    source = name,
+                    url = videoUrl,
+                    quality = quality,
+                    type = when {
+                        source.type.contains("hls", true) -> VIDEO_TYPE_HLS
+                        videoUrl.contains(".m3u8", true) -> VIDEO_TYPE_HLS
+                        else -> VIDEO_TYPE_M3U8
+                    },
+                    headers = mapOf("Referer" to url)
+                )
             }
+        } ?: emptyList()
+    }
+
+    private fun extractQualityFromUrl(url: String): Int {
+        return Regex("""/(\d+)p/""").find(url)?.groupValues?.get(1)?.toIntOrNull() ?: 720
     }
 }
