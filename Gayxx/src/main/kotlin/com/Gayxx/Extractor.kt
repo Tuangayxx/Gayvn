@@ -164,8 +164,8 @@ open class HdgayPlayer : ExtractorApi() {
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val ref = referer ?: "https://gayxx.net"
-        val response = app.get(url, referer = ref).text
+    
+        val response = app.get(url, referer = url).text
         
         return Regex("""<script type="text/javascript">(.*?)</script>""")
             .find(response)
