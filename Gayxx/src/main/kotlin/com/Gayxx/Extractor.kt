@@ -166,7 +166,7 @@ class HdgayPlayer : BaseVideoExtractor() {
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
     
-        val response = app.get(url, referer = url ).text
+        val response = app.get(url, referer = "https://gayxx.net"" ).text
         
         return Regex("""<script type="text/javascript">(.*?)</script>""")
             .find(response)
