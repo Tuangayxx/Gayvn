@@ -160,7 +160,7 @@ open class vvide0Extractor : ExtractorApi() {
 
  open class HdgayPlayer : ExtractorApi() {
     override val name = "HdgayPlayer"
-    override val mainUrl = "https://api.hdgay.net/api/source"
+    override val mainUrl = "https://player.hdgay.net"
     override val requiresReferer = false
 
     private data class VideoSource(
