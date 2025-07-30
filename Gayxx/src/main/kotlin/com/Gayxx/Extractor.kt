@@ -172,13 +172,12 @@ open class HdgayPlayer : ExtractorApi() {
             .find(response)?.groupValues?.get(1)
             ?: return null
 
-        // Giải nén nếu cần và tìm URL video
-        return 
+        // Giải nén nếu cần và tìm URL video 
             JsUnpacker(scriptContent).unpack()?.let { unpacked ->
                 Regex("""sources:\s*\[\{\s*file:\s*"(https?[^"]+)""")
                     .find(unpacked)?.groupValues?.get(1)?.let { videoUrl ->
                     
-                    listOf(
+                   return listOf(
                         newExtractorLink(
                             name = name,
                             source = name,
