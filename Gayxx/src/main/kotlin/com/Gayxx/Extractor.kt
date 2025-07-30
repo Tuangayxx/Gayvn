@@ -158,14 +158,15 @@ open class vvide0Extractor : ExtractorApi() {
 }
 
 
-open class HdgayPlayer : ExtractorApi() {
+class HdgayPlayer : BaseVideoExtractor() {
     override var name = "HdgayPlayer"
-    override var mainUrl = "https://player.hdgay.net"
+    override val domain = "player.hdgay.net"
+    override val mainUrl = "https://$domain"
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
     
-        val response = app.get(url, referer = mainUrl).text
+        val response = app.get(url, referer = url ).text
         
         return Regex("""<script type="text/javascript">(.*?)</script>""")
             .find(response)
