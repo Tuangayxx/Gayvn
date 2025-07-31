@@ -158,10 +158,11 @@ class Fxggxt : MainAPI() {
             val url = it.attr("src")
                 loadExtractor(url, subtitleCallback, callback)
         }
-        
-            if (!url.isNullOrEmpty() && url.startsWith("http")) {
+            if (iframes.isNotEmpty()) {
+                    iframes.forEach {
+            val url = it.attr("data-src")
                 loadExtractor(url, subtitleCallback, callback)
-        
+                
         } else {
                 
         val embedURL = document.select("meta[itemprop=embedURL]")?.attr("content")
