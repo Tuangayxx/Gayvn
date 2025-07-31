@@ -85,13 +85,9 @@ class BoyfriendTV : MainAPI() {
         .map { it.trim().replace("-", "") }
         .filter { it.isNotBlank() && !StringUtil.isNumeric(it) }
 
-    val recommendations = document.select(".media-listing-grid .media-item").map { item ->
-    SearchResult(
-        title = item.selectFirst(".media-item__title")?.text() ?: "",
-        url = item.selectFirst("a")?.attr("href") ?: "",
-        thumbnailUrl = item.selectFirst("img")?.attr("src") ?: ""
-    )
-}
+    val recommendations = document.select(".media-listing-grid .media-item").mapNotNull {
+            it.toRecommendResult()
+    }
 
     return newMovieLoadResponse(title, url, TvType.NSFW, url) {
         this.posterUrl = poster
