@@ -152,28 +152,22 @@ class Fxggxt : MainAPI() {
         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
     )
     
-    val supportedDomains = listOf(
-        "bigwarp.io", "voe.sx", "mixdrop", 
-        "streamtape", "doodstream.com", "abyss.to", "vinovo.to",
-        "vide0.net", "vvide0.com", "d-s.io" // Đảm bảo cả hai domain đều được hỗ trợ
-    )
-
-    val document = app.get(data, headers = headers).document
+        val document = app.get(data, headers = headers).document
     
-    val embedURL = document.select("meta[itemprop=embedURL]")?.attr("content")
-    val url      = embedURL?.trim('\'')
-
-             if (!url.isNullOrEmpty() && url.startsWith("http")) {
+        document.select("iframe[src]").forEach {
+            val url = it.attr("src")
+                loadExtractor(url, subtitleCallback, callback)
+        }
+        
+            if (!url.isNullOrEmpty() && url.startsWith("http")) {
                 loadExtractor(url, subtitleCallback, callback)
         
         } else {
                 
-                document.select("iframe[src]").forEach {
-            val url = it.attr("src")
+        val embedURL = document.select("meta[itemprop=embedURL]")?.attr("content")
+        val url      = embedURL?.trim('\'')
                 loadExtractor(url, subtitleCallback, callback)
         }
-    }
-
     return true
     }
 }
