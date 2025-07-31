@@ -32,7 +32,7 @@ class dsio : BaseVideoExtractor() {
             val token = passMd5Path.substringAfterLast("/")
         
             val md5Url = mainUrl + passMd5Path
-            val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
+            val res = app.get(md5Url, referer = referer) // Sử dụng URL gốc làm referer
             val videoData = res.text
 
             val randomStr = (1..10).map { 
