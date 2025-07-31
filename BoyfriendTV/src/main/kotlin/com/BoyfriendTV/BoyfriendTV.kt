@@ -85,7 +85,7 @@ class BoyfriendTV : MainAPI() {
         .map { it.trim().replace("-", "") }
         .filter { it.isNotBlank() && !StringUtil.isNumeric(it) }
 
-    val recommendations = document.select("div#list_videos_related_videos div.video-list div.video-item")
+    val recommendations = document.select("ul#list_videos_related li.js-pop div.media-item__inner-wrapper div.media-item__inner")
         .mapNotNull { it.toSearchResult() }
 
     return newMovieLoadResponse(title, url, TvType.NSFW, url) {
