@@ -158,8 +158,8 @@ class Fxggxt : MainAPI() {
             val url = it.attr("src")
                 loadExtractor(url, subtitleCallback, callback)
         }
-            if (iframes.isNotEmpty()) {
-                    iframes.forEach {
+            if (url.isNotEmpty()) {
+                    url.forEach {
             val url = it.attr("data-src")
                 loadExtractor(url, subtitleCallback, callback)
                 
