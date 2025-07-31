@@ -154,7 +154,7 @@ class Fxggxt : MainAPI() {
     
         val document = app.get(data, headers = headers).document
     
-            document.select("iframe[src]").forEach {
+            document.select("div.responsive-player iframe[src]").forEach {
         val url = it.attr("src")
             loadExtractor(url, subtitleCallback, callback)
         }
