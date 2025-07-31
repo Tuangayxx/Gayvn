@@ -64,9 +64,9 @@ class BoyfriendTV : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst(".media-item__title")?.text() ?: "",
-        val href = this.selectFirst("a")?.attr("href") ?: "",
-        val posterUrl = this.selectFirst("img")?.attr("src") ?: ""
+        val title = this.selectFirst(".media-item__title")?.text() ?: return null
+        val href = this.selectFirst("a")?.attr("href")
+        val posterUrl = this.selectFirst("img")?.attr("src")
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
