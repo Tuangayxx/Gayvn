@@ -154,22 +154,11 @@ class Fxggxt : MainAPI() {
     
         val document = app.get(data, headers = headers).document
     
-        document.select("iframe[src]").forEach {
-            val url = it.attr("src")
-                loadExtractor(url, subtitleCallback, callback)
+            document.select("iframe[src]").forEach {
+        val url = it.attr("src")
+            loadExtractor(url, subtitleCallback, callback)
         }
-            if (url.isNotEmpty()) {
-                    url.forEach {
-            val url = it.attr("data-src")
-                loadExtractor(url, subtitleCallback, callback)
-                
-        } else {
-                
-        val embedURL = document.select("meta[itemprop=embedURL]")?.attr("content")
-        val url      = embedURL?.trim('\'')
-                loadExtractor(url, subtitleCallback, callback)
-        }
-    return true
+            return true
     }
 }
 
