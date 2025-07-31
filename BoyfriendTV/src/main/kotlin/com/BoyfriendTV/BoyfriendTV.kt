@@ -63,6 +63,15 @@ class BoyfriendTV : MainAPI() {
         }
     }
 
+    private fun Element.toRecommendResult(): SearchResponse? {
+        val title = item.selectFirst(".media-item__title")?.text() ?: "",
+        val href = item.selectFirst("a")?.attr("href") ?: "",
+        val posterUrl = item.selectFirst("img")?.attr("src") ?: ""
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+        }
+    }
+
      override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/search/?q=$query"
         val document = app.get(url).document
