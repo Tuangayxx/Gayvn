@@ -48,7 +48,7 @@ class boynextdoors : Stbturbo() {
     override val requiresReferer = false
 }
 
-class yilungjp : Stbturbo() {
+class yilingjp : Stbturbo() {
     override var name = "1069jp"
     override var mainUrl = "https://1069jp.com/f"
     override val requiresReferer = false
