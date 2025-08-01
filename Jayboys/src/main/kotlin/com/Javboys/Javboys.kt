@@ -19,13 +19,13 @@ class Jayboys : MainAPI() {
     val subtitleCatUrl = "https://www.subtitlecat.com"
     
     override val mainPage = mainPageOf(
-            "/category/onlyfans/" to "Onlyfans",
-            "/2025/" to "Latest Upadates",
-            "/category/movies/" to "Most View Today",
-            "/category/asian-gay-porn-hd/" to "Most View Week",
-            "/category/western-gay-porn-hd/" to "Jav Subbed",
-            "/category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c/" to "Uncensored",
-            "/category/hunk-channel/" to "Reduced Mosaic",
+            "/2025/"                                          to "Latest Upadates",
+            "/category/onlyfans/"                             to "Onlyfans",
+            "/category/movies/"                               to "Movies",
+            "/category/asian-gay-porn-hd/"                    to "Châu Á",
+            "/category/western-gay-porn-hd/"                  to "Châu Mỹ Âu",
+            "/category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c/" to "Tạp chí",
+            "/category/hunk-channel/"                         to "Hunk Channel",
         )
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
             val document = if(page == 1)
@@ -37,15 +37,15 @@ class Jayboys : MainAPI() {
                 app.get("$mainUrl${request.data}recent/$page").document
             }
 
-            val responseList  = document.select("div.list-item").mapNotNull { it.toSearchResult() }
+            val responseList  = document.select("div.video.col-2").mapNotNull { it.toSearchResult() }
             return newHomePageResponse(HomePageList(request.name, responseList, isHorizontalImages = false),hasNext = true)
 
     }
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select(".video-title").text()
-        val href =  this.select("a").attr("href")
-        val posterUrl = this.selectFirst(".video-thumb img")?.attr("src")
+        val title = this.select("span.title").text()
+        val href =  this.select("a.thumb-video").attr("href")
+        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
         }
@@ -59,7 +59,7 @@ class Jayboys : MainAPI() {
             val document = app.get("$mainUrl/search/video/?s=$query&page=$i").document
             //val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("div.list-item").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.video.col-2").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
