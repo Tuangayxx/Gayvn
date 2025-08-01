@@ -14,5 +14,5 @@ cloudstream {
     **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://www.javboys.tv/wp-content/themes/yametube/images/favicon.ico"
+    iconUrl = "https://www.javboys.tv/wp-content/uploads/2025/04/177d33e6.webp"
 }
