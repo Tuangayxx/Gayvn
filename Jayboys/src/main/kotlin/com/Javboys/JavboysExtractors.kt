@@ -1,4 +1,4 @@
-package com.JAVHd
+package com.Jayboys
 
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.StreamWishExtractor
@@ -10,13 +10,13 @@ import com.lagradost.cloudstream3.utils.*
 
 open class Stbturbo : ExtractorApi() {
     override var name = "Stbturbo"
-    override var mainUrl = "https://stbturbo.xyz/"
+    override var mainUrl = "https://gaystream.link/"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         with(app.get(url)) {
             this.document.let { document ->
-                val finalLink = document.select("#video_player").attr("data-hash")
+                val finalLink = document.select("#video-player").attr("data-src")
                 return listOf(
                     newExtractorLink(
                         source = name,
@@ -36,20 +36,20 @@ open class Stbturbo : ExtractorApi() {
 
 
 
-class Turbovid : Stbturbo() {
-    override var name = "Stbturbo"
-    override var mainUrl = "https://turbovid.xyz/"
+class 1069 : Stbturbo() {
+    override var name = "1069"
+    override var mainUrl = "https://1069.website/"
     override val requiresReferer = false
 }
 
-class MyCloudZ : VidhideExtractor() {
-    override var name = "MyCloudZ"
-    override var mainUrl = "https://mycloudz.cc/"
+class boynextdoors : Stbturbo() {
+    override var name = "boynextdoors"
+    override var mainUrl = "jilliandescribecompany.com/"
     override val requiresReferer = false
 }
 
-class Cloudwish : StreamWishExtractor() {
-    override var name = "Cloudwish"
-    override var mainUrl = "https://cloudwish.xyz/"
+class 1069jp : Stbturbo() {
+    override var name = "1069jp"
+    override var mainUrl = "https://1069jp.com/f"
     override val requiresReferer = false
 }

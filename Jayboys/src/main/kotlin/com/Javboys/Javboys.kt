@@ -1,4 +1,4 @@
-package com.JAVHd
+package com.Jayboys
 
 import android.util.Log
 import org.jsoup.nodes.Element
@@ -7,24 +7,25 @@ import com.lagradost.cloudstream3.utils.*
 import okhttp3.FormBody
 
 class JAVHDProvider : MainAPI() {
-    override var mainUrl              = "https://javhd.today"
-    override var name                 = "JAV HD"
+    override var mainUrl              = "https://javboys.tv"
+    override var name                 = "Javboys"
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasDownloadSupport   = true
     override val hasChromecastSupport = true
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
+    
     val subtitleCatUrl = "https://www.subtitlecat.com"
+    
     override val mainPage = mainPageOf(
-            "/releaseday/" to "Release Day",
-            "/recent/" to "Latest Upadates",
-            "/popular/today/" to "Most View Today",
-            "/popular/week/" to "Most View Week",
-            "/jav-sub/" to "Jav Subbed",
-            "/uncensored-jav/" to "Uncensored",
-            "/reducing-mosaic/" to "Reduced Mosaic",
-            "/amateur/" to "Amateur"
+            "/category/onlyfans/" to "Onlyfans",
+            "/2025/" to "Latest Upadates",
+            "/category/movies/" to "Most View Today",
+            "/category/asian-gay-porn-hd/" to "Most View Week",
+            "/category/western-gay-porn-hd/" to "Jav Subbed",
+            "/category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c/" to "Uncensored",
+            "/category/hunk-channel/" to "Reduced Mosaic",
         )
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
             val document = if(page == 1)
@@ -33,23 +34,17 @@ class JAVHDProvider : MainAPI() {
             }
             else
             {
-                if(request.name == "Jav Subbed" || request.name == "Uncensored" || request.name == "Reduced Mosaic" || request.name == "Amateur")
-                {
-                    app.get("$mainUrl${request.data}recent/$page").document
-                }
-                else
-                {
-                    app.get("$mainUrl${request.data}$page").document
-                }
+                app.get("$mainUrl${request.data}recent/$page").document
             }
-            val responseList  = document.select("div.video").mapNotNull { it.toSearchResult() }
+
+            val responseList  = document.select("div.list-item").mapNotNull { it.toSearchResult() }
             return newHomePageResponse(HomePageList(request.name, responseList, isHorizontalImages = false),hasNext = true)
 
     }
 
     private fun Element.toSearchResult(): SearchResponse {
         val title = this.select(".video-title").text()
-        val href = mainUrl + this.select(".thumbnail").attr("href")
+        val href =  this.select("a").attr("href")
         val posterUrl = this.selectFirst(".video-thumb img")?.attr("src")
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
@@ -64,7 +59,7 @@ class JAVHDProvider : MainAPI() {
             val document = app.get("$mainUrl/search/video/?s=$query&page=$i").document
             //val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("div.video").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.list-item").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
