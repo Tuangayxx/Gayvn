@@ -36,7 +36,7 @@ open class Stbturbo : ExtractorApi() {
 
 
 
-class 1069 : Stbturbo() {
+class yiling : Stbturbo() {
     override var name = "1069"
     override var mainUrl = "https://1069.website/"
     override val requiresReferer = false
@@ -48,7 +48,7 @@ class boynextdoors : Stbturbo() {
     override val requiresReferer = false
 }
 
-class 1069jp : Stbturbo() {
+class yilungjp : Stbturbo() {
     override var name = "1069jp"
     override var mainUrl = "https://1069jp.com/f"
     override val requiresReferer = false

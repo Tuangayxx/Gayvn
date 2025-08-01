@@ -11,8 +11,8 @@ class JayboysPlugin: Plugin() {
         registerMainAPI(Jayboys())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(Stbturbo())
-        registerExtractorAPI(1069jp())
-        registerExtractorAPI(1069())
+        registerExtractorAPI(yilingjp())
+        registerExtractorAPI(yiling())
         registerExtractorAPI(boynextdoors())
     }
 }
