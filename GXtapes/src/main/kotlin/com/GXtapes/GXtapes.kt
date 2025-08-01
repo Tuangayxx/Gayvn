@@ -13,7 +13,7 @@ class GXtapes : MainAPI() {
     override var name = "G_Xtapes"
     override val hasMainPage = true
     override var lang = "en"
-    override val hasQuickSearch = false
+    override val hasQuickSearch = true
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.NSFW)

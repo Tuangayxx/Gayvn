@@ -12,6 +12,7 @@ import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
 import org.jsoup.nodes.Document
+import java.io.IOException
 
 class Fxggxt : MainAPI() {
     override var mainUrl = "https://fxggxt.com"
@@ -159,8 +160,8 @@ class Fxggxt : MainAPI() {
      
         val document = app.get(data).document
     
-            document.select("div.responsive-player iframe[src]").forEach {
-        val url = it.attr("src")
+            document.select("div.responsive-player iframe[src]").forEach { link ->
+        val url = link.attr("src")
             loadExtractor(url, subtitleCallback, callback)
         }
             return true
