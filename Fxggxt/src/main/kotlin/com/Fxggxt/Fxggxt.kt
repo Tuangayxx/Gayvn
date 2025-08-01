@@ -137,7 +137,7 @@ class Fxggxt : MainAPI() {
 
     val actors = doc.select("#video-actors a").mapNotNull { it.text() }.filter { it.isNotBlank() }
 
-    val recommendations = document.select("article.loop-video.thumb-block").mapNotNull {
+    val recommendations = doc.select("article.loop-video.thumb-block").mapNotNull {
             it.toRecommendResult()
     }
 
