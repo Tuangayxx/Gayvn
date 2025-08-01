@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
 
@@ -23,6 +24,8 @@ class BestHDgayporn : MainAPI() {
         "$mainUrl/video-tag/bareback-gay-porn/" to "Bareback",
         "$mainUrl/video-tag/onlyfans/" to "Onlyfans"
     )
+
+    private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) "${request.data}page/$page/" else request.data
