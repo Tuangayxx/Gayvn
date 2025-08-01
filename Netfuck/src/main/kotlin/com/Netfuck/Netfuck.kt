@@ -37,7 +37,7 @@ class Netfuck : MainAPI() {
                 app.get("$mainUrl${request.data}recent/$page").document
             }
 
-            val responseList  = document.select("div.row-in").mapNotNull { it.toSearchResult() }
+            val responseList  = document.select("div.content").mapNotNull { it.toSearchResult() }
             return newHomePageResponse(HomePageList(request.name, responseList, isHorizontalImages = false),hasNext = true)
 
     }
@@ -59,7 +59,7 @@ class Netfuck : MainAPI() {
             val document = app.get("$mainUrl/search/video/?s=$query&page=$i").document
             //val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("div.row-in").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.content").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
