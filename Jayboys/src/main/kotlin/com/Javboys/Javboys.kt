@@ -96,11 +96,11 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val doc = Jsoup.parse(data)
+    val document = app.get(data).document
     var found = false
     
     // Lấy tất cả player có class 'video-player'
-    doc.select("div.video-player").forEach { player ->
+    document.select("div.video-player").forEach { player ->
         // Lấy link từ thuộc tính data-src
         val videoUrl = player.attr("data-src").takeIf { it.isNotBlank() }
         
