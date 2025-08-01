@@ -8,11 +8,16 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.network
 import org.json.JSONObject
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Document
 import org.jsoup.Jsoup
 import android.annotation.SuppressLint
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.dnsoverhttps.DnsOverHttps
+import java.net.InetAddress
 
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
@@ -63,6 +68,15 @@ class dsExtractor : ExtractorApi() {
     override var name = "dsExtractor"
     override var mainUrl = "https://doodstream.com"
     override val requiresReferer = true
+
+    // Client tùy chỉnh cho Android TV
+    override val client: OkHttpClient by lazy {
+        val trustManager = trustAllCertificates()
+        OkHttpClient.Builder()
+            .sslSocketFactory(sslSocketFactory, trustManager)
+            .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))
+            .build()
+    }
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         // Sửa lỗi: Tạo chuỗi ngẫu nhiên đúng cách
