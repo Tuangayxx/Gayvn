@@ -9,7 +9,8 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 class JayboysPlugin: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Jayboys())
-        registerExtractorAPI(StreamTape())
+        registerExtractorAPI(dsio())
+        registerExtractorAPI(VoeExtractor())
         registerExtractorAPI(Stbturbo())
         registerExtractorAPI(yilingjp())
         registerExtractorAPI(yiling())
