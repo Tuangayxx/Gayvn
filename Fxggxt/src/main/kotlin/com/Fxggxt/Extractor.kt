@@ -90,8 +90,8 @@ class dsExtractor : ExtractorApi() {
         return listOf(
             newExtractorLink(
                 source = name,
-                name = "Dsio ${quality ?: "HD"}",
-                url = videoUrl,
+                name = "Dsio",
+                url = trueUrl,
                 type = INFER_TYPE
             ) {
                 this.referer = mainUrl
