@@ -59,42 +59,48 @@ class dsio : BaseVideoExtractor() {
     }
 }
 
-open class dsExtractor : ExtractorApi() {
+class dsExtractor : ExtractorApi() {
     override var name = "dsExtractor"
     override var mainUrl = "https://doodstream.com"
-    override val requiresReferer = true // Bật yêu cầu referer
+    override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val changeurl=url.replace("doodstream.com","d-s.io")
-        val response0 = app.get(changeurl, referer = url ).text
+        // Tạo URL proxy để tránh chặn
+        val proxyUrl = url.replace("doodstream.com", "d-s.io")
         
-        // Tìm đường dẫn pass_md5
-        val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
-        val token = passMd5Path.substringAfterLast("/")
+        // Tải nội dung HTML với referer chính xác
+        val response = app.get(proxyUrl, referer = referer ?: mainUrl).text
+
+        // Trích xuất token từ URL pass_md5
+        val tokenRegex = Regex("""/pass_md5/[^'"]+\?token=([\w]+)""")
+        val token = tokenRegex.find(response)?.groupValues?.get(1) ?: return null
+
+        // Trích xuất ID file để xây dựng URL pass_md5
+        val fileIdRegex = Regex("""\.cookie\('file_id',\s*'(\d+)'\)""")
+        val fileId = fileIdRegex.find(response)?.groupValues?.get(1) ?: return null
+
+        // Xây dựng URL pass_md5 hoàn chỉnh
+        val passMd5Url = "$mainUrl/pass_md5/$fileId?token=$token"
         
-        // Lấy dữ liệu video
-        val md5Url = mainUrl + passMd5Path
-        val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
-        val videoData = res.text
-        
-        // Tạo chuỗi ngẫu nhiên chính xác
-        val randomStr = (1..10).map { 
-            (('a'..'z') + ('A'..'Z') + ('0'..'9')).random() 
-        }.joinToString("")
-        
-        // Tạo URL hoàn chỉnh
-        val trueUrl = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
-        
-        // Lấy chất lượng video (cải tiến regex)
-        val quality = Regex("(\\d{3,4})[pP]")
-            .find(response0.substringAfter("<title>").substringBefore("</title>"))
-            ?.groupValues?.get(1)
+        // Lấy dữ liệu video chính
+        val videoData = app.get(passMd5Url, referer = proxyUrl).text
+
+        // Tạo URL video hoàn chỉnh với token và thời gian hết hạn
+        val randomStr = (1..10).joinToString("") { 
+            ('a'..'z').random().toString() 
+        }
+        val expiry = System.currentTimeMillis()
+        val videoUrl = "$videoData$randomStr?token=$token&expiry=$expiry"
+
+        // Trích xuất chất lượng video
+        val quality = Regex("""Spain In The Ass 2.*?(\d{3,4})[pP]""")
+            .find(response)?.groupValues?.get(1)?.toIntOrNull()
 
         return listOf(
             newExtractorLink(
                 source = name,
-                name = name,
-                url = trueUrl,
+                name = "Dsio ${quality ?: "HD"}",
+                url = videoUrl,
                 type = INFER_TYPE
             ) {
                 this.referer = mainUrl
@@ -103,7 +109,6 @@ open class dsExtractor : ExtractorApi() {
         )
     }
 }
-
 
 class doodstream : BaseVideoExtractor() {
     override val name = "doodstream"
