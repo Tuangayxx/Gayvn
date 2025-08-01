@@ -157,7 +157,15 @@ class Fxggxt : MainAPI() {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
      
-        val document = app.get(data).document
+        // Headers tương thích TV
+        val headers = mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Origin" to mainUrl,
+            "Referer" to referer ?: mainUrl,
+            "Access-Control-Allow-Origin" to "*"
+    )
+    
+        val document = app.get(data, headers = headers).document
     
             document.select("div.responsive-player iframe[src]").forEach {
         val url = it.attr("src")

@@ -69,16 +69,7 @@ class dsExtractor : ExtractorApi() {
         val randomStr = generateRandomString(10)
 
         val proxyUrl = url.replace("doodstream.com", "d-s.io")
-
-       // Headers tương thích TV
-        val headers = mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Origin" to mainUrl,
-            "Referer" to referer ?: mainUrl,
-            "Access-Control-Allow-Origin" to "*"
-        )
-
-        val response = app.get(proxyUrl, headers = headers).text
+        val response = app.get(proxyUrl, referer = referer ?: mainUrl).text
 
         // Tìm token từ hàm makePlay()
         val tokenRegex = Regex("""makePlay\(\)\s*{[^}]*token=([\w]+)""")
@@ -90,7 +81,7 @@ class dsExtractor : ExtractorApi() {
 
         // Lấy dữ liệu video
         val md5Url = mainUrl + passMd5Path
-        val videoData = app.get(md5Url, header = header).text
+        val videoData = app.get(md5Url, referer = proxyUrl).text
 
         // Tạo URL cuối cùng
         val expiry = System.currentTimeMillis()
