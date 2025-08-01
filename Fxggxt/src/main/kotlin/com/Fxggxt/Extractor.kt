@@ -118,8 +118,8 @@ open class dsdsExtractor : ExtractorApi() {
         // Sửa lỗi: Tạo chuỗi ngẫu nhiên đúng cách
         val randomStr = generateRandomString(10)
     
-        val doc = app.get(url).document
-        val videoHash = doc.substringAfter("/")
+        val link = app.get(url).document
+        val videoHash = link.substringAfter("/")
         val directUrl = "http://d-s.io/e/$videoHash"
         val response = app.get(directUrl, referer = referer ?: mainUrl).text
 
