@@ -41,7 +41,7 @@ class GXtapes : MainAPI() {
         val url = if (page > 1) {
             "/page/$page${request.data}"
         } else {
-            request.data
+            "$mainUrl/${request.data}"
         }
 
         val document = app.get(url).document
