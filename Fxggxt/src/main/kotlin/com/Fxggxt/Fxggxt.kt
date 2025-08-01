@@ -88,6 +88,21 @@ class Fxggxt : MainAPI() {
         }
     }
 
+    private fun Element.toRecommendResult(): SearchResponse? {
+        val aTag = this.selectFirst("a") ?: return null
+        val href = aTag.attr("href")
+        val title = aTag.selectFirst("header.entry-header span")?.text() ?: "No Title"
+
+        var posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("data-src")
+        if (posterUrl.isNullOrEmpty()) {
+            posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("src")
+        }
+
+        return newMovieSearchResponse(title, href, TvType.Movie) {
+            this.posterUrl = posterUrl
+        }
+    }
+
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
         for (i in 1..5) {

@@ -61,12 +61,12 @@ class dsio : BaseVideoExtractor() {
 
 open class dsExtractor : ExtractorApi() {
     override var name = "dsExtractor"
-    override var mainUrl = "https://d-s.io"
+    override var mainUrl = "https://doodstream.com"
     override val requiresReferer = true // Bật yêu cầu referer
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val changeurl=url.replace("doodstream.com","d-s.io")
-        val response0 = app.get(changeurl, referer = mainUrl).text
+        val response0 = app.get(changeurl, referer = url ).text
         
         // Tìm đường dẫn pass_md5
         val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
