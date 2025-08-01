@@ -106,7 +106,7 @@ class GXtapes : MainAPI() {
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
         val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        val recommendations = doc.select("ul.listing-tube li").mapNotNull {
+        val recommendations = document.select("ul.listing-tube li").mapNotNull {
             it.toRecommendResult()
         }
 
