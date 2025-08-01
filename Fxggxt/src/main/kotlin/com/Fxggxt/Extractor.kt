@@ -60,7 +60,7 @@ class dsio : BaseVideoExtractor() {
 }
 
 
-class dsExtractor : ExtractorApi() {
+open class dsExtractor : ExtractorApi() {
     override var name = "dsExtractor"
     override var mainUrl = "https://doodstream.com"
     override val requiresReferer = true
@@ -109,32 +109,54 @@ class dsExtractor : ExtractorApi() {
     }
 }
 
-open class dsdsExtractor(
-    override val name: String = "ds.io",
-    override val mainUrl: String = "https://d-s.io/e",
-    override val requiresReferer: Boolean = false
-) : ExtractorApi() {
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val document = app.get(url).document
-        var found = false
+open class dsdsExtractor : ExtractorApi() {
+    override var name = "dsExtractor"
+    override var mainUrl = "https://doodstream.com"
+    override val requiresReferer = true
 
-        document.select("div.responsive-player iframe[src]").forEach {
-            val src = it.attr("src")
-            val videoHash = src.substringAfter("/")
-            val directUrl = "$mainUrl/$videoHash"
-        callback(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    directUrl
-                )
-            )
-        }
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        // Sửa lỗi: Tạo chuỗi ngẫu nhiên đúng cách
+        val randomStr = generateRandomString(10)
+    
+        val doc = app.get(url).document
+        val videoHash = doc.substringAfter("/")
+        val directUrl = "http://d-s.io/e/$videoHash"
+        val response = app.get(directUrl, referer = referer ?: mainUrl).text
+
+        // Tìm token từ hàm makePlay()
+        val tokenRegex = Regex("""makePlay\(\)\s*{[^}]*token=([\w]+)""")
+        val token = tokenRegex.find(response)?.groupValues?.get(1) ?: return null
+
+        // Tìm URL pass_md5
+        val passMd5Regex = Regex("""\$\get\('(/pass_md5/[^']+)'\)""")
+        val passMd5Path = passMd5Regex.find(response)?.groupValues?.get(1) ?: return null
+
+        // Lấy dữ liệu video
+        val md5Url = mainUrl + passMd5Path
+        val videoData = app.get(md5Url, referer = directUrl).text
+
+        // Tạo URL cuối cùng
+        val expiry = System.currentTimeMillis()
+        val trueUrl = "$videoData$randomStr?token=$token&expiry=$expiry"
+
+        return listOf(
+            newExtractorLink(
+                source = name,
+                name = "Dsio",
+                url = trueUrl,
+                type = INFER_TYPE
+            ) {
+                this.referer = mainUrl
+            }
+        )
+    }
+
+    // Hàm tạo chuỗi ngẫu nhiên đúng
+    private fun generateRandomString(length: Int): String {
+        val charPool = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+        return (1..length)
+            .map { charPool.random() }
+            .joinToString("")
     }
 }
 
