@@ -2,6 +2,8 @@ package com.Jayboys
 
 import android.util.Log
 import org.jsoup.nodes.Element
+import org.jsoup.nodes.Document
+import org.jsoup.Jsoup
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import okhttp3.FormBody
