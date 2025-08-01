@@ -137,19 +137,15 @@ class Fxggxt : MainAPI() {
 
     val actors = doc.select("#video-actors a").mapNotNull { it.text() }.filter { it.isNotBlank() }
 
-    val recommendations = doc.select("article.loop-video.thumb-block").mapNotNull { el ->
-        val aTag = el.selectFirst("a") ?: return@mapNotNull null
-        val recUrl = fixUrl(aTag.attr("href"))
-        val recName = aTag.attr("title") ?: aTag.selectFirst("header.entry-header span")?.text() ?: return@mapNotNull null
-        val recPoster = aTag.selectFirst(".post-thumbnail-container img")?.attr("data-src")
-        newMovieSearchResponse(recName, recUrl, TvType.NSFW) {
-            this.posterUrl = recPoster
-        }
-    }  
+    val recommendations = document.select("article.loop-video.thumb-block").mapNotNull {
+            it.toRecommendResult()
+    }
+
     return newMovieLoadResponse(title, url, TvType.NSFW, url) {
         this.posterUrl = poster
         this.plot = description
         if (actors.isNotEmpty()) addActors(actors)
+        this.recommendations = recommendations
     }
 }
 
@@ -160,14 +156,8 @@ class Fxggxt : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-
-    val headers = mapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Referer" to "https://fxggxt.com/",
-        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-    )
-    
-        val document = app.get(data, headers = headers).document
+     
+        val document = app.get(data).document
     
             document.select("div.responsive-player iframe[src]").forEach {
         val url = it.attr("src")
