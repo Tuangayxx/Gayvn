@@ -109,6 +109,35 @@ class dsExtractor : ExtractorApi() {
     }
 }
 
+class dsdsExtractor(
+    override val name: String = "ds.io",
+    override val mainUrl: String = "https://d-s.io",
+    override val requiresReferer: Boolean = false
+) : ExtractorApi() {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val document = app.get(url).document
+        var found = false
+
+        document.select("div.responsive-player iframe[src]").forEach {
+            val src = it.attr("src")
+            val videoHash = src.substringAfter("/")
+            val directUrl = "$mainUrl/$videoHash"
+        callback(
+                newExtractorLink(
+                    this.name,
+                    this.name,
+                    directUrl
+                )
+            )
+        }
+    }
+}
+
 class doodstream : BaseVideoExtractor() {
     override val name = "doodstream"
     override val domain = "doodstream.com"
