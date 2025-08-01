@@ -18,7 +18,7 @@ class Jayboys : MainAPI() {
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
     
-    val subtitleCatUrl = "https://www.subtitlecat.com"
+    val cookies = mapOf("i18next" to "en")
     
     override val mainPage = mainPageOf(
             "/2025/"                                          to "Latest Upadates",
