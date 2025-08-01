@@ -90,8 +90,6 @@ class Jayboys : MainAPI() {
         }
     }
 
-    import org.jsoup.Jsoup
-
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
