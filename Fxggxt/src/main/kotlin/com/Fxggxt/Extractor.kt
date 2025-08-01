@@ -65,36 +65,27 @@ class dsExtractor : ExtractorApi() {
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        // Tạo URL proxy để tránh chặn
+        // Sửa lỗi: Tạo chuỗi ngẫu nhiên đúng cách
+        val randomStr = generateRandomString(10)
+
         val proxyUrl = url.replace("doodstream.com", "d-s.io")
-        
-        // Tải nội dung HTML với referer chính xác
         val response = app.get(proxyUrl, referer = referer ?: mainUrl).text
 
-        // Trích xuất token từ URL pass_md5
-        val tokenRegex = Regex("""/pass_md5/[^'"]+\?token=([\w]+)""")
+        // Tìm token từ hàm makePlay()
+        val tokenRegex = Regex("""makePlay\(\)\s*{[^}]*token=([\w]+)""")
         val token = tokenRegex.find(response)?.groupValues?.get(1) ?: return null
 
-        // Trích xuất ID file để xây dựng URL pass_md5
-        val fileIdRegex = Regex("""\.cookie\('file_id',\s*'(\d+)'\)""")
-        val fileId = fileIdRegex.find(response)?.groupValues?.get(1) ?: return null
+        // Tìm URL pass_md5
+        val passMd5Regex = Regex("""\$\get\('(/pass_md5/[^']+)'\)""")
+        val passMd5Path = passMd5Regex.find(response)?.groupValues?.get(1) ?: return null
 
-        // Xây dựng URL pass_md5 hoàn chỉnh
-        val passMd5Url = "$mainUrl/pass_md5/$fileId?token=$token"
-        
-        // Lấy dữ liệu video chính
-        val videoData = app.get(passMd5Url, referer = proxyUrl).text
+        // Lấy dữ liệu video
+        val md5Url = mainUrl + passMd5Path
+        val videoData = app.get(md5Url, referer = proxyUrl).text
 
-        // Tạo URL video hoàn chỉnh với token và thời gian hết hạn
-        val randomStr = (1..10).joinToString("") { 
-            ('a'..'z').random().toString() 
-        }
+        // Tạo URL cuối cùng
         val expiry = System.currentTimeMillis()
-        val videoUrl = "$videoData$randomStr?token=$token&expiry=$expiry"
-
-        // Trích xuất chất lượng video
-        val quality = Regex("""Spain In The Ass 2.*?(\d{3,4})[pP]""")
-            .find(response)?.groupValues?.get(1)?.toIntOrNull()
+        val trueUrl = "$videoData$randomStr?token=$token&expiry=$expiry"
 
         return listOf(
             newExtractorLink(
@@ -106,6 +97,14 @@ class dsExtractor : ExtractorApi() {
                 this.referer = mainUrl
             }
         )
+    }
+
+    // Hàm tạo chuỗi ngẫu nhiên đúng
+    private fun generateRandomString(length: Int): String {
+        val charPool = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+        return (1..length)
+            .map { charPool.random() }
+            .joinToString("")
     }
 }
 
