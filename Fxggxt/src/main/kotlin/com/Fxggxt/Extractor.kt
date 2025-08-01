@@ -14,10 +14,14 @@ import org.jsoup.nodes.Element
 import org.jsoup.nodes.Document
 import org.jsoup.Jsoup
 import android.annotation.SuppressLint
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.OkHttpClient
-import okhttp3.dnsoverhttps.DnsOverHttps
 import java.net.InetAddress
+import com.lagradost.cloudstream3.utils.M3u8Helper
+import com.lagradost.cloudstream3.utils.getQualityFromName
+import com.lagradost.cloudstream3.utils.loadExtractor
+import okhttp3.*
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.*
 
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
@@ -64,61 +68,92 @@ class dsio : BaseVideoExtractor() {
     }
 }
 
+
 class dsExtractor : ExtractorApi() {
     override var name = "dsExtractor"
     override var mainUrl = "https://doodstream.com"
     override val requiresReferer = true
 
-    // Client tùy chỉnh cho Android TV
-    override val client: OkHttpClient by lazy {
-        val trustManager = trustAllCertificates()
-        OkHttpClient.Builder()
-            .sslSocketFactory(sslSocketFactory, trustManager)
-            .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))
+    // Hàm tạo SSL context để bỏ qua xác thực chứng chỉ
+    private fun createUnsafeOkHttpClient(): OkHttpClient {
+        val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun getAcceptedIssuers() = arrayOf<X509Certificate>()
+        })
+
+        val sslContext = SSLContext.getInstance("SSL")
+        sslContext.init(null, trustAllCerts, SecureRandom())
+        
+        return OkHttpClient.Builder()
+            .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+            .hostnameVerifier { _, _ -> true }
             .build()
     }
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        // Sửa lỗi: Tạo chuỗi ngẫu nhiên đúng cách
+        // Tạo client an toàn cho TV
+        val tvSafeClient = createUnsafeOkHttpClient()
+        
         val randomStr = generateRandomString(10)
-
         val proxyUrl = url.replace("doodstream.com", "d-s.io")
-        val response = app.get(proxyUrl, referer = referer ?: mainUrl).text
+        
+        // Headers tương thích TV
+        val headers = headers = mapOf(
+            "User-Agent" -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36",
+            "Origin" -> "https://doodstream.com",
+            "Referer" -> (referer ?: "https://doodstream.com/"),
+            "Accept" -> "*/*",
+            "Connection" -> "keep-alive"
+        )
 
-        // Tìm token từ hàm makePlay()
-        val tokenRegex = Regex("""makePlay\(\)\s*{[^}]*token=([\w]+)""")
-        val token = tokenRegex.find(response)?.groupValues?.get(1) ?: return null
+        // Request với client TV-safe
+        val request = Request.Builder()
+            .url(proxyUrl)
+            .headers(Headers.of(headers))
+            .get()
+            .build()
 
-        // Tìm URL pass_md5
-        val passMd5Regex = Regex("""\$\get\('(/pass_md5/[^']+)'\)""")
-        val passMd5Path = passMd5Regex.find(response)?.groupValues?.get(1) ?: return null
+        val response = tvSafeClient.newCall(request).execute()
+        val responseBody = response.body?.string() ?: return null
+
+        // Trích xuất token
+        val token = Regex("""token=([a-zA-Z0-9]+)""").find(responseBody)?.groupValues?.get(1) 
+            ?: return null
+
+        // Trích xuất pass_md5 path
+        val passMd5Path = Regex("""['"](/pass_md5/[^'"]+)""").find(responseBody)?.groupValues?.get(1)
+            ?: return null
 
         // Lấy dữ liệu video
         val md5Url = mainUrl + passMd5Path
-        val videoData = app.get(md5Url, referer = proxyUrl).text
+        val videoData = tvSafeClient.newCall(
+            Request.Builder()
+                .url(md5Url)
+                .headers(Headers.of(headers))
+                .get()
+                .build()
+        ).execute().body?.string() ?: return null
 
-        // Tạo URL cuối cùng
         val expiry = System.currentTimeMillis()
-        val trueUrl = "$videoData$randomStr?token=$token&expiry=$expiry"
+        val videoUrl = "$videoData$randomStr?token=$token&expiry=$expiry"
 
         return listOf(
             newExtractorLink(
                 source = name,
-                name = "Dsio",
-                url = trueUrl,
+                name = name,
+                url = videoUrl,
                 type = INFER_TYPE
-            ) {
-                this.referer = mainUrl
-            }
-        )
+                        ) {
+                referer = "${mainUrl}/",
+                quality = Qualities.SD.value
+                        }
+            )
     }
 
-    // Hàm tạo chuỗi ngẫu nhiên đúng
     private fun generateRandomString(length: Int): String {
-        val charPool = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-        return (1..length)
-            .map { charPool.random() }
-            .joinToString("")
+        val charPool = ('a'..'z') + ('0'..'9')
+        return (1..length).joinToString("") { charPool.random().toString() }
     }
 }
 
