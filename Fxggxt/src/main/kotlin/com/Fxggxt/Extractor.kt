@@ -73,7 +73,7 @@ class dsExtractor : BaseVideoExtractor() {
         val randomStr = generateRandomString(10)
 
         val proxyUrl = url.replace("doodstream.com", "d-s.io")
-        val response = app.get(proxyUrl, referer = referer ?: mainUrl).text
+        val response = app.get(proxyUrl, referer = proxyUrl).text
 
         // Tìm token từ hàm makePlay()
         val tokenRegex = Regex("""makePlay\(\)\s*{[^}]*token=([\w]+)""")
@@ -84,7 +84,7 @@ class dsExtractor : BaseVideoExtractor() {
         val passMd5Path = passMd5Regex.find(response)?.groupValues?.get(1) ?: return null
 
         // Lấy dữ liệu video
-        val md5Url = mainUrl + passMd5Path
+        val md5Url = proxyUrl + passMd5Path
         val videoData = app.get(md5Url, referer = proxyUrl).text
 
         // Tạo URL cuối cùng
@@ -98,7 +98,7 @@ class dsExtractor : BaseVideoExtractor() {
                 url = trueUrl,
                 type = INFER_TYPE
             ) {
-                this.referer = mainUrl
+                this.referer = proxyUrl
             }
         )
     }
