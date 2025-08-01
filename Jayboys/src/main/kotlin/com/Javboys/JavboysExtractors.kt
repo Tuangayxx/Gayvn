@@ -10,13 +10,13 @@ import com.lagradost.cloudstream3.utils.*
 
 open class Stbturbo : ExtractorApi() {
     override var name = "Stbturbo"
-    override var mainUrl = "https://gaystream.link/"
+    override var mainUrl = "https://stbturbo.xyz/"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         with(app.get(url)) {
             this.document.let { document ->
-                val finalLink = document.select("#video-player").attr("data-src")
+                val finalLink = document.select("div.download-button-wrapper").attr("href")
                 return listOf(
                     newExtractorLink(
                         source = name,
@@ -36,20 +36,43 @@ open class Stbturbo : ExtractorApi() {
 
 
 
-class yiling : Stbturbo() {
-    override var name = "1069"
-    override var mainUrl = "https://1069.website/"
-    override val requiresReferer = false
-}
+abstract class BaseVideoExtractor : ExtractorApi() {
+    protected abstract val domain: String
+    override val mainUrl: String get() = "https://$domain"
 
-class boynextdoors : Stbturbo() {
-    override var name = "boynextdoors"
-    override var mainUrl = "jilliandescribecompany.com/"
+    class VoeExtractor : BaseVideoExtractor() {
+    override val name = "Voe"
+    override val domain = "jilliandescribecompany.com"
+    override val mainUrl = "https://$domain"
     override val requiresReferer = false
-}
 
-class yilingjp : Stbturbo() {
-    override var name = "1069jp"
-    override var mainUrl = "https://1069jp.com/f"
-    override val requiresReferer = false
+    private data class VideoSource(
+        @JsonProperty("hls") val url: String?,
+        @JsonProperty("video_height") val height: Int?
+    )
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+        val response = app.get(url)
+        if (response.code == 404) return emptyList()
+
+        val jsonMatch = Regex("""const\s+sources\s*=\s*(\{.*?\});""")
+            .find(response.text)
+            ?.groupValues?.get(1)
+            ?.replace("0,", "0")
+            ?: return emptyList()
+
+        return tryParseJson<VideoSource>(jsonMatch)?.let { source ->
+            source.url?.let { videoUrl ->
+                listOf(
+                    newExtractorLink(
+                        name = name,
+                        source = name,
+                        url = videoUrl,
+                        type = INFER_TYPE
+                    )
+                )
+            } ?: emptyList()
+        } ?: emptyList()
+    }
+}
 }

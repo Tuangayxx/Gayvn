@@ -70,7 +70,6 @@ class VoeExtractor : BaseVideoExtractor() {
             } ?: emptyList()
         } ?: emptyList()
     }
-}
 
 
 class dsio : BaseVideoExtractor() {
@@ -111,6 +110,7 @@ class dsio : BaseVideoExtractor() {
             }
         )
     }
+}
 }
 
 open class vvide0Extractor : ExtractorApi() {
