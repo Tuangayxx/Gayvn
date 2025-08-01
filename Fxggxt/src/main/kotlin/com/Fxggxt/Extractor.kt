@@ -109,7 +109,7 @@ class dsExtractor : ExtractorApi() {
     }
 }
 
-class dsdsExtractor(
+open class dsdsExtractor(
     override val name: String = "ds.io",
     override val mainUrl: String = "https://d-s.io/e",
     override val requiresReferer: Boolean = false
