@@ -90,15 +90,29 @@ class Jayboys : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+    import org.jsoup.Jsoup
+
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
     val doc = Jsoup.parse(data)
     var found = false
+    
+    // Lấy tất cả player có class 'video-player'
     doc.select("div.video-player").forEach { player ->
-        player.attr("data-src").takeIf { it.isNotEmpty() }?.let { url ->
+        // Lấy link từ thuộc tính data-src
+        val videoUrl = player.attr("data-src").takeIf { it.isNotBlank() }
+        
+        videoUrl?.let { url ->
             found = true
+            // Gọi hàm xử lý link (giữ nguyên logic gốc)
             loadExtractor(url, subtitleCallback, callback)
         }
     }
+    
     return found
 }
 }
