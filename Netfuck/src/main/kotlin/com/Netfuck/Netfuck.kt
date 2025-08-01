@@ -6,9 +6,9 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import okhttp3.FormBody
 
-class Jayboys : MainAPI() {
+class Netfuck : MainAPI() {
     override var mainUrl              = "https://javboys.tv"
-    override var name                 = "Javboys"
+    override var name                 = "Netfuck"
     override val hasMainPage          = true
     override var lang                 = "en"
     override val hasDownloadSupport   = true

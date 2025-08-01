@@ -6,9 +6,9 @@ import android.content.Context
 import com.lagradost.cloudstream3.extractors.StreamTape
 
 @CloudstreamPlugin
-class JayboysPlugin: Plugin() {
+class NetfuckPlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Jayboys())
+        registerMainAPI(Netfuck())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(Stbturbo())
         registerExtractorAPI(yilingjp())
