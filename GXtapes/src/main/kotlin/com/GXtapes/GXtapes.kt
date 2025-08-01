@@ -26,19 +26,25 @@ class GXtapes : MainAPI() {
         "/category/groupsex-gangbang-porn-189457" to "Gang bang & Group",
         "/category/860425"                        to "Corbin Fisher",
         "/category/139616"                        to "Timtales",
-        "/category/68780"                         to "Bel Ami",
+        "/category/687469"                        to "Bel Ami",
         "/category/651571"                        to "Broke Straight Boys",
-        "/category/835056"                        to "BroMo",
-        "/category/845926"                        to "CockyBoys",
-        "/category/346893" to "Sean Cody",
-        "/category/62478"  to "Fraternity X",
-        "/category/416510" to "Falcon Studio",
+        "/category/850356"                        to "BroMo",
+        "/category/847926"                        to "CockyBoys",
+        "/category/346893"                        to "Sean Cody",
+        "/category/62478"                         to "Fraternity X",
+        "/category/416510"                        to "Falcon Studio",
         "/category/37433"  to "Gay Hoopla",
-        "/category/621576" to "Onlyfans",
+        "/category/621537" to "Onlyfans",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val document = app.get("$mainUrl/${request.data}/page/$page/").document
+        val url = if (page > 1) {
+            "/page/$page${request.data}"
+        } else {
+            request.data
+        }
+
+        val document = app.get(url).document
         val home = document.select("ul.listing-tube li").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
@@ -53,6 +59,16 @@ class GXtapes : MainAPI() {
 
 
     private fun Element.toSearchResult(): SearchResponse {
+        val title = this.select("img").attr("title")
+        val href = fixUrl(this.select("a").attr("href"))
+        val posterUrl = fixUrlNull(this.select("img").attr("src"))
+        
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
+    }
+
+    private fun Element.toRecommendResult(): SearchResponse {
         val title = this.select("img").attr("title")
         val href = fixUrl(this.select("a").attr("href"))
         val posterUrl = fixUrlNull(this.select("img").attr("src"))
@@ -90,9 +106,14 @@ class GXtapes : MainAPI() {
         val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
         val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
+        val recommendations = doc.select("ul.listing-tube li").mapNotNull {
+            it.toRecommendResult()
+        }
+
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
+            this.recommendations = recommendations
         }
     }
 
