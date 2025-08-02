@@ -21,15 +21,9 @@ class Jayboys : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Fixed cookies implementation
-    override val client = super.client.newBuilder()
-        .addInterceptor { chain ->
-            val request = chain.request().newBuilder()
-                .addHeader("Cookie", "i18next=en")
-                .build()
-            chain.proceed(request)
-        }
-        .build()
+    override var sequentialMainPage            = true        // * https://recloudstream.github.io/dokka/-cloudstream/com.lagradost.cloudstream3/-main-a-p-i/index.html#-2049735995%2FProperties%2F101969414
+    override var sequentialMainPageDelay       = 50L  // ? 0.05 saniye
+    override var sequentialMainPageScrollDelay = 50L  
 
     override val mainPage = mainPageOf(
         "/2025/" to "Latest Updates",
@@ -48,7 +42,7 @@ class Jayboys : MainAPI() {
             else -> "$mainUrl${request.data}"
         }
 
-        val document = app.get(url, referer = mainUrl).document
+        val document = app.get(url, headers = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0").document
         // Fixed selector - using correct container class
         val home = document.select("div.list-item div.video.col-2").mapNotNull { it.toSearchResult() }
 
