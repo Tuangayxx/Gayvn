@@ -77,6 +77,7 @@ abstract class BaseVideoExtractor : ExtractorApi() {
         } ?: emptyList()
     }
 }
+}
 
 class dsio : BaseVideoExtractor() {
     override val name = "dsio"
@@ -116,5 +117,4 @@ class dsio : BaseVideoExtractor() {
             }
         )
     }
-}
 }
