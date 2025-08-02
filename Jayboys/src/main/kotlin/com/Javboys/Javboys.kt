@@ -37,12 +37,12 @@ class Jayboys : MainAPI() {
         val document = if (page == 1) {
             app.get("$mainUrl${request.data}").document
         } else {
-            app.get("$mainUrl${request.data}recent/$page").document
+            app.get("$mainUrl${request.data}page/$page").document
         }
 
         val responseList = document.select("div.video.col-2").mapNotNull { it.toSearchResult() }
         return newHomePageResponse(
-            HomePageList(request.name, responseList, isHorizontalImages = false),
+            HomePageList(request.name, responseList, isHorizontalImages = true),
             hasNext = true
         )
     }
