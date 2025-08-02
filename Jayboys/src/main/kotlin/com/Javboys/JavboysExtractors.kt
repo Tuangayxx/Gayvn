@@ -41,6 +41,7 @@ open class Stbturbo : ExtractorApi() {
 abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
+}
 
     class VoeExtractor : BaseVideoExtractor() {
     override val name = "Voe"
@@ -77,7 +78,7 @@ abstract class BaseVideoExtractor : ExtractorApi() {
         } ?: emptyList()
     }
 }
-}
+
 
 class dsio : BaseVideoExtractor() {
     override val name = "dsio"

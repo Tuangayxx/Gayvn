@@ -88,55 +88,33 @@ class Netfuck : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        val doc = app.get(data).document
-        val episodeList = doc.select(".button_style .button_choice_server")
-        episodeList.forEach { item->
-            var link = "atob\\('(.*)'\\)".toRegex().find(item.attr("onclick"))?.groups?.get(1)?.value.toString()
-            loadExtractor(base64Decode(link),subtitleCallback,callback)
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val document = app.get(data).document
+        var found = false
+
+        // Player links
+        document.select("div.video-player").forEach { player ->
+            val videoUrl = player.attr("data-src").takeIf { it.isNotBlank() }
+            videoUrl?.let { url ->
+                found = true
+                loadExtractor(url, subtitleCallback, callback)
+            }
         }
 
-        try {
-            val title = doc.selectFirst("meta[property=og:title]")?.attr("content")?.trim().toString()
-            val javCode = "([a-zA-Z]+-\\d+)".toRegex().find(title)?.groups?.get(1)?.value
-            if(!javCode.isNullOrEmpty())
-            {
-                val query = "$subtitleCatUrl/index.php?search=$javCode"
-                val subDoc = app.get(query, timeout = 15).document
-                val subList = subDoc.select("td a")
-                for(item in subList)
-                {
-                    if(item.text().contains(javCode))
-                    {
-                        val fullUrl = "$subtitleCatUrl/${item.attr("href")}"
-                        val pDoc = app.get(fullUrl, timeout = 10).document
-                        val sList = pDoc.select(".col-md-6.col-lg-4")
-                        for(item in sList)
-                        {
-                            try {
-                                val language = item.select(".sub-single span:nth-child(2)").text()
-                                val text = item.select(".sub-single span:nth-child(3) a")
-                                if(text != null && text.size > 0 && text[0].text() == "Download")
-                                {
-                                    val url = "$subtitleCatUrl${text[0].attr("href")}"
-                                    subtitleCallback.invoke(
-                                        SubtitleFile(
-                                            language.replace("\uD83D\uDC4D \uD83D\uDC4E",""),  // Use label for the name
-                                            url     // Use extracted URL
-                                        )
-                                    )
-                                }
-                            } catch (e: Exception) { }
-                        }
-
-                    }
-                }
-
+        // Download button links
+        document.select("div.download-button-wrapper").forEach { down ->
+            val videoLink = down.attr("href").takeIf { it.isNotBlank() }
+            videoLink?.let { url ->
+                found = true
+                loadExtractor(url, subtitleCallback, callback)
             }
-        } catch (e: Exception) { }
+        }
 
-
-
-        return true
+        return found
     }
 }
