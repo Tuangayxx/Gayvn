@@ -21,8 +21,6 @@ class Jayboys : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    val cookies = mapOf("i18next" to "en")
-
     override val mainPage = mainPageOf(
         "/2025/" to "Latest Updates",
         "/category/onlyfans/" to "Onlyfans",
