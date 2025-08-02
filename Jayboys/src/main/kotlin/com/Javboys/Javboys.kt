@@ -21,6 +21,16 @@ class Jayboys : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
+    // Fixed cookies implementation
+    override val client = super.client.newBuilder()
+        .addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .addHeader("Cookie", "i18next=en")
+                .build()
+            chain.proceed(request)
+        }
+        .build()
+
     override val mainPage = mainPageOf(
         "/2025/" to "Latest Updates",
         "/category/onlyfans/" to "Onlyfans",
@@ -31,15 +41,19 @@ class Jayboys : MainAPI() {
         "/category/hunk-channel/" to "Hunk Channel",
     )
 
-     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page > 1) {
-            "${request.data}page/$page"
-        } else {
-            "$mainUrl${request.data}"
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = when {
+            request.data.startsWith("/category/") && page > 1 -> "$mainUrl${request.data}page/$page/"
+            page > 1 -> "$mainUrl${request.data}page/$page/"
+            else -> "$mainUrl${request.data}"
         }
 
-        val document = app.get(url).document
-        val home = document.select("div.video.col-2").mapNotNull { it.toSearchResult() }
+        val document = app.get(url, referer = mainUrl).document
+        // Fixed selector - using correct container class
+        val home = document.select("div.list-item div.video.col-2").mapNotNull { it.toSearchResult() }
+
+        // Fixed pagination detection
+        val hasNext = document.selectFirst("a.next.page-numbers") != null
 
         return newHomePageResponse(
             list = HomePageList(
@@ -47,38 +61,32 @@ class Jayboys : MainAPI() {
                 list = home,
                 isHorizontalImages = true
             ),
-            hasNext = true
+            hasNext = hasNext
         )
     }
 
     private fun Element.toSearchResult(): SearchResponse {
-        val title = this.select("span.title").text()
-        val href = this.select("a.thumb-video").attr("href")
-        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")
-        return newMovieSearchResponse(title, href, TvType.Movie) {
+        // Fixed selectors to match actual HTML structure
+        val title = this.selectFirst("a.denomination span.title")?.text()?.trim() ?: ""
+        val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
+        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
+        
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
     }
 
+    // Fixed search function
     override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-
-        for (i in 1..7) {
-            val document = app.get("$mainUrl/search/video/?s=$query&page=$i").document
-            val results = document.select("div.video.col-2").mapNotNull { it.toSearchResult() }
-
-            if (!searchResponse.containsAll(results)) {
-                searchResponse.addAll(results)
-            } else {
-                break
-            }
-
-            if (results.isEmpty()) break
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
+        val url = "$mainUrl/?s=$encodedQuery"
+        val document = app.get(url, referer = mainUrl).document
+        
+        return document.select("div.list-item div.video.col-2").mapNotNull { 
+            it.toSearchResult() 
         }
-
-        return searchResponse
     }
-
+}
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
