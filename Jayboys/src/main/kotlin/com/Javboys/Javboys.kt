@@ -41,7 +41,7 @@ class Jayboys : MainAPI() {
         }
 
         val document = app.get(url).document
-        val home = document.select("div.video col-2").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.video.col-2").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
