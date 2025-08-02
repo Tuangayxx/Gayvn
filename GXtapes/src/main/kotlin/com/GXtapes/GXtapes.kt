@@ -39,7 +39,7 @@ class GXtapes : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
-            "/page/$page${request.data}"
+            "$mainUrl/page/$page${request.data}"
         } else {
             "$mainUrl/${request.data}"
         }

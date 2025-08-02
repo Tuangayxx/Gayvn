@@ -55,19 +55,22 @@ class Jayboys : MainAPI() {
         "/category/hunk-channel/" to "Hunk Channel",
     )
 
-    override suspend fun getMainPage(
-        page: Int,
-        request: MainPageRequest
-    ): HomePageResponse {
-        val document = if (page == 1) {
-            app.get("$mainUrl${request.data}").document
+     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (page > 1) {
+            "${request.data}page/$page"
         } else {
-            app.get("$mainUrl${request.data}page/$page").document
+            "$mainUrl${request.data}"
         }
 
-        val responseList = document.select("div.video.col-2").mapNotNull { it.toSearchResult() }
+        val document = app.get(url).document
+        val home = document.select("div.video col-2").mapNotNull { it.toSearchResult() }
+
         return newHomePageResponse(
-            HomePageList(request.name, responseList, isHorizontalImages = true),
+            list = HomePageList(
+                name = request.name,
+                list = home,
+                isHorizontalImages = true
+            ),
             hasNext = true
         )
     }
