@@ -12,8 +12,5 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(dsio())
         registerExtractorAPI(VoeExtractor())
         registerExtractorAPI(Stbturbo())
-        registerExtractorAPI(yilingjp())
-        registerExtractorAPI(yiling())
-        registerExtractorAPI(boynextdoors())
     }
 }

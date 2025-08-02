@@ -106,6 +106,14 @@ override suspend fun loadLinks(
         
         videoUrl?.let { url ->
             found = true
+            loadExtractor(url, subtitleCallback, callback)
+        }
+
+    doc.select("div.download-button-wrapper").forEach { down ->
+        val videoLink = down.attr("href").takeIf {it.isNotBlank()}
+
+        videoLink?.let { url ->
+            found = true
             // Gọi hàm xử lý link (giữ nguyên logic gốc)
             loadExtractor(url, subtitleCallback, callback)
         }
