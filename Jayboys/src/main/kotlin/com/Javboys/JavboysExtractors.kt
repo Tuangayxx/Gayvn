@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.extractors.StreamTape
 import com.fasterxml.jackson.annotation.JsonProperty
 
 open class Stbturbo : ExtractorApi() {
