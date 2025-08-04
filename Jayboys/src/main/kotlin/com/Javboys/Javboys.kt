@@ -72,18 +72,28 @@ class Jayboys : MainAPI() {
         }
     }
 
-    // Fixed search function
     override suspend fun search(query: String): List<SearchResponse> {
-        val encodedQuery = URLEncoder.encode(query, "UTF-8")
-        val url = "$mainUrl/?s=$encodedQuery"
-        val document = app.get(url, referer = mainUrl).document
-        
-        return document.select("div.list-item div.video.col-2").mapNotNull { 
-            it.toSearchResult() 
+        val searchResponse = mutableListOf<SearchResponse>()
+
+        for (i in 1..5) {
+            val document = app.get("${mainUrl}/page/$i/?s=$query").document
+
+            val results = document.select("div.list-item div.video.col-2").mapNotNull { it.toSearchResult() }
+
+            if (!searchResponse.containsAll(results)) {
+                searchResponse.addAll(results)
+            } else {
+                break
+            }
+
+            if (results.isEmpty()) break
         }
+
+        return searchResponse
     }
-}
-    override suspend fun load(url: String): LoadResponse {
+       
+        
+        override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
 
         val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim().toString()
