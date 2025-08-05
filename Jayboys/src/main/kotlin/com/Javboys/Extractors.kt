@@ -45,7 +45,7 @@ open class yi069website  : ExtractorApi() {
 
 open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
-    override val mainUrl = "jilliandescribecompany.com"
+    override val mainUrl = "https://jilliandescribecompany.com"
     override val requiresReferer = false
 
     private data class VideoSource(
