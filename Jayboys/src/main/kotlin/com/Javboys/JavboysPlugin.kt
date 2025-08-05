@@ -15,5 +15,7 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(Voe())
         registerExtractorAPI(Stbturbo())
         registerExtractorAPI(StreamTape())
+        registerExtractorAPI(1069website())
+
     }
 }

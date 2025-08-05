@@ -16,10 +16,10 @@ abstract class BaseVideoExtractor : ExtractorApi() {
     protected abstract val domain: String
     override val mainUrl: String get() = "https://$domain"
 }
-class 1069website  : BaseVideoExtractor() {
+
+open class 1069website  : ExtractorApi() {
     override val name = "1069website"
-    override val domain = "https://1069.website/"
-    override val mainUrl = "https://$domain/bkg"
+    override val mainUrl = "https://1069.website"
     override val requiresReferer = false 
     
     
