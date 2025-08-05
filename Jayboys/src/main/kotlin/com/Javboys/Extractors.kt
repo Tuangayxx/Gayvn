@@ -13,35 +13,39 @@ import com.lagradost.cloudstream3.extractors.Voe
 import com.fasterxml.jackson.annotation.JsonProperty
 
 
-open class yi069website  : ExtractorApi() {
+open class yi069website : ExtractorApi() {
     override val name = "yi069website"
     override val mainUrl = "https://1069.website"
     override val requiresReferer = false 
-    
-    
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        with(app.get(url)) {
-            this.document.let { document ->
-                val link = document.select("div.download-button-wrapper").attr("href")
-                val videohash = link.substringAfterLast("/")
-                val finalLink = "https://l455o.com/bkg/$videohash"
-                return listOf(
-                    newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = finalLink,
-                        type = INFER_TYPE
-                    ) {
-                        this.referer = url
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
-            }
-        }
-        return null
-    }
-    }
 
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        val response = app.get(url)
+        val document = response.document
+
+        // 1. Chọn chính xác thẻ <a> đầu tiên trong download-button-wrapper
+        val firstDownloadLink = document.select("div.download-button-wrapper a:first-child").attr("href")
+        if (firstDownloadLink.isBlank()) return null
+
+        // 2. Trích xuất ID video (phần cuối sau dấu '/')
+        val videoId = firstDownloadLink.substringAfterLast("/")
+        if (videoId.isBlank()) return null
+
+        // 3. Sửa domain chính xác: 1455o thay vì l455o
+        val finalLink = "https://1455o.com/bkg/$videoId"
+
+        return listOf(
+            newExtractorLink(
+                source = name,
+                name = "yi069video",
+                url = finalLink,
+                type = INFER_TYPE
+            ) {
+                this.referer = url
+                this.quality = Qualities.Unknown.value
+            }
+        )
+    }
+}
 
 open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
