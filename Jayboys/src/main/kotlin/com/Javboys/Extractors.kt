@@ -13,8 +13,8 @@ import com.lagradost.cloudstream3.extractors.Voe
 import com.fasterxml.jackson.annotation.JsonProperty
 
 
-open class 1069website  : ExtractorApi() {
-    override val name = "1069website"
+open class yi069website  : ExtractorApi() {
+    override val name = "yi069website"
     override val mainUrl = "https://1069.website"
     override val requiresReferer = false 
     

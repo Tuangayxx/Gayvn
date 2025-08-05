@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 
 @CloudstreamPlugin
 class JayboysPlugin: Plugin() {
@@ -13,9 +14,9 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(dsio())
         registerExtractorAPI(VoeExtractor())
         registerExtractorAPI(Voe())
-        registerExtractorAPI(Stbturbo())
         registerExtractorAPI(StreamTape())
-        registerExtractorAPI(1069website())
+        registerExtractorAPI(yi069website())
+        registerExtractorAPI(DoodLaExtractor())
 
     }
 }
