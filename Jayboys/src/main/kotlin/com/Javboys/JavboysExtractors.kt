@@ -9,23 +9,32 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.extractors.Voe
 import com.fasterxml.jackson.annotation.JsonProperty
 
-open class Stbturbo : ExtractorApi() {
-    override var name = "Stbturbo"
-    override var mainUrl = "https://stbturbo.xyz/"
-    override val requiresReferer = false
-
+abstract class BaseVideoExtractor : ExtractorApi() {
+    protected abstract val domain: String
+    override val mainUrl: String get() = "https://$domain"
+}
+class 1069website  : BaseVideoExtractor() {
+    override val name = "1069website"
+    override val domain = "https://1069.website/"
+    override val mainUrl = "https://$domain/bkg"
+    override val requiresReferer = false 
+    
+    
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         with(app.get(url)) {
             this.document.let { document ->
-                val finalLink = document.select("div.download-button-wrapper").attr("href")
+                val link = document.select("div.download-button-wrapper").attr("href")
+                val videohash = link.substringAfterLast("/")
+                val finalLink = "https://l455o.com/bkg/$videohash"
                 return listOf(
                     newExtractorLink(
                         source = name,
                         name = name,
-                        url = httpsify(finalLink),
-                        ExtractorLinkType.M3U8
+                        url = finalLink,
+                        type = INFER_TYPE
                     ) {
                         this.referer = url
                         this.quality = Qualities.Unknown.value
