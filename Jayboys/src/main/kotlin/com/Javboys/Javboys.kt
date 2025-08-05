@@ -22,10 +22,6 @@ class Jayboys : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    override var sequentialMainPage            = true        // * https://recloudstream.github.io/dokka/-cloudstream/com.lagradost.cloudstream3/-main-a-p-i/index.html#-2049735995%2FProperties%2F101969414
-    override var sequentialMainPageDelay       = 50L  // ? 0.05 saniye
-    override var sequentialMainPageScrollDelay = 50L  
-
     override val mainPage = mainPageOf(
         "/2025/" to "Latest Updates",
         "/category/onlyfans/" to "Onlyfans",

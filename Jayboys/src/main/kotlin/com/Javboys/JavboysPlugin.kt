@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.extractors.Voe
 
 @CloudstreamPlugin
 class JayboysPlugin: Plugin() {
@@ -11,6 +12,7 @@ class JayboysPlugin: Plugin() {
         registerMainAPI(Jayboys())
         registerExtractorAPI(dsio())
         registerExtractorAPI(VoeExtractor())
+        registerExtractorAPI(Voe())
         registerExtractorAPI(Stbturbo())
         registerExtractorAPI(StreamTape())
     }
