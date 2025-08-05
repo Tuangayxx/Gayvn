@@ -12,10 +12,6 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
 import com.fasterxml.jackson.annotation.JsonProperty
 
-abstract class BaseVideoExtractor : ExtractorApi() {
-    protected abstract val domain: String
-    override val mainUrl: String get() = "https://$domain"
-}
 
 open class 1069website  : ExtractorApi() {
     override val name = "1069website"
@@ -47,13 +43,7 @@ open class 1069website  : ExtractorApi() {
     }
 
 
-
-abstract class BaseVideoExtractor : ExtractorApi() {
-    protected abstract val domain: String
-    override val mainUrl: String get() = "https://$domain"
-}
-
-    class VoeExtractor : BaseVideoExtractor() {
+open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
     override val domain = "jilliandescribecompany.com"
     override val mainUrl = "https://$domain"
@@ -90,7 +80,7 @@ abstract class BaseVideoExtractor : ExtractorApi() {
 }
 
 
-class dsio : BaseVideoExtractor() {
+open class dsio : ExtractorApi() {
     override val name = "dsio"
     override val domain = "d-s.io"
     override val mainUrl = "https://$domain"

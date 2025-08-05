@@ -21,7 +21,8 @@ class Gayxx : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "/2025/07" to "Latest",
+        "/2025/08" to "Latest",
+        "/2025/07" to "Tháng bảy",
         "/2025/06" to "Tháng sáu",
         "/2025/05" to "Tháng năm",
         "/2025/04" to "Tháng bốn",
