@@ -45,8 +45,7 @@ open class yi069website  : ExtractorApi() {
 
 open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
-    override val domain = "jilliandescribecompany.com"
-    override val mainUrl = "https://$domain"
+    override val mainUrl = "jilliandescribecompany.com"
     override val requiresReferer = false
 
     private data class VideoSource(
@@ -82,8 +81,7 @@ open class VoeExtractor : ExtractorApi() {
 
 open class dsio : ExtractorApi() {
     override val name = "dsio"
-    override val domain = "d-s.io"
-    override val mainUrl = "https://$domain"
+    override val mainUrl = "d-s.io"
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
