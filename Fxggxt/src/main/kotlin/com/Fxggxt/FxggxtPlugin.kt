@@ -4,6 +4,7 @@ import android.content.Context
 import com.Fxggxt.Fxggxt
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 
 @CloudstreamPlugin
 class FxggxtPlugin : Plugin() {
@@ -13,6 +14,7 @@ class FxggxtPlugin : Plugin() {
         registerExtractorAPI(dood())
         registerExtractorAPI(dsio())
         registerExtractorAPI(dsExtractor())
-        registerExtractorAPI(doodstream())
+        registerExtractorAPI(doodst())
+        registerExtractorAPI(DoodLaExtractor())
     }
 }
