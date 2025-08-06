@@ -181,7 +181,7 @@ class Fxggxt : MainAPI() {
         }
 
         // Download button links
-        document.select("a").forEach { down ->
+        document.select("a#tracking-url[href]").forEach { down ->
             val videoLink = down.attr("href").takeIf { it.isNotBlank() }
             videoLink?.let { url ->
                 found = true
