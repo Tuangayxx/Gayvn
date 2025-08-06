@@ -160,6 +160,7 @@ class Fxggxt : MainAPI() {
 ): Boolean {
      
         val document = app.get(data).document
+        var found = false
     
         // Player links
         document.select("div.responsive-player iframe[src]").forEach { player ->
