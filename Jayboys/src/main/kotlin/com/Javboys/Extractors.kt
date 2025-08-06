@@ -31,7 +31,7 @@ open class yi069website : ExtractorApi() {
         if (videoId.isBlank()) return null
 
         // 3. Sửa domain chính xác: 1455o thay vì l455o
-        val finalLink = "https://1455o.com/bkg/$videoId"
+        val finalLink = "https://l455o.com/bkg/$videoId"
 
         return listOf(
             newExtractorLink(
