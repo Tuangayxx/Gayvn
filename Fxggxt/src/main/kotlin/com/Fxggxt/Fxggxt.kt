@@ -25,11 +25,9 @@ class Fxggxt : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
 
-    override val requestInterceptor = RequestInterceptor { request ->
-        request.newBuilder()
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-            .build()
-    }
+    private val headers = mapOf(
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
+    )
 
     override val mainPage = mainPageOf(
         "$mainUrl/?filter=latest/"             to "Latest",
@@ -166,7 +164,7 @@ class Fxggxt : MainAPI() {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
      
-        val document = app.get(data).document
+        val document = app.get(data , headers = headers).document
         var found = false
     
         // Player links
