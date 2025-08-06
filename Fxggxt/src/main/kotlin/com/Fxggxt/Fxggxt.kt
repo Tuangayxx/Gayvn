@@ -10,6 +10,7 @@ import com.lagradost.cloudstream3.network.CloudflareKiller
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
+import okhttp3.Request
 import org.json.JSONObject
 import org.json.JSONArray
 import org.jsoup.nodes.Document
@@ -23,6 +24,12 @@ class Fxggxt : MainAPI() {
     override val hasChromecastSupport = true
     override val vpnStatus = VPNStatus.MightBeNeeded
     override val supportedTypes = setOf(TvType.NSFW)
+
+    override val requestInterceptor = RequestInterceptor { request ->
+        request.newBuilder()
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+            .build()
+    }
 
     override val mainPage = mainPageOf(
         "$mainUrl/?filter=latest/"             to "Latest",
