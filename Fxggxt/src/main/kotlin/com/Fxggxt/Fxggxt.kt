@@ -26,7 +26,11 @@ class Fxggxt : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
 
     private val headers = mapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
+        "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language" to "en-US,en;q=0.5",
+        "Connection" to "keep-alive",
+        "Upgrade-Insecure-Requests" to "1"
     )
 
     override val mainPage = mainPageOf(
