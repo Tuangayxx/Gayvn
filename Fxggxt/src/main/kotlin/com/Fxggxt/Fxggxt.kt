@@ -161,11 +161,26 @@ class Fxggxt : MainAPI() {
      
         val document = app.get(data).document
     
-            document.select("div.responsive-player iframe[src]").forEach { link ->
-        val url = link.attr("src")
-            loadExtractor(url, subtitleCallback, callback)
+        // Player links
+        document.select("div.responsive-player iframe[src]").forEach { player ->
+            val videoUrl = player.attr("src").takeIf { it.isNotBlank() }
+            videoUrl?.let { url ->
+                found = true
+                loadExtractor(url, subtitleCallback, callback)
+            }
         }
-            return true
+
+        // Download button links
+        document.select("a").forEach { down ->
+            val videoLink = down.attr("href").takeIf { it.isNotBlank() }
+            videoLink?.let { url ->
+                found = true
+                loadExtractor(url, subtitleCallback, callback)
+            }
+        }
+
+        return found
     }
 }
+
 
