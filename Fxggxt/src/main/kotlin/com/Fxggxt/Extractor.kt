@@ -64,7 +64,7 @@ class dsio : BaseVideoExtractor() {
 
 class dsExtractor : BaseVideoExtractor() {
     override var name = "dsExtractor"
-    override val domain = "doodstream.com"
+    override val domain = "d-s.io"
     override val mainUrl = "https://$domain"
     override val requiresReferer = true
 
