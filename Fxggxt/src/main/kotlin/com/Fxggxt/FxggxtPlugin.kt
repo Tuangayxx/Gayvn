@@ -10,11 +10,6 @@ import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 class FxggxtPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Fxggxt())
-        registerExtractorAPI(vide0Extractor())
-        registerExtractorAPI(dood())
-        registerExtractorAPI(dsio())
-        registerExtractorAPI(dsExtractor())
-        registerExtractorAPI(doodst())
         registerExtractorAPI(DoodLaExtractor())
     }
 }
