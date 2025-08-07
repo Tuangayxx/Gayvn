@@ -225,4 +225,4 @@ private fun getBaseUrl(url: String): String {
             .replace(Regex("""(\w+)\s*:\s*('[^']*')"""), "$1:$2")
             .replace(Regex("""(\w+)\s*:\s*("[^"]*")"""), "$1:$2")
     }
-}
+} }
