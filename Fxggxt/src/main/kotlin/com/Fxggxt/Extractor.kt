@@ -80,7 +80,7 @@ open class dsio : ExtractorApi() {
         
         // Tìm pass_md5 path (sử dụng response đã chuẩn hóa)
         val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value 
-            ?: throw Exception("No pass_md5 found")
+            ?: return null
 
         val token = passMd5Path.substringAfterLast("/")
         val md5Url = "$mainUrl$passMd5Path" // SỬA: Dùng mainUrl mới
