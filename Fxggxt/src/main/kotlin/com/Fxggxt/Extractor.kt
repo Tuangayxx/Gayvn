@@ -68,10 +68,14 @@ open class VoeExtractor : ExtractorApi() {
 
 open class dsio : ExtractorApi() {
     override val name = "dsio"
-    override val mainUrl = "https://doodstream.com"
+    override val mainUrl = "https://doodstream.com/"
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+    override suspend fun getUrl(url: String,
+                                referer: String?,
+                                subtitleCallback: (SubtitleFile) -> Unit,
+                                callback: (ExtractorLink) -> Unit
+        ) {
             val response = app.get(url).text
             val response0 = response.replace("doodstream.com","d-s.io")
 
