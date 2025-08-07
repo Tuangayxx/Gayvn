@@ -98,14 +98,15 @@ open class dsio : ExtractorApi() {
             ?: Qualities.Unknown.value
 
         return listOf(
-            ExtractorLink(
+            newExtractorLink(
                 source = name,
                 name = "Doodstream ${quality}p",
                 url = videoUrl,
-                referer = mainUrl, // SỬA: Referer domain thực
-                quality = quality,
                 type = INFER_TYPE
-            )
+            ) {
+                referer = mainUrl // SỬA: Referer domain thực
+                quality = quality
+            }
         )
     }
 }
