@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors
 import com.lagradost.cloudstream3.extractors.Filesim
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.JsUnpacker
@@ -29,6 +30,8 @@ import org.mozilla.javascript.NativeJSON
 import org.mozilla.javascript.NativeObject
 import org.mozilla.javascript.Scriptable
 import android.annotation.SuppressLint
+import java.net.URI
+import kotlin.random.Random
 
 
 open class VoeExtractor : ExtractorApi() {
@@ -66,65 +69,60 @@ open class VoeExtractor : ExtractorApi() {
     }
 }
 
+class dsio : DoodLaExtractor() {
+    override var mainUrl = "https://d-s.io"
 
-open class dsio : ExtractorApi() {
-    override val name = "dsio"
-    override val mainUrl = "https://d-s.io"
+open class DoodLaExtractor : ExtractorApi() {
+    override var name = "DoodStream"
+    override var mainUrl = "https://dood.la"
     override val requiresReferer = false
-    
-    // Sử dụng User-Agent mới nhất của Chrome
-    private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.142 Safari/537.36"
-    
-    private fun getHeaders(referer: String = mainUrl): Map<String, String> {
-        return mapOf(
-            "User-Agent" to userAgent,
-            "Referer" to referer,
-            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language" to "en-US,en;q=0.5",
-            "Connection" to "keep-alive"
-        )
-    }
+	
+    private val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        // Bước 1: Lấy HTML của trang
-        val html = try {
-            app.get(url, headers = getHeaders()).text
-        } catch (e: Exception) {
-            return null
-        }
-        
-        // Bước 2: Tìm pass_md5 endpoint
-        val passMd5Path = Regex("""/pass_md5/([^'"]+)""").find(html)?.value ?: return null
-        val token = passMd5Path.substringAfterLast("/")
-        
-        // Bước 3: Lấy dữ liệu video từ endpoint
-        val md5Url = "https://d-s.io$passMd5Path"
-        val videoData = try {
-            app.get(md5Url, headers = getHeaders(url)).text
-        } catch (e: Exception) {
-            return null
-        }
-        
-        // Bước 4: Tạo URL video hoàn chỉnh
-        val expiry = (System.currentTimeMillis() / 1000) + 21600 // 6 giờ
-        val videoUrl = "$videoData?token=$token&expiry=$expiry"
-        
-        // Bước 5: Lấy thông tin chất lượng
-        val quality = Regex("""(\d{3,4})[pP]""").find(html)?.run {
-            groupValues[1].toIntOrNull() ?: Qualities.Unknown.value
-        } ?: Qualities.Unknown.value
-
-        return listOf(
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val embedUrl = url.replace("/d/", "/e/")
+		val req = app.get(embedUrl)
+        val host = getBaseUrl(req.url)
+        val response0 = req.text
+	val md5 = host + (Regex("/pass_md5/[^']*").find(response0)?.value ?: return)
+        val trueUrl = app.get(md5, referer = req.url).text + createHashTable() + "?token=" + md5.substringAfterLast("/")
+		
+	val quality = Regex("\\d{3,4}p")
+            .find(response0.substringAfter("<title>").substringBefore("</title>"))
+            ?.groupValues
+            ?.getOrNull(0)
+		
+	callback.invoke(
             newExtractorLink(
-                source = name,
-                name = "Doodstream ${quality}p",
-                url = videoUrl,
-                type = INFER_TYPE
+                this.name,
+                this.name,
+                trueUrl,
             ) {
-                this.referer = mainUrl // SỬA: Referer domain thực
-                this.quality = quality
+                this.referer = "$mainUrl/"
+                this.quality = getQualityFromName(quality)
             }
         )
+
+    }
+	
+private fun createHashTable(): String {
+    return buildString {
+        repeat(10) {
+            append(alphabet.random())
+        }
+    }
+}
+
+	
+private fun getBaseUrl(url: String): String {
+        return URI(url).let {
+            "${it.scheme}://${it.host}"
+        }
     }
 }
 
