@@ -71,6 +71,7 @@ open class dsio : ExtractorApi() {
     override val name = "dsio"
     override val mainUrl = "https://d-s.io" // SỬA: Dùng domain thực tế
     private val originUrl = "https://doodstream.com" // Domain gốc để tham chiếu
+    override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
         // SỬA: Thay thế domain trong response
