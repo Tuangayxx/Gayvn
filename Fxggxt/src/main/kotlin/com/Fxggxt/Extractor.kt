@@ -110,42 +110,57 @@ open class dsio : ExtractorApi() {
     }
 }
 
+open class dsio : ExtractorApi() {
+    override val name = "dsio"
+    override val mainUrl = "https://d-s.io"
+    
+    // Sử dụng User-Agent mới nhất của Chrome
+    private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.142 Safari/537.36"
+    
+    private fun getHeaders(referer: String = mainUrl): Map<String, String> {
+        return mapOf(
+            "User-Agent" to userAgent,
+            "Referer" to referer,
+            "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language" to "en-US,en;q=0.5",
+            "Connection" to "keep-alive"
+        )
+    }
 
-open class vvide0Extractor : ExtractorApi() {
-        override var name = "vvide0"
-        override var mainUrl = "https://vvide0.com"
-        override val requiresReferer = true // Bật yêu cầu referer
-
-        override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-            val response0 = app.get(url).text
-
-        // Tìm đường dẫn pass_md5
-            val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
-            val token = passMd5Path.substringAfterLast("/")
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        // Bước 1: Lấy HTML của trang
+        val html = try {
+            app.get(url, headers = getHeaders()).text
+        } catch (e: Exception) {
+            return null
+        }
         
-        // Lấy dữ liệu video
-            val md5Url = mainUrl + passMd5Path
-            val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
-            val videoData = res.text
-            
-        // Tạo chuỗi ngẫu nhiên chính xác
-            val randomStr = (1..10).map { 
-            (('a'..'z') + ('A'..'Z') + ('0'..'9')).random() 
-                }.joinToString("")
+        // Bước 2: Tìm pass_md5 endpoint
+        val passMd5Path = Regex("""/pass_md5/([^'"]+)""").find(html)?.value ?: return null
+        val token = passMd5Path.substringAfterLast("/")
         
-        // Tạo URL hoàn chỉnh
-        val link = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
+        // Bước 3: Lấy dữ liệu video từ endpoint
+        val md5Url = "https://d-s.io$passMd5Path"
+        val videoData = try {
+            app.get(md5Url, headers = getHeaders(url)).text
+        } catch (e: Exception) {
+            return null
+        }
         
-        // Lấy chất lượng video (cải tiến regex)
-        val quality = Regex("(\\d{3,4})[pP]")
-            .find(response0.substringAfter("<title>").substringBefore("</title>"))
-            ?.groupValues?.get(1)
+        // Bước 4: Tạo URL video hoàn chỉnh
+        val expiry = (System.currentTimeMillis() / 1000) + 21600 // 6 giờ
+        val videoUrl = "$videoData?token=$token&expiry=$expiry"
+        
+        // Bước 5: Lấy thông tin chất lượng
+        val quality = Regex("""(\d{3,4})[pP]""").find(html)?.run {
+            groupValues[1].toIntOrNull() ?: Qualities.Unknown.value
+        } ?: Qualities.Unknown.value
 
         return listOf(
             newExtractorLink(
                 source = name,
                 name = name,
-                url = link,
+                url = videoUrl,
                 type = INFER_TYPE
             ) {
                 this.referer = mainUrl
