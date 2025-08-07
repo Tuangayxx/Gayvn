@@ -74,13 +74,13 @@ class VoeExtractor : BaseVideoExtractor() {
 
 class dsio : BaseVideoExtractor() {
     override val name = "dsio"
-    override val domain = "d-s.io"
+    override val domain = "doodstream.com"
     override val mainUrl = "https://$domain"
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
             val response = app.get(url).text
-            val response0 = replace.response("doodstream.com","d-s.io")
+            val response0 = response.replace("doodstream.com","d-s.io")
 
             val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
             val token = passMd5Path.substringAfterLast("/")
