@@ -15,7 +15,6 @@ import com.lagradost.cloudstream3.utils.JsUnpacker
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.extractors.MixDrop
-import com.lagradost.cloudstream3.utils.ErrorLoadingException
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.USER_AGENT
@@ -81,7 +80,7 @@ open class dsio : ExtractorApi() {
         
         // Tìm pass_md5 path (sử dụng response đã chuẩn hóa)
         val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value 
-            ?: throw ErrorLoadingException("No pass_md5 found")
+            ?: throw Exception("No pass_md5 found")
 
         val token = passMd5Path.substringAfterLast("/")
         val md5Url = "$mainUrl$passMd5Path" // SỬA: Dùng mainUrl mới
