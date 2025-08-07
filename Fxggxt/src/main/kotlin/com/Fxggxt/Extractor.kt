@@ -69,7 +69,7 @@ open class VoeExtractor : ExtractorApi() {
 
 open class dsio : ExtractorApi() {
     override val name = "dsio"
-    override val mainUrl = "https://doodstream.com/"
+    override val mainUrl = "https://doodstream.com"
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? 
