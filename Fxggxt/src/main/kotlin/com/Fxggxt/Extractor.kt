@@ -64,6 +64,7 @@ open class VoeExtractor : ExtractorApi() {
             } ?: emptyList()
         } ?: emptyList()
     }
+}
 
 
 open class dsio : ExtractorApi() {
@@ -96,20 +97,17 @@ open class dsio : ExtractorApi() {
             .find(response0.substringAfter("<title>").substringBefore("</title>"))
             ?.groupValues?.get(1)
 
-                return listOf(
-                    newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = link,
-                        type = INFER_TYPE
-                                    ) {
-                        this.referer = mainUrl
-                        this.quality = getQualityFromName(quality)
-            }
+        callback.invoke(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = trueUrl,
+                type = INFER_TYPE
+            )
         )
     }
 }
-}
+
 
 open class vvide0Extractor : ExtractorApi() {
         override var name = "vvide0"
