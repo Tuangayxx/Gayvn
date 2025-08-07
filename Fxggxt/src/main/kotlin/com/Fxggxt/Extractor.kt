@@ -70,6 +70,7 @@ open class VoeExtractor : ExtractorApi() {
 open class dsio : ExtractorApi() {
     override val name = "dsio"
     override val mainUrl = "https://d-s.io"
+    override val requiresReferer = false
     
     // Sử dụng User-Agent mới nhất của Chrome
     private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.142 Safari/537.36"
