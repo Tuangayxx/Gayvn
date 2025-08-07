@@ -72,11 +72,8 @@ open class dsio : ExtractorApi() {
     override val mainUrl = "https://doodstream.com/"
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String,
-                                referer: String?,
-                                subtitleCallback: (SubtitleFile) -> Unit,
-                                callback: (ExtractorLink) -> Unit
-        ) {
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? 
+        {
             val response = app.get(url).text
             val response0 = response.replace("doodstream.com","d-s.io")
 
@@ -97,13 +94,16 @@ open class dsio : ExtractorApi() {
             .find(response0.substringAfter("<title>").substringBefore("</title>"))
             ?.groupValues?.get(1)
 
-        callback.invoke(
-            newExtractorLink(
-                source = name,
-                name = name,
-                url = trueUrl,
-                type = INFER_TYPE
-            )
+        return listOf(
+                    newExtractorLink(
+                        source = name,
+                        name = name,
+                        url = link,
+                        type = INFER_TYPE
+                                    ) {
+                        this.referer = mainUrl
+                        this.quality = getQualityFromName(quality)
+            }
         )
     }
 }
