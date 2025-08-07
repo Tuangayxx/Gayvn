@@ -79,7 +79,7 @@ open class dsio : ExtractorApi() {
         val normalizedResponse = response.replace("doodstream.com", "d-s.io")
         
         // Tìm pass_md5 path (sử dụng response đã chuẩn hóa)
-        val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value ?: return null
+        val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value ?: return ""
 
         val token = passMd5Path.substringAfterLast("/")
         val md5Url = "$mainUrl$passMd5Path" // SỬA: Dùng mainUrl mới
@@ -104,8 +104,8 @@ open class dsio : ExtractorApi() {
                 url = videoUrl,
                 type = INFER_TYPE
             ) {
-                referer = mainUrl // SỬA: Referer domain thực
-                quality = quality
+                this.referer = mainUrl // SỬA: Referer domain thực
+                this.quality = quality
             }
         )
     }
