@@ -69,41 +69,43 @@ open class VoeExtractor : ExtractorApi() {
 
 open class dsio : ExtractorApi() {
     override val name = "dsio"
-    override val mainUrl = "https://doodstream.com"
-    override val requiresReferer = true
+    override val mainUrl = "https://d-s.io" // SỬA: Dùng domain thực tế
+    private val originUrl = "https://doodstream.com" // Domain gốc để tham chiếu
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? 
-        {
-            val response = app.get(url).text
-            val response0 = response.replace("doodstream.com","d-s.io")
-
-            val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
-            val token = passMd5Path.substringAfterLast("/")
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+        // SỬA: Thay thế domain trong response
+        val response = app.get(url).text
+        val normalizedResponse = response.replace("doodstream.com", "d-s.io")
         
-            val md5Url = mainUrl + passMd5Path
-            val res = app.get(md5Url, referer = "https://d-s.io") // Sử dụng URL gốc làm referer
-            val videoData = res.text
+        // Tìm pass_md5 path (sử dụng response đã chuẩn hóa)
+        val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value 
+            ?: throw ErrorLoadingException("No pass_md5 found")
 
-            val randomStr = (1..10).map { 
-            (('a'..'z') + ('A'..'Z') + ('0'..'9')).random() 
-                }.joinToString("")
-
-            val link = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
-
-            val quality = Regex("(\\d{3,4})[pP]")
-            .find(response0.substringAfter("<title>").substringBefore("</title>"))
-            ?.groupValues?.get(1)
+        val token = passMd5Path.substringAfterLast("/")
+        val md5Url = "$mainUrl$passMd5Path" // SỬA: Dùng mainUrl mới
+        
+        // SỬA: Referer phải là domain thực tế (d-s.io)
+        val videoData = app.get(md5Url, referer = mainUrl).text
+        
+        // Tạo expiry timestamp (6 giờ - đơn vị GIÂY)
+        val expiry = (System.currentTimeMillis() / 1000) + 21600 
+        
+        // SỬA: Cấu trúc URL chuẩn
+        val videoUrl = "$videoData?token=$token&expiry=$expiry"
+        
+        // Lấy chất lượng từ response gốc
+        val quality = Regex("""(\d{3,4})[pP][^0-9]""").find(response)?.groupValues?.get(1)?.toIntOrNull()
+            ?: Qualities.Unknown.value
 
         return listOf(
-                    newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = link,
-                        type = INFER_TYPE
-                                    ) {
-                        this.referer = "https://d-s.io"
-                        this.quality = getQualityFromName(quality)
-            }
+            ExtractorLink(
+                source = name,
+                name = "Doodstream ${quality}p",
+                url = videoUrl,
+                referer = mainUrl, // SỬA: Referer domain thực
+                quality = quality,
+                type = INFER_TYPE
+            )
         )
     }
 }
