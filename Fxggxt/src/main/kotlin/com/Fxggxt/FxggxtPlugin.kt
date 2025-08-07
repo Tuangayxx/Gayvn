@@ -11,5 +11,6 @@ class FxggxtPlugin : Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Fxggxt())
         registerExtractorAPI(DoodLaExtractor())
+        registerExtractorAPI(dsio())
     }
 }

@@ -79,13 +79,14 @@ class dsio : BaseVideoExtractor() {
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-            val response0 = app.get(url).text
+            val response = app.get(url).text
+            val response0 = replace.response("doodstream.com","d-s.io")
 
             val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
             val token = passMd5Path.substringAfterLast("/")
         
             val md5Url = mainUrl + passMd5Path
-            val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
+            val res = app.get(md5Url, referer = mainUrl) // Sử dụng URL gốc làm referer
             val videoData = res.text
 
             val randomStr = (1..10).map { 
