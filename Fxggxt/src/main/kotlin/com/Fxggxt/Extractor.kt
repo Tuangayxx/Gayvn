@@ -81,7 +81,7 @@ open class dsio : ExtractorApi() {
             val token = passMd5Path.substringAfterLast("/")
         
             val md5Url = mainUrl + passMd5Path
-            val res = app.get(md5Url, referer = mainUrl) // Sử dụng URL gốc làm referer
+            val res = app.get(md5Url, referer = "https://d-s.io") // Sử dụng URL gốc làm referer
             val videoData = res.text
 
             val randomStr = (1..10).map { 
@@ -101,7 +101,7 @@ open class dsio : ExtractorApi() {
                         url = link,
                         type = INFER_TYPE
                                     ) {
-                        this.referer = mainUrl
+                        this.referer = "https://d-s.io"
                         this.quality = getQualityFromName(quality)
             }
         )
