@@ -68,9 +68,9 @@ open class VoeExtractor : ExtractorApi() {
 
 
 open class dsio : ExtractorApi() {
-    override val name = "dsio"
-    override val mainUrl = "https://d-s.io" // SỬA: Dùng domain thực tế
-    private val originUrl = "https://doodstream.com" // Domain gốc để tham chiếu
+    override var name = "dsio"
+    override var mainUrl = "https://d-s.io" // SỬA: Dùng domain thực tế
+    private var originUrl = "https://doodstream.com" // Domain gốc để tham chiếu
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
@@ -79,8 +79,7 @@ open class dsio : ExtractorApi() {
         val normalizedResponse = response.replace("doodstream.com", "d-s.io")
         
         // Tìm pass_md5 path (sử dụng response đã chuẩn hóa)
-        val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value 
-            ?: return null
+        val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value ?: return null
 
         val token = passMd5Path.substringAfterLast("/")
         val md5Url = "$mainUrl$passMd5Path" // SỬA: Dùng mainUrl mới
