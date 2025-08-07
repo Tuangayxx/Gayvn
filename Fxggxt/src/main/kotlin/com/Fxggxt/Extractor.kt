@@ -19,6 +19,7 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.extractors.DoodExtractor
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Document
 import org.jsoup.Jsoup
@@ -76,16 +77,15 @@ open class dsio : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
         // SỬA: Thay thế domain trong response
         val response = app.get(url).text
-        val normalizedResponse = response.replace("doodstream.com", "d-s.io")
         
         // Tìm pass_md5 path (sử dụng response đã chuẩn hóa)
-        val passMd5Path = Regex("/pass_md5/[^'\"?]+").find(normalizedResponse)?.value ?: return emptyList()
+        val passMd5Path = Regex("""/pass_md5/[^'\"?]+""").find(response)?.value ?: return emptyList()
 
         val token = passMd5Path.substringAfterLast("/")
-        val md5Url = "$mainUrl$passMd5Path" // SỬA: Dùng mainUrl mới
+        val md5Url = ""https://d-s.io$passMd5Path" // SỬA: Dùng mainUrl mới
         
         // SỬA: Referer phải là domain thực tế (d-s.io)
-        val videoData = app.get(md5Url, referer = mainUrl).text
+        val videoData = app.get(md5Url, referer = "https://d-s.io/").text
         
         // Tạo expiry timestamp (6 giờ - đơn vị GIÂY)
         val expiry = (System.currentTimeMillis() / 1000) + 21600 
