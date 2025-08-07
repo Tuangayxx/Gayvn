@@ -17,6 +17,6 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(yi069website())
         registerExtractorAPI(DoodLaExtractor())
-
+        registerExtractorAPI(tapepops())
     }
 }
