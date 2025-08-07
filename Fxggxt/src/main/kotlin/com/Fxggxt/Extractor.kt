@@ -31,15 +31,9 @@ import org.mozilla.javascript.Scriptable
 import android.annotation.SuppressLint
 
 
-abstract class BaseVideoExtractor : ExtractorApi() {
-    protected abstract val domain: String
-    override val mainUrl: String get() = "https://$domain"
-}
-
-class VoeExtractor : BaseVideoExtractor() {
+open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
-    override val domain = "jilliandescribecompany.com"
-    override val mainUrl = "https://$domain/e"
+    override val mainUrl = "https://jilliandescribecompany.com"
     override val requiresReferer = false
 
     private data class VideoSource(
@@ -72,10 +66,9 @@ class VoeExtractor : BaseVideoExtractor() {
     }
 
 
-class dsio : BaseVideoExtractor() {
+open class dsio : ExtractorApi() {
     override val name = "dsio"
-    override val domain = "doodstream.com"
-    override val mainUrl = "https://$domain"
+    override val mainUrl = "https://doodstream.com"
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
