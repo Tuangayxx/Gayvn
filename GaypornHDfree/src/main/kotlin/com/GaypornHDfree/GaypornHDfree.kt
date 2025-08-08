@@ -30,7 +30,7 @@ class GaypornHDfree : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
+        val url = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}page/$page/"
 
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
         val document = app.get(url, headers = ua).document
@@ -38,7 +38,7 @@ class GaypornHDfree : MainAPI() {
         val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
         // Fixed pagination detection
-        val hasNext = document.selectFirst("a.page-number") != null
+        val hasNext = document.selectFirst("a.next.page-numbers") != null
 
         return newHomePageResponse(
             list = HomePageList(
@@ -52,9 +52,9 @@ class GaypornHDfree : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse {
         // Fixed selectors to match actual HTML structure
-        val title = this.selectFirst("div.video-title a")?.text()?.trim() ?: ""
+        val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = this.selectFirst("img")?.attr("src")?.trim() ?: ""
+        val posterUrl = this.selectFirst("img.img-responsive")?.attr("src")?.trim() ?: ""
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
@@ -62,9 +62,9 @@ class GaypornHDfree : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("div.video-title a")?.text()?.trim() ?: ""
+        val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = this.selectFirst("img")?.attr("src")?.trim() ?: ""
+        val posterUrl = this.selectFirst("img.img-responsive")?.attr("src")?.trim() ?: ""
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
