@@ -53,9 +53,9 @@ class GaypornHDfree : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse {
         // Fixed selectors to match actual HTML structure
-        val title = this.selectFirst("a.title")?.text()?.trim() ?: ""
+        val title = this.selectFirst("div.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
+        val posterUrl = this.selectFirst("img")?.attr("src")?.trim() ?: ""
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
@@ -63,9 +63,9 @@ class GaypornHDfree : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("a.title")?.text()?.trim() ?: ""
+        val title = this.selectFirst("div.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
+        val posterUrl = this.selectFirst("img")?.attr("src")?.trim() ?: ""
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
