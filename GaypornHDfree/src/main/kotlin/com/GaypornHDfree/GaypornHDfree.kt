@@ -1,10 +1,16 @@
 package com.GaypornHDfree
 
 import android.util.Log
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.jsoup.nodes.Element
+import org.jsoup.nodes.Document
+import org.jsoup.Jsoup
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.network.CloudflareKiller
 import okhttp3.FormBody
+import okhttp3.Interceptor
+import okhttp3.Response
 
 class GaypornHDfree : MainAPI() {
     override var mainUrl              = "https://gaypornhdfree.com"
@@ -54,7 +60,7 @@ class GaypornHDfree : MainAPI() {
         // Fixed selectors to match actual HTML structure
         val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = this.selectFirst("img.img-responsive")?.attr("src")?.trim() ?: ""
+        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
@@ -64,7 +70,7 @@ class GaypornHDfree : MainAPI() {
     private fun Element.toRecommendResult(): SearchResponse? {
         val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = this.selectFirst("img.img-responsive")?.attr("src")?.trim() ?: ""
+        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
