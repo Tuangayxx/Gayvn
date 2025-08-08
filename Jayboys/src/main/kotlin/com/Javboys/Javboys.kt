@@ -103,32 +103,35 @@ class Jayboys : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val document = app.get(data).document
-        var found = false
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+    val videoUrls = mutableSetOf<String>()
 
-        // Player links
-        document.select("div.video-player").forEach { player ->
-            val videoUrl = player.attr("data-src").takeIf { it.isNotBlank() }
-            videoUrl?.let { url ->
-                found = true
-                loadExtractor(url, subtitleCallback, callback)
-            }
-        }
+    // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
+    document.select("iframe").forEach { iframe ->
+        iframe.attr("data-src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+            ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    }
 
-        // Download button links
-        document.select("div.download-button-wrapper").forEach { down ->
-            val videoLink = down.attr("href").takeIf { it.isNotBlank() }
-            videoLink?.let { url ->
-                found = true
-                loadExtractor(url, subtitleCallback, callback)
-            }
-        }
+    // Thu thập URL từ player
+    document.select("div.video-player[data-src]").forEach {
+        it.attr("data-src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
+    }
 
-        return found
+    // Thu thập URL từ download button
+    document.select("div.download-button-wrapper a[href]").forEach {
+        it.attr("href").takeIf { href -> href.isNotBlank() }?.let(videoUrls::add)
+    }
+
+    // Xử lý tất cả URL đã thu thập
+    videoUrls.forEach { url ->
+        loadExtractor(url, subtitleCallback, callback)
+    }
+
+    return videoUrls.isNotEmpty()
     }
 }
