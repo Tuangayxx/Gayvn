@@ -24,14 +24,13 @@ class GaypornHDfree : MainAPI() {
             "/category/bilatinmen/"             to "La tin cu bự",
             "/category/fraternityx/"            to "Fraternity X",
             "/category/sketchysex/"             to "Sketchy Sex",
+            "/2025/07/"                         to "Video 7",
+            "/2025/06/"                         to "Video 6",
+            "/2025/05/"                         to "Video 5",
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = when {
-            request.data.startsWith("/category/") && page > 1 -> "$mainUrl${request.data}page/$page/"
-            page > 1 -> "$mainUrl${request.data}page/$page/"
-            else -> "$mainUrl${request.data}"
-        }
+        val url = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}?page=$page"
 
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
         val document = app.get(url, headers = ua).document
@@ -39,7 +38,7 @@ class GaypornHDfree : MainAPI() {
         val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
         // Fixed pagination detection
-        val hasNext = document.selectFirst("a.page-numbers:contains(Next)") != null
+        val hasNext = document.selectFirst("a.page-number") != null
 
         return newHomePageResponse(
             list = HomePageList(
