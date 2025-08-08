@@ -74,56 +74,10 @@ class dsio : DoodLaExtractor() {
     override var name = "dsio"
 }
 
-open class DoodLaExtractor : ExtractorApi() {
-    override var name = "DoodStream"
+class DoodstreamCom : DoodLaExtractor() {
     override var mainUrl = "https://doodstream.com"
-    override val requiresReferer = false
-	
-    private val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val embedUrl = url.replace("/d/", "/e/")
-		val req = app.get(embedUrl)
-        val host = getBaseUrl(req.url)
-        val response0 = req.text
-	val md5 = host + (Regex("/pass_md5/[^']*").find(response0)?.value ?: return)
-        val trueUrl = app.get(md5, referer = req.url).text + createHashTable() + "?token=" + md5.substringAfterLast("/")
-		
-	val quality = Regex("\\d{3,4}p")
-            .find(response0.substringAfter("<title>").substringBefore("</title>"))
-            ?.groupValues
-            ?.getOrNull(0)
-		
-	callback.invoke(
-            newExtractorLink(
-                this.name,
-                this.name,
-                trueUrl,
-            ) {
-                this.referer = "$mainUrl/"
-                this.quality = getQualityFromName(quality)
-            }
-        )
-
-    }
-	
-private fun createHashTable(): String {
-    return buildString {
-        repeat(10) {
-            append(alphabet.random())
-        }
-    }
 }
 
-	
-private fun getBaseUrl(url: String): String {
-        return URI(url).let {
-            "${it.scheme}://${it.host}"
-        }
-    }
+class vide0 : DoodLaExtractor() {
+    override var mainUrl = "https://vide0.net"
 }
