@@ -68,6 +68,16 @@ class Jayboys : MainAPI() {
         }
     }
 
+    private fun Element.toRecommendResult(): SearchResponse? {
+        val title = this.selectFirst("a.denomination span.title")?.text()?.trim() ?: ""
+        val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
+        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
+        
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
+    }
+
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
 
@@ -96,9 +106,14 @@ class Jayboys : MainAPI() {
         val poster = fixUrlNull(document.selectFirst("[property='og:image']")?.attr("content"))
         val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
+        val recommendations = document.select("div.list-item div.video.col-2").mapNotNull {
+            it.toRecommendResult()
+    }
+
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
+            this.recommendations = recommendations
         }
     }
 
