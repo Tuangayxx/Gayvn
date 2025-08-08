@@ -36,10 +36,10 @@ class GaypornHDfree : MainAPI() {
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
         val document = app.get(url, headers = ua).document
         // Fixed selector - using correct container class
-        val home = document.select("div.videopost.col-md-3.col-sm-4.col-xs-6").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
         // Fixed pagination detection
-        val hasNext = document.selectFirst("a.page-numbers") != null
+        val hasNext = document.selectFirst("a.page-numbers:contains(Next)") != null
 
         return newHomePageResponse(
             list = HomePageList(
@@ -63,7 +63,7 @@ class GaypornHDfree : MainAPI() {
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("a.thumb-video title")?.text()?.trim() ?: ""
+        val title = this.selectFirst("a.title")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
         val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
         
@@ -78,7 +78,7 @@ class GaypornHDfree : MainAPI() {
         for (i in 1..5) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("div.videopost.col-md-3.col-sm-4.col-xs-6").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
@@ -100,7 +100,7 @@ class GaypornHDfree : MainAPI() {
         val poster = fixUrlNull(document.selectFirst("[property='og:image']")?.attr("content"))
         val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        val recommendations = document.select("div.videopost.col-md-3.col-sm-4.col-xs-6").mapNotNull {
+        val recommendations = document.select("div.videopost").mapNotNull {
             it.toRecommendResult()
     }
 
