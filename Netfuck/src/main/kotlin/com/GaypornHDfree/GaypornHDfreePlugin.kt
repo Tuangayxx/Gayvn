@@ -1,18 +1,19 @@
-package com.Netfuck
+package com.GaypornHDfree
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
 import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.extractors.*
 
 @CloudstreamPlugin
-class NetfuckPlugin: Plugin() {
+class GaypornHDfreePlugin: Plugin() {
     override fun load(context: Context) {
-        registerMainAPI(Netfuck())
+        registerMainAPI(GaypornHDfree())
         registerExtractorAPI(StreamTape())
-        registerExtractorAPI(Stbturbo())
-        registerExtractorAPI(yilingjp())
-        registerExtractorAPI(yiling())
+        registerExtractorAPI(DoodLaExtractor())
+        registerExtractorAPI(dsio())
+        registerExtractorAPI(Voe())
         registerExtractorAPI(boynextdoors())
     }
 }
