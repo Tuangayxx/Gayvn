@@ -123,7 +123,20 @@ open class dsio : ExtractorApi() {
     }
 }
 
+class DoodstreamCom : DoodLaExtractor() {
+    override var mainUrl = "https://doodstream.com"
+}
+
+class vide0 : DoodLaExtractor() {
+    override var mainUrl = "https://vide0.net"
+}
+
 class tapepops : StreamTape() {
     override var mainUrl = "https://tapepops.com"
     override var name = "tapepops"
+}
+
+class FileMoon : FilemoonV2() {
+    override var mainUrl = "https://filemoon.to"
+    override var name = "FileMoon"
 }

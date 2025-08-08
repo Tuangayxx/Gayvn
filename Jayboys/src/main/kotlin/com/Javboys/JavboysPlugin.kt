@@ -6,6 +6,7 @@ import android.content.Context
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors.*
 
 @CloudstreamPlugin
 class JayboysPlugin: Plugin() {
@@ -17,6 +18,10 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(yi069website())
         registerExtractorAPI(DoodLaExtractor())
+        registerExtractorAPI(DoodstreamCom())
+        registerExtractorAPI(vide0())
         registerExtractorAPI(tapepops())
+        registerExtractorAPI(FileMoon())
+        registerExtractorAPI(FilemoonV2())
     }
 }
