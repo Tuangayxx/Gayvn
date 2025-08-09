@@ -38,25 +38,29 @@ class GaypornHDfree : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}page/$page/"
+    val url = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}page/$page/"
 
-        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-        val document = app.get(url, headers = ua).document
-        // Fixed selector - using correct container class
-        val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
+    val headers = mapOf(
+        "User-Agent" to "Mozilla/5.0",
+        "Referer" to mainUrl,
+        "Cookie" to "age_gate=1"
+    )
 
-        // Fixed pagination detection
-        val hasNext = document.selectFirst("a.next.page-numbers") != null
+    val document = app.get(url, headers = headers).document
+    val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = hasNext
-        )
-    }
+    val hasNext = document.selectFirst("a.next.page-numbers") != null
+
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = true
+        ),
+        hasNext = hasNext
+    )
+}
+
 
     private fun Element.toSearchResult(): SearchResponse {
         // Fixed selectors to match actual HTML structure
