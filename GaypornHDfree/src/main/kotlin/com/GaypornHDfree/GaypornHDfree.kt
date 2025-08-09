@@ -45,7 +45,7 @@ class GaypornHDfree : MainAPI() {
         "Referer" to mainUrl
     )
 
-    val document = app.get(request.data + page, referer = "$mainUrl/", cookies = cookies).document
+    val document = app.get(url, referer = "$mainUrl/", cookies = cookies).document
     val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
     val hasNext = document.selectFirst("a.next.page-numbers") != null
