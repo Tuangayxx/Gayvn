@@ -21,6 +21,8 @@ class GaypornHDfree : MainAPI() {
     override val hasChromecastSupport = true
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
+
+    val cookies = mapOf("i18next" to "en")
         
     override val mainPage = mainPageOf(
             "/?s="                              to "Mới cập nhật",
