@@ -21,8 +21,6 @@ class GaypornHDfree : MainAPI() {
     override val hasChromecastSupport = true
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
-
-    val cookies = mapOf("i18next" to "en")
         
     override val mainPage = mainPageOf(
             ""                              to "Mới cập nhật",
@@ -42,10 +40,11 @@ class GaypornHDfree : MainAPI() {
 
     val headers = mutableMapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
-        "Referer" to mainUrl
+        "Referer" to mainUrl,
+        "Cookie" to "i18next=en; age_gate=1"
     )
 
-    val document = app.get(url, referer = "$mainUrl/", headers = headers, cookies = cookies).document
+    val document = app.get(url, headers = headers).document
     val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
     val hasNext = document.selectFirst("a.next.page-numbers") != null
