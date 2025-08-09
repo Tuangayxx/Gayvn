@@ -41,12 +41,11 @@ class GaypornHDfree : MainAPI() {
     val url = if (page == 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}page/$page/"
 
     val headers = mutableMapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
         "Referer" to mainUrl
     )
 
-    val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-    val document = app.get(url, referer = "$mainUrl/", cookies = cookies).document
+    val document = app.get(url, referer = "$mainUrl/", headers = headers, cookies = cookies).document
     val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
     val hasNext = document.selectFirst("a.next.page-numbers") != null
