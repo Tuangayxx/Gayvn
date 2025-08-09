@@ -25,16 +25,16 @@ class GaypornHDfree : MainAPI() {
     val cookies = mapOf("i18next" to "en")
         
     override val mainPage = mainPageOf(
-            "/"                              to "Mới cập nhật",
-            "/category/onlyfans/"               to "Onlyfans",
-            "/category/gay-porn-movies/"        to "Phim dài",
-            "/category/asian-gay-porn-hd/"      to "Châu Á",
-            "/category/bilatinmen/"             to "La tin cu bự",
-            "/category/fraternityx/"            to "Fraternity X",
-            "/category/sketchysex/"             to "Sketchy Sex",
-            "/2025/07/"                         to "Video 7",
-            "/2025/06/"                         to "Video 6",
-            "/2025/05/"                         to "Video 5",
+            ""                              to "Mới cập nhật",
+            "category/onlyfans/"               to "Onlyfans",
+            "category/gay-porn-movies/"        to "Phim dài",
+            "category/asian-gay-porn-hd/"      to "Châu Á",
+            "category/bilatinmen/"             to "La tin cu bự",
+            "category/fraternityx/"            to "Fraternity X",
+            "category/sketchysex/"             to "Sketchy Sex",
+            "2025/07/"                         to "Video 7",
+            "2025/06/"                         to "Video 6",
+            "2025/05/"                         to "Video 5",
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -45,7 +45,7 @@ class GaypornHDfree : MainAPI() {
         "Referer" to mainUrl
     )
 
-    val document = app.get(request.data + page, referer = "$mainUrl", cookies = cookies).document
+    val document = app.get(request.data + page, referer = "$mainUrl/", cookies = cookies).document
     val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
     val hasNext = document.selectFirst("a.next.page-numbers") != null
