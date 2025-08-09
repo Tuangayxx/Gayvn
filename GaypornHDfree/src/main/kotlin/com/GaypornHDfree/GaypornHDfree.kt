@@ -45,10 +45,7 @@ class GaypornHDfree : MainAPI() {
         "Referer" to mainUrl
     )
 
-    // set cookie age_gate
-    headers["Cookie"] = "age_gate=1"
-
-    val document = app.get(url, headers = headers).document
+    val document = app.get(request.data + page, referer = "$mainUrl/", cookies = cookies).document
     val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
     val hasNext = document.selectFirst("a.next.page-numbers") != null
