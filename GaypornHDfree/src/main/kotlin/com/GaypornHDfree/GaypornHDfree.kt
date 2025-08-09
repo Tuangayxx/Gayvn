@@ -40,43 +40,18 @@ class GaypornHDfree : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val url = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}page/$page/"
 
-    val headers = mapOf(
-    "User-Agent" to "Mozilla/5.0",
-    "Referer" to mainUrl,
-    "Cookie" to "age_gate=1"
+    val headers = mutableMapOf(
+        "User-Agent" to "Mozilla/5.0",
+        "Referer" to mainUrl
     )
 
-    var document = app.get(url, headers = headers).document
+    // set cookie age_gate
+    headers["Cookie"] = "age_gate=1"
 
-    // Nếu server trả age-gate overlay, thử bypass bằng cookie (age_gate=1) và request lại
-    if (document.selectFirst(".age-gate") != null || document.selectFirst("html.age-gate__restricted") != null) {
-        // Thử set cookie đơn giản trước (nhiều site chấp nhận age_gate=1)
-        headers["Cookie"] = "age_gate=1"
-        document = app.get(url, headers = headers).document
-
-        // Nếu vẫn còn age-gate, bạn có thể thử gọi endpoint check (tuỳ hỗ trợ của app.post)
-        if (document.selectFirst(".age-gate") != null) {
-            try {
-                // Gửi POST tới endpoint để set cookie (tuỳ api của client: app.post(...) )
-                val postHeaders = headers.toMutableMap()
-                postHeaders["Content-Type"] = "application/x-www-form-urlencoded"
-                // body: age_gate[confirm]=1 (form-encoded). Điều này mô phỏng nút "Yes".
-                app.post("$mainUrl/wp-json/age-gate/v3/check", data = "age_gate%5Bconfirm%5D=1", headers = postHeaders)
-                // rồi request lại với cookie
-                headers["Cookie"] = "age_gate=1"
-                document = app.get(url, headers = headers).document
-            } catch (e: Exception) {
-                // ignore — fallback tiếp
-            }
-        }
-    }
-
-    // Lấy danh sách video bằng selector chính xác
+    val document = app.get(url, headers = headers).document
     val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
-    // Pagination: check anchor 'next' hoặc link rel=next
-    val hasNext = document.selectFirst("a.next.page-numbers") != null ||
-                  document.selectFirst("link[rel=next]") != null
+    val hasNext = document.selectFirst("a.next.page-numbers") != null
 
     return newHomePageResponse(
         list = HomePageList(
@@ -89,22 +64,17 @@ class GaypornHDfree : MainAPI() {
 }
 
 private fun Element.toSearchResult(): SearchResponse? {
-    val anchor = this.selectFirst("a.thumb-video") ?: return null
+    val anchor = selectFirst("a.thumb-video") ?: return null
     val href = anchor.attr("href").trim().ifEmpty { return null }
 
-    val title = this.selectFirst("div.deno.video-title a")?.text()?.trim().ifEmpty {
-        anchor.attr("title")?.trim().orEmpty()
-    }
-
-    val img = anchor.selectFirst("img")
-    val posterUrl = img?.attr("data-src")?.takeIf { it.isNotBlank() }
-        ?: img?.attr("data-lazy-src")?.takeIf { it.isNotBlank() }
-        ?: img?.attr("src")?.trim().orEmpty()
+    val title = selectFirst("div.deno.video-title a")?.text()?.trim().orEmpty()
+    val posterUrl = selectFirst("a.thumb-video img")?.attr("src")?.trim().orEmpty()
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
     }
 }
+
 
 
     private fun Element.toRecommendResult(): SearchResponse? {
