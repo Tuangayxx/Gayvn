@@ -25,7 +25,7 @@ class GaypornHDfree : MainAPI() {
     val cookies = mapOf("i18next" to "en")
         
     override val mainPage = mainPageOf(
-            "/?s="                              to "Mới cập nhật",
+            "/"                              to "Mới cập nhật",
             "/category/onlyfans/"               to "Onlyfans",
             "/category/gay-porn-movies/"        to "Phim dài",
             "/category/asian-gay-porn-hd/"      to "Châu Á",
