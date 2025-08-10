@@ -19,26 +19,12 @@ class GaypornHDfree : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Custom OkHttp Interceptor for adding headers
-    init {
-        // Register the interceptor in the app's HTTP client
-        app = AppUtils.app.newBuilder()
-            .addInterceptor(object : Interceptor {
-                override fun intercept(chain: Interceptor.Chain): Response {
-                    val request = chain.request().newBuilder()
-                        .addHeader("Cookie", "age_gate=1; i18next=en")
-                        .addHeader("Referer", mainUrl)
-                        .addHeader(
-                            "User-Agent",
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-                        )
-                        .build()
-                    Log.d("GaypornHDfree", "Requesting: ${request.url}")
-                    return chain.proceed(request)
-                }
-            })
-            .build()
-    }
+    // Define custom headers for requests
+    private val customHeaders = mapOf(
+        "Cookie" to "age_gate=1; i18next=en",
+        "Referer" to mainUrl,
+        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    )
 
     override val mainPage = mainPageOf(
         "" to "Mới cập nhật",
@@ -60,7 +46,7 @@ class GaypornHDfree : MainAPI() {
         try {
             val cleanPath = request.data.removePrefix("/").removeSuffix("/")
             val url = if (page == 1) "$mainUrl/$cleanPath" else "$mainUrl/$cleanPath/page/$page/"
-            val document = app.get(url).document
+            val document = app.get(url, headers = customHeaders).document
             val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
             return newHomePageResponse(
@@ -96,7 +82,7 @@ class GaypornHDfree : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         try {
-            val document = app.get(url).document // Replaced webViewResolver with app.get
+            val document = app.get(url, headers = customHeaders).document
             val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
                 ?: throw IllegalStateException("Title not found")
             val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
@@ -124,7 +110,7 @@ class GaypornHDfree : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
         try {
-            val document = app.get(data).document
+            val document = app.get(data, headers = customHeaders).document
             val videoUrls = mutableSetOf<String>()
 
             // Collect URLs from iframe
