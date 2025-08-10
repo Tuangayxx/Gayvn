@@ -67,8 +67,7 @@ class Fxggxt : MainAPI() {
         "$mainUrl/category/treasure-island-media/"  to "Treasure Island Media",
         "$mainUrl/category/slamrush/"               to "Slam Rush",
         "$mainUrl/category/seehimfuck/"             to "See Him Fuck",
-        "$mainUrl/category/voyr/                    to "VOYR",
-        
+        "$mainUrl/category/voyr/"                   to "VOYR",        
     )
 
 
