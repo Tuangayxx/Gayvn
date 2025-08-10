@@ -47,6 +47,7 @@ class Fxggxt : MainAPI() {
         "$mainUrl/tag/twink-gay-porn/"         to "Twink",
         "$mainUrl/category/adulttime/"         to "Adulttime",
         "$mainUrl/category/asgmax/"            to "ASGmax",
+        "$mainUrl/category/?s=bareback%2B"     to "Bareback+",
         "$mainUrl/category/bel-ami/"           to "Bel Ami",
         "$mainUrl/category/breederbros/"       to "Breeder Bros",
         "$mainUrl/category/clubbangboys/"      to "Club Bang Boys",
@@ -62,9 +63,12 @@ class Fxggxt : MainAPI() {
         "$mainUrl/category/kristenbjorn/"           to "Kristen Bjorn",
         "$mainUrl/category/bi-guys-fuck/"           to "Bi Guys Fuck",
         "$mainUrl/category/falcon-studios/"         to "Falcon Studios",
+        "$mainUrl/category/gay-only-fans/"          to "Onlyfans",
         "$mainUrl/category/treasure-island-media/"  to "Treasure Island Media",
         "$mainUrl/category/slamrush/"               to "Slam Rush",
         "$mainUrl/category/seehimfuck/"             to "See Him Fuck",
+        "$mainUrl/category/voyr/                    to "VOYR",
+        
     )
 
 
