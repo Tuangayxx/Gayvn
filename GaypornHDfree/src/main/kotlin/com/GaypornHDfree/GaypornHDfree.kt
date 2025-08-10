@@ -1,8 +1,7 @@
-        package com.GaypornHDfree
+package com.GaypornHDfree
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.*
 import okhttp3.Interceptor
@@ -20,20 +19,25 @@ class GaypornHDfree : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Thêm logging vào interceptor để debug
-    override val requestInterceptor = object : Interceptor {
-        override fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request().newBuilder()
-                .addHeader("Cookie", "age_gate=1; i18next=en")
-                .addHeader("Referer", mainUrl)
-                .addHeader(
-                    "User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-                )
-                .build()
-            Log.d("GaypornHDfree", "Requesting: ${request.url}")
-            return chain.proceed(request)
-        }
+    // Custom OkHttp Interceptor for adding headers
+    init {
+        // Register the interceptor in the app's HTTP client
+        app = AppUtils.app.newBuilder()
+            .addInterceptor(object : Interceptor {
+                override fun intercept(chain: Interceptor.Chain): Response {
+                    val request = chain.request().newBuilder()
+                        .addHeader("Cookie", "age_gate=1; i18next=en")
+                        .addHeader("Referer", mainUrl)
+                        .addHeader(
+                            "User-Agent",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+                        )
+                        .build()
+                    Log.d("GaypornHDfree", "Requesting: ${request.url}")
+                    return chain.proceed(request)
+                }
+            })
+            .build()
     }
 
     override val mainPage = mainPageOf(
@@ -86,14 +90,13 @@ class GaypornHDfree : MainAPI() {
         }
     }
 
-    // Hàm mới để xử lý recommendations
     private fun Element.toRecommendResult(): SearchResponse? {
-        return toSearchResult() // Tái sử dụng logic từ toSearchResult
+        return toSearchResult() // Reuse toSearchResult logic
     }
 
     override suspend fun load(url: String): LoadResponse {
         try {
-            val document = webViewResolver.getDocument(url, timeout = 60000)
+            val document = app.get(url).document // Replaced webViewResolver with app.get
             val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
                 ?: throw IllegalStateException("Title not found")
             val poster = fixUrlNull(document.selectFirst("meta[property=og:image]")?.attr("content"))
@@ -124,18 +127,18 @@ class GaypornHDfree : MainAPI() {
             val document = app.get(data).document
             val videoUrls = mutableSetOf<String>()
 
-            // Thu thập URL từ iframe
+            // Collect URLs from iframe
             document.select("iframe").forEach { iframe ->
                 iframe.attr("data-src").takeIf { it.isNotBlank() && it.startsWith("http") }?.let(videoUrls::add)
                     ?: iframe.attr("src").takeIf { it.isNotBlank() && it.startsWith("http") }?.let(videoUrls::add)
             }
 
-            // Thu thập URL từ player
+            // Collect URLs from player
             document.select("div.video-player[data-src]").forEach {
                 it.attr("data-src").takeIf { src -> src.isNotBlank() && src.startsWith("http") }?.let(videoUrls::add)
             }
 
-            // Thu thập URL từ download button
+            // Collect URLs from download button
             document.select("div.download-button-wrapper a[href]").forEach {
                 it.attr("href").takeIf { href -> href.isNotBlank() && href.startsWith("http") }?.let(videoUrls::add)
             }
@@ -145,7 +148,7 @@ class GaypornHDfree : MainAPI() {
                 return false
             }
 
-            // Xử lý tất cả URL đã thu thập
+            // Process collected URLs
             videoUrls.forEach { url ->
                 try {
                     loadExtractor(url, subtitleCallback, callback)
