@@ -19,24 +19,16 @@ class GaypornHDfree : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    // Thêm WebViewResolver để xử lý Cloudflare Turnstile
-    override val webViewResolver = WebViewResolver(
-        userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        interceptUrls = listOf(mainUrl),
-        timeout = 60000
-    )
-
-    // Thêm request interceptor
-    override val requestInterceptor: RequestInterceptor = object : RequestInterceptor {
-        override suspend fun intercept(chain: Interceptor.Chain): Response {
-            val request = chain.request()
-                .newBuilder()
-                .addHeader("Cookie", "i18next=en; age_gate=1")
-                .addHeader("Referer", mainUrl)
-                .addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-                .addHeader("Accept-Language", "en-US,en;q=0.5")
-                .build()
-            return chain.proceed(request)
+    // Sử dụng requestInterceptor để thêm cookie và headers
+    override val requestInterceptor = object : RequestInterceptor {
+        override fun intercept(request: Request.Builder) {
+            request.addHeaders(
+                mapOf(
+                    "Cookie" to "age_gate=1; i18next=en",
+                    "Referer" to mainUrl,
+                    "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+                )
+            )
         }
     }
 
@@ -61,8 +53,8 @@ class GaypornHDfree : MainAPI() {
         val url = if (page == 1) "$mainUrl/$cleanPath"
         else "$mainUrl/$cleanPath/page/$page/"
 
-        // Sử dụng webViewResolver để vượt Cloudflare
-        val document = webViewResolver.getDocument(url, timeout = 60000)
+        // Sử dụng app.get() thông thường với interceptor đã định nghĩa
+        val document = app.get(url).document
         val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
@@ -80,7 +72,6 @@ class GaypornHDfree : MainAPI() {
         val href = anchor.attr("href").trim().ifEmpty { return null }
 
         val title = selectFirst("div.deno.video-title a")?.text()?.trim().orEmpty()
-        // Lấy ảnh từ src hoặc data-src
         val posterUrl = selectFirst("a.thumb-video img")
             ?.let { it.attr("src").ifEmpty { it.attr("data-src") } }
             ?.trim().orEmpty()
@@ -88,36 +79,6 @@ class GaypornHDfree : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
-    }
-
-    private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("div.deno.video-title a")?.text()?.trim().orEmpty()
-        val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = this.selectFirst("a.thumb-video img")?.attr("src")?.trim() ?: ""
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-
-        for (i in 1..5) {
-            val url = "$mainUrl/page/$i/?s=$query"
-            // Sử dụng webViewResolver cho search
-            val document = webViewResolver.getDocument(url, timeout = 60000)
-
-            val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
-
-            if (results.isNotEmpty()) {
-                searchResponse.addAll(results)
-            } else {
-                break
-            }
-        }
-
-        return searchResponse
     }
 
     override suspend fun load(url: String): LoadResponse {
