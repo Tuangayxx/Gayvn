@@ -21,12 +21,6 @@ class GaypornHDfree : MainAPI() {
     override val hasChromecastSupport = true
     override val supportedTypes       = setOf(TvType.NSFW)
     override val vpnStatus            = VPNStatus.MightBeNeeded
-
-    override val interceptor = CloudflareKiller()
-
-    override var sequentialMainPage = true       
-    override var sequentialMainPageDelay       = 250L // ? 0.25 saniye
-    override var sequentialMainPageScrollDelay = 250L // ? 0.25 saniye
         
     override val mainPage = mainPageOf(
             ""                              to "Mới cập nhật",
@@ -56,15 +50,13 @@ class GaypornHDfree : MainAPI() {
     val document = app.get(url, headers = headers).document
     val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
-    val hasNext = document.selectFirst("a.next.page-numbers") != null
-
     return newHomePageResponse(
         list = HomePageList(
             name = request.name,
             list = home,
             isHorizontalImages = true
         ),
-        hasNext = hasNext
+        hasNext = true
     )
 }
 
