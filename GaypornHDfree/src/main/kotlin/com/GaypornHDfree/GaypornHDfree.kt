@@ -40,7 +40,10 @@ class GaypornHDfree : MainAPI() {
         )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val url = if (page == 1) "$mainUrl/${request.data}" else "$mainUrl/${request.data}page/$page/"
+    // Xử lý path để tránh lỗi dư //
+    val cleanPath = request.data.removePrefix("/").removeSuffix("/")
+    val url = if (page == 1) "$mainUrl/$cleanPath"
+              else "$mainUrl/$cleanPath/page/$page/"
 
     val headers = mutableMapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
@@ -68,12 +71,16 @@ private fun Element.toSearchResult(): SearchResponse? {
     val href = anchor.attr("href").trim().ifEmpty { return null }
 
     val title = selectFirst("div.deno.video-title a")?.text()?.trim().orEmpty()
-    val posterUrl = selectFirst("a.thumb-video img")?.attr("src")?.trim().orEmpty()
+    // Lấy ảnh từ src hoặc data-src
+    val posterUrl = selectFirst("a.thumb-video img")
+        ?.let { it.attr("src").ifEmpty { it.attr("data-src") } }
+        ?.trim().orEmpty()
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
     }
 }
+
 
 
 
