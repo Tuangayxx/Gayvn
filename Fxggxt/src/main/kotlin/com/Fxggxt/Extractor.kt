@@ -71,7 +71,6 @@ open class VoeExtractor : ExtractorApi() {
 
 class dsio : DoodLaExtractor() {
     override var mainUrl = "https://d-s.io"
-    override var name = "dsio"
 }
 
 class DoodstreamCom : DoodLaExtractor() {
