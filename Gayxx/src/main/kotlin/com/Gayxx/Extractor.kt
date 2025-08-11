@@ -19,6 +19,7 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.extractors.*
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Document
 import org.jsoup.Jsoup
@@ -155,6 +156,14 @@ open class vvide0Extractor : ExtractorApi() {
             }
         )
     }
+}
+
+class Doply : DoodLaExtractor() {
+    override var mainUrl = "https://doply.net"
+}
+
+class dsio : DoodLaExtractor() {
+    override var mainUrl = "https://d-s.io"
 }
 
 
