@@ -12,7 +12,7 @@ import okhttp3.FormBody
 import okhttp3.Interceptor
 import okhttp3.Response
 
-class Jayboys : MainAPI() {
+class GaypornHDfree : MainAPI() {
     override var mainUrl = "https://gaypornhdfree.com"
     override var name = "GaypornHDfree"
     override val hasMainPage = true
@@ -67,7 +67,6 @@ class Jayboys : MainAPI() {
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
         val posterUrl = selectFirst("a.thumb-video img")
             ?.let { it.attr("src").ifEmpty { it.attr("data-src") } }
-            ?.trim() ?: return null
 
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
@@ -79,8 +78,7 @@ class Jayboys : MainAPI() {
         val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
         val posterUrl = selectFirst("a.thumb-video img")
-            ?.let { it.attr("src").ifEmpty { it.attr("data-src") } }
-            ?.trim() ?: return null
+            ?.let { it.attr("src").ifEmpty { it.attr("data-src") }
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
