@@ -24,6 +24,10 @@ class Jayboys : MainAPI() {
 
     override val mainPage = mainPageOf(
         "/2025/" to "Latest Updates",
+        "/2025/07/" to "7",
+        "/2025/06/" to "6",
+        "/2025/05/" to "5",
+        "/2025/04/" to "4",     
         "/category/onlyfans/" to "Onlyfans",
         "/category/movies/" to "Movies",
         "/category/asian-gay-porn-hd/" to "Châu Á",
