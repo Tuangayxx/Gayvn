@@ -31,13 +31,10 @@ class GaypornHDfree : MainAPI() {
 
     private val webViewResolver = WebViewResolver(
         userAgent = USER_AGENT,
-        interceptUrls = listOf(
-            Regex(".*\\.gaypornhdfree\\.com/.*"),
-            Regex(".*cloudflare.*")
-        )
+        interceptUrl = Regex(".*\\.gaypornhdfree\\.com/.*|.*cloudflare.*")
     )
 
-    override val requestInterceptors: List<Interceptor> = listOf(
+    override val requestInterceptors: List<Interceptor>? = listOf(
         webViewResolver,
         cloudflareKiller
     )
@@ -96,7 +93,7 @@ class GaypornHDfree : MainAPI() {
         val seenUrls = mutableSetOf<String>()
 
         for (i in 1..5) {
-            val document = app.get("$mainUrl/page/$i/?s=${query.encodeURL()}", headers = headers).document
+            val document = app.get("$mainUrl/page/$i/?s=${encodeSearchQuery(query)}", headers = headers).document
             val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
                 .filterNot { seenUrls.contains(it.url) }
 
@@ -153,7 +150,7 @@ class GaypornHDfree : MainAPI() {
         }
 
         videoUrls.forEach { url ->
-            loadExtractor(fixUrl(url, data), subtitleCallback, callback)
+            loadExtractor(app.fixUrl(url, data), subtitleCallback, callback)
         }
 
         return videoUrls.isNotEmpty()
