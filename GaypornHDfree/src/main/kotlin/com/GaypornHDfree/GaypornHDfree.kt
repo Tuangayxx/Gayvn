@@ -25,12 +25,12 @@ class GaypornHDfree : MainAPI() {
 
     private val cloudflareKiller = CloudflareKiller()
 
-    override suspend fun bypassAntiBot(url: String, method: String, headers: Map<String, String>, data: Map<String, String>): Response? {
-        return cloudflareKiller.bypass(url, method, headers, data)
+    companion object {
+        private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
     }
 
     private val webViewResolver = WebViewResolver(
-        userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
+        userAgent = USER_AGENT,
         interceptUrls = listOf(
             Regex(".*\\.gaypornhdfree\\.com/.*"),
             Regex(".*cloudflare.*")
@@ -42,17 +42,19 @@ class GaypornHDfree : MainAPI() {
         cloudflareKiller
     )
 
+    private val headers = mapOf("User-Agent" to USER_AGENT)
+
     override val mainPage = mainPageOf(
         "/2025/" to "Latest Updates",
-        "/2025/07/" to "7",
-        "/2025/06/" to "6",
-        "/2025/05/" to "5",
-        "/2025/04/" to "4",     
+        "/2025/07/" to "July",
+        "/2025/06/" to "June",
+        "/2025/05/" to "May",
+        "/2025/04/" to "April",     
         "/category/onlyfans/" to "Onlyfans",
         "/category/movies/" to "Movies",
-        "/category/asian-gay-porn-hd/" to "Châu Á",
-        "/category/western-gay-porn-hd/" to "Châu Mỹ Âu",
-        "/category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c/" to "Tạp chí",
+        "/category/asian-gay-porn-hd/" to "Asian",
+        "/category/western-gay-porn-hd/" to "Western",
+        "/category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c/" to "Magazines",
         "/category/hunk-channel/" to "Hunk Channel",
     )
 
@@ -63,20 +65,9 @@ class GaypornHDfree : MainAPI() {
             else -> "$mainUrl${request.data}"
         }
 
-        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-        
-        // Sử dụng requestInterceptor để xử lý Cloudflare
-        val document = app.get(
-            url, 
-            headers = ua,
-            interceptor = requestInterceptors // Áp dụng interceptors
-        ).document
-
-        // Fixed selector - using correct container class
+        val document = app.get(url, headers = headers).document
         val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
-
-        // Fixed pagination detection
-        val hasNext = document.selectFirst("a.next.page-numbers") != null
+        val hasNext = document.select("a.next.page-numbers").isNotEmpty()
 
         return newHomePageResponse(
             list = HomePageList(
@@ -89,60 +80,45 @@ class GaypornHDfree : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse {
-        // Fixed selectors to match actual HTML structure
         val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
-        val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = selectFirst("a.thumb-video img")
-            ?.let { it.attr("src").ifEmpty { it.attr("data-src") } }
+        val href = fixUrl(this.selectFirst("a.thumb-video")?.attr("href") ?: "")
+        val poster = this.selectFirst("img")?.let { 
+            it.attr("src").ifEmpty { it.attr("data-src") } 
+        } ?: ""
 
-        
         return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    }
-
-    private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
-        val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
-        val posterUrl = selectFirst("a.thumb-video img")
-            ?.let { it.attr("src").ifEmpty { it.attr("data-src") } }
-        
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
+            this.posterUrl = poster
         }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchResponse = mutableListOf<SearchResponse>()
+        val seenUrls = mutableSetOf<String>()
 
         for (i in 1..5) {
-            val document = app.get("${mainUrl}/page/$i/?s=$query", interceptor = requestInterceptors).document
-
+            val document = app.get("$mainUrl/page/$i/?s=${query.encodeURL()}", headers = headers).document
             val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
-
-            if (!searchResponse.containsAll(results)) {
-                searchResponse.addAll(results)
-            } else {
-                break
-            }
+                .filterNot { seenUrls.contains(it.url) }
 
             if (results.isEmpty()) break
+
+            results.forEach { seenUrls.add(it.url) }
+            searchResponse.addAll(results)
         }
 
         return searchResponse
     }
        
-        
-        override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+    override suspend fun load(url: String): LoadResponse {
+        val document = app.get(url, headers = headers).document
 
-        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim().toString()
-        val poster = fixUrlNull(document.selectFirst("[property='og:image']")?.attr("content"))
+        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
+        val poster = document.selectFirst("meta[property='og:image']")?.attr("content") ?: ""
         val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        val recommendations = document.select("div.videopost").mapNotNull {
-            it.toRecommendResult()
-    }
+        val recommendations = document.select("div.videopost").mapNotNull { 
+            it.toSearchResult() 
+        }
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
@@ -152,35 +128,34 @@ class GaypornHDfree : MainAPI() {
     }
 
     override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data).document
-    val videoUrls = mutableSetOf<String>()
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val document = app.get(data, headers = headers).document
+        val videoUrls = mutableSetOf<String>()
 
-    // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
-    document.select("iframe").forEach { iframe ->
-        iframe.attr("data-src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
-            ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
-    }
+        // Extract from iframes
+        document.select("iframe").forEach { iframe ->
+            iframe.attr("data-src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+            iframe.attr("src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+        }
 
-    // Thu thập URL từ player
-    document.select("div.video-player[data-src]").forEach {
-        it.attr("data-src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
-    }
+        // Extract from video players
+        document.select("div.video-player[data-src]").forEach {
+            it.attr("data-src").takeIf(String::isNotBlank)?.let(videoUrls::add)
+        }
 
-    // Thu thập URL từ download button
-    document.select("div.download-button-wrapper a[href]").forEach {
-        it.attr("href").takeIf { href -> href.isNotBlank() }?.let(videoUrls::add)
-    }
+        // Extract from download buttons
+        document.select("div.download-button-wrapper a[href]").forEach {
+            it.attr("href").takeIf(String::isNotBlank)?.let(videoUrls::add)
+        }
 
-    // Xử lý tất cả URL đã thu thập
-    videoUrls.forEach { url ->
-        loadExtractor(url, subtitleCallback, callback)
-    }
+        videoUrls.forEach { url ->
+            loadExtractor(fixUrl(url, data), subtitleCallback, callback)
+        }
 
-    return videoUrls.isNotEmpty()
+        return videoUrls.isNotEmpty()
     }
 }
