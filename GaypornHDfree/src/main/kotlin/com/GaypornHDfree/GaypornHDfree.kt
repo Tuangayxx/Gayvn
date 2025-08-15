@@ -12,6 +12,7 @@ import okhttp3.FormBody
 import okhttp3.Interceptor
 import okhttp3.Response
 import com.lagradost.cloudstream3.network.WebViewResolver
+import java.net.URLEncoder
 
 class GaypornHDfree : MainAPI() {
     override var mainUrl = "https://gaypornhdfree.com"
@@ -34,7 +35,7 @@ class GaypornHDfree : MainAPI() {
         interceptUrl = Regex(".*\\.gaypornhdfree\\.com/.*|.*cloudflare.*")
     )
 
-    override val requestInterceptors: List<Interceptor>? = listOf(
+    override val requestInterceptors: List<Interceptor> = listOf(
         webViewResolver,
         cloudflareKiller
     )
@@ -93,7 +94,8 @@ class GaypornHDfree : MainAPI() {
         val seenUrls = mutableSetOf<String>()
 
         for (i in 1..5) {
-            val document = app.get("$mainUrl/page/$i/?s=${encodeSearchQuery(query)}", headers = headers).document
+            val encodedQuery = URLEncoder.encode(query, "UTF-8")
+            val document = app.get("$mainUrl/page/$i/?s=$encodedQuery", headers = headers).document
             val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
                 .filterNot { seenUrls.contains(it.url) }
 
@@ -150,7 +152,12 @@ class GaypornHDfree : MainAPI() {
         }
 
         videoUrls.forEach { url ->
-            loadExtractor(app.fixUrl(url, data), subtitleCallback, callback)
+            val fixedUrl = when {
+                url.startsWith("http") -> url
+                url.startsWith("//") -> "https:$url"
+                else -> "$mainUrl/${url.removePrefix("/")}"
+            }
+            loadExtractor(fixedUrl, subtitleCallback, callback)
         }
 
         return videoUrls.isNotEmpty()
