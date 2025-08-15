@@ -78,12 +78,11 @@ class GaypornHDfree : MainAPI() {
         val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a.thumb-video")?.attr("href")?.trim() ?: ""
         val posterUrl = selectFirst("a.thumb-video img")
-            ?.let { it.attr("src").ifEmpty { it.attr("data-src") }
+            ?.let { it.attr("src").ifEmpty { it.attr("data-src") } }
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = posterUrl
         }
-    }
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
