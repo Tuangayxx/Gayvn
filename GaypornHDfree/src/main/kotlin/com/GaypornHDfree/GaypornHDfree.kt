@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.network.CloudflareKiller
 import okhttp3.FormBody
 import okhttp3.Interceptor
 import okhttp3.Response
+import com.lagradost.cloudstream3.network.WebViewResolver
 
 class GaypornHDfree : MainAPI() {
     override var mainUrl = "https://gaypornhdfree.com"
@@ -21,6 +22,25 @@ class GaypornHDfree : MainAPI() {
     override val hasChromecastSupport = true
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
+
+    private val cloudflareKiller = CloudflareKiller()
+
+    override suspend fun bypassAntiBot(url: String, method: String, headers: Map<String, String>, data: Map<String, String>): Response? {
+        return cloudflareKiller.bypass(url, method, headers, data)
+    }
+
+    private val webViewResolver = WebViewResolver(
+        userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
+        interceptUrls = listOf(
+            Regex(".*\\.gaypornhdfree\\.com/.*"),
+            Regex(".*cloudflare.*")
+        )
+    )
+
+    override val requestInterceptors: List<Interceptor> = listOf(
+        webViewResolver,
+        cloudflareKiller
+    )
 
     override val mainPage = mainPageOf(
         "/2025/" to "Latest Updates",
@@ -44,7 +64,14 @@ class GaypornHDfree : MainAPI() {
         }
 
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-        val document = app.get(url, headers = ua).document
+        
+        // Sử dụng requestInterceptor để xử lý Cloudflare
+        val document = app.get(
+            url, 
+            headers = ua,
+            interceptor = requestInterceptors // Áp dụng interceptors
+        ).document
+
         // Fixed selector - using correct container class
         val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
@@ -89,7 +116,7 @@ class GaypornHDfree : MainAPI() {
         val searchResponse = mutableListOf<SearchResponse>()
 
         for (i in 1..5) {
-            val document = app.get("${mainUrl}/page/$i/?s=$query").document
+            val document = app.get("${mainUrl}/page/$i/?s=$query", interceptor = requestInterceptors).document
 
             val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
 
