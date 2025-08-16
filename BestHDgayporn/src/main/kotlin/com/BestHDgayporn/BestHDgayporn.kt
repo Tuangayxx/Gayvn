@@ -47,7 +47,6 @@ class BestHDgayporn : MainAPI() {
         val aTag = this.selectFirst("a") ?: return null
         val href = aTag.attr("href")
         val posterUrl = aTag.selectFirst(".aiovg-thumbnail img")?.attr("src")
-            ?: aTag.selectFirst(".post-thumbnail-container img")?.attr("src")
         val title = this.selectFirst(".aiovg-link-title")?.text()?.trim() ?: "No Title"
         
         return newMovieSearchResponse(title, href, TvType.NSFW) {
@@ -63,7 +62,8 @@ class BestHDgayporn : MainAPI() {
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val doc = app.get(url).document
+        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+        val doc = app.get(url, headers = ua).document
         val videoElement = doc.selectFirst("div[context='https://schema.org']")
             ?: throw ErrorLoadingException("Không tìm thấy thẻ video")
         val title = videoElement.selectFirst("meta[itemprop='name']")?.attr("content") ?: "No Title"
