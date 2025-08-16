@@ -80,7 +80,7 @@ class GaypornHDfree : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse {
         val title = this.selectFirst("div.deno.video-title a")?.text()?.trim() ?: ""
         val href = fixUrl(this.selectFirst("a.thumb-video")?.attr("href") ?: "")
-        val poster = this.selectFirst("img")?.let { 
+        val poster = this.selectFirst("a.thumb-video img)?.let { 
             it.attr("src").ifEmpty { it.attr("data-src") } 
         } ?: ""
 
