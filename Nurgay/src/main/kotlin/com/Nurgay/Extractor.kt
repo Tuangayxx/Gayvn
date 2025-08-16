@@ -129,6 +129,14 @@ class GXtape44Extractor(
     }
 }
 
+class doodso : DoodLaExtractor() {
+    override var mainUrl = "https://dood.so"
+}
+
+class dsio : DoodLaExtractor() {
+    override var mainUrl = "https://d-s.io"
+}
+
 open class DoodExtractor : ExtractorApi() {
     override var name = "DoodStream"
     override var mainUrl = "https://d0000d.com"

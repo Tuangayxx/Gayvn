@@ -1,5 +1,6 @@
 package com.Nurgay
 
+import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import android.content.Context
@@ -16,5 +17,7 @@ class NurgayProvider: Plugin() {
         registerExtractorAPI(DoodExtractor())
         registerExtractorAPI(vide0Extractor())
         registerExtractorAPI(DoodExtractor())
+        registerExtractorAPI(doodso())
+        registerExtractorAPI(dsio())
     }
 }
