@@ -35,7 +35,7 @@ class GaypornHDfree : MainAPI() {
         interceptUrl = Regex(".*gaypornhdfree\\.com.*cloudflare.*") // Sửa regex
     )
 
-    override val requestInterceptors: List<Interceptor> = listOf( // Thêm kiểu dữ liệu
+    val requestInterceptors: List<Interceptor> = listOf(
         webViewResolver,
         cloudflareKiller
     )
