@@ -42,6 +42,8 @@ class GaypornHDfree : MainAPI() {
 
     private val headers = mapOf("User-Agent" to USER_AGENT)
 
+    private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
+
     override val mainPage = mainPageOf(
         "2025" to "Latest Updates",
         "2025/07" to "July",

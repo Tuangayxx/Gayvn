@@ -29,7 +29,8 @@ class BestHDgayporn : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) "${request.data}page/$page/" else request.data
-        val document = app.get(url).document
+        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+        val document = app.get(url, headers = ua).document
         val home = document.select("div.aiovg-item-video").mapNotNull { it.toSearchResult() }
         
         return newHomePageResponse(
@@ -45,7 +46,6 @@ class BestHDgayporn : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val aTag = this.selectFirst("a") ?: return null
         val href = aTag.attr("href")
-        // Lấy poster theo cách tương tự Fxggxt.kt:
         var posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("data-src")
         if (posterUrl.isNullOrEmpty()) {
             posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("src")
