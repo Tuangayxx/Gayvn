@@ -44,10 +44,10 @@ class GaypornHDfree : MainAPI() {
 
     override val mainPage = mainPageOf(
         "2025" to "Latest Updates",
-        "202507" to "July",
-        "202506" to "June",
-        "202505" to "May",
-        "202504" to "April",     
+        "2025/07" to "July",
+        "2025/06" to "June",
+        "2025/05" to "May",
+        "2025/04" to "April",     
         "category/onlyfans" to "Onlyfans",
         "category/movies" to "Movies",
         "category/asian-gay-porn-hd" to "Asian",

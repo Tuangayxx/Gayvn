@@ -3,6 +3,7 @@ package com.Nurgay
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.extractors.*
 import org.jsoup.nodes.Element
 import java.io.IOException
 import com.lagradost.api.Log
@@ -99,30 +100,21 @@ override suspend fun search(query: String): List<SearchResponse> {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val supportedDomains = listOf(
-            "bigwarp.io", "voe.sx", "mixdrop", 
-            "streamtape", "doodstream.com", "dooood.com", "doods.pro", "d0000d.com", "vinovo.to",
-            "vide0.net",  "abyss.to", "vinovo.to", "d-s.io", "dood.so", // Thêm domain Doodstream thực tế Thêm domain download
-        )
-        
         val document = app.get(data).document
+    val videoUrls = mutableSetOf<String>()
 
-        // Lấy tất cả link hợp lệ trong cả 2 khu vực:
-        val links = document.select("""
-            div.notranslate a[href],
-            div.desc a[href]
-        """).mapNotNull { it.attr("href").takeIf { href -> href.isNotBlank() } }
-            .filter { url -> 
-                supportedDomains.any { domain -> domain in url } 
-            }
-            .distinct()
+        document.select("div.notranslate a[href]").forEach { player ->
+        player.attr("href").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    }
 
-        if (links.isEmpty()) return false
+    document.select("div.desc a[href]").forEach {
+        it.attr("herf").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    }
 
-        links.forEach { url ->
-            Log.i("Tuanxx", "Processing URL: $url")
-            loadExtractor(url, subtitleCallback, callback)
-        }
-        return true
+    videoUrls.forEach { url ->
+        loadExtractor(url, subtitleCallback, callback)
+    }
+
+    return videoUrls.isNotEmpty()
     }
 }
