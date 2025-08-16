@@ -81,17 +81,27 @@ class BestHDgayporn : MainAPI() {
 }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        
-        val document = app.get(data).document
-                document.select("video[src]").forEach {
-            val url = it.attr("src")
-        loadExtractor(url, subtitleCallback, callback)
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+
+    document.select("script[type=application/ld+json]").firstOrNull()?.let { script ->
+        val json = Json.parseToJsonElement(script.data()).jsonObject
+        json["contentUrl"]?.jsonPrimitive?.content?.let { mp4Url ->
+            callback.invoke(
+                ExtractorLink(
+                    name = "Direct MP4",
+                    source = "FamilyDick",
+                    url = mp4Url,
+                    referer = "",
+                    quality = Qualities.Unknown.value
+                )
+            )
+            return true
+        }
     }
-    return true
 }
 }
