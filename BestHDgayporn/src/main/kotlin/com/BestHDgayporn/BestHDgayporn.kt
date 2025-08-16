@@ -46,11 +46,10 @@ class BestHDgayporn : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val aTag = this.selectFirst("a") ?: return null
         val href = aTag.attr("href")
-        var posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("data-src")
-        if (posterUrl.isNullOrEmpty()) {
-            posterUrl = aTag.selectFirst(".post-thumbnail-container img")?.attr("src")
-        }
-        val title = aTag.selectFirst("haiovg-link-title")?.text()?.trim() ?: "No Title"
+        val posterUrl = aTag.selectFirst(".aiovg-thumbnail img")?.attr("src")
+            ?: aTag.selectFirst(".post-thumbnail-container img")?.attr("src")
+        val title = this.selectFirst(".aiovg-link-title")?.text()?.trim() ?: "No Title"
+        
         return newMovieSearchResponse(title, href, TvType.NSFW) {
             this.posterUrl = fixUrlNull(posterUrl)
         }
