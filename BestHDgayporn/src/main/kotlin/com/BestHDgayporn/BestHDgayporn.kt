@@ -106,7 +106,7 @@ class BestHDgayporn : MainAPI() {
                             source = name,
                             name = name,
                             url = mp4Url,
-                            type = ExtractorLinkType.MP4,
+                            type = ExtractorLinkType.VIDEO,
                             referer = mainUrl,
                             quality = quality,
                         )
