@@ -92,7 +92,8 @@ class BestHDgayporn : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val document = app.get(data).document
+        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+        val document = app.get(data, headers = ua).document
 
         document.select("script[type=application/ld+json]").firstOrNull()?.let { script ->
             try {
