@@ -86,7 +86,7 @@ suspend fun loadLinks(
     isCasting: Boolean,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data)
+    val document = app.get(data).document
     val jsonLdScript = document.selectFirst("script[type=application/ld+json]")
 
     jsonLdScript?.let { script ->
