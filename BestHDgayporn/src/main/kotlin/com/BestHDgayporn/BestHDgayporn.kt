@@ -86,7 +86,7 @@ suspend fun loadLinks(
     isCasting: Boolean,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = App.getInstance().createDocument(data)
+    val document = app.get(data)
     val jsonLdScript = document.selectFirst("script[type=application/ld+json]")
 
     jsonLdScript?.let { script ->
@@ -101,13 +101,12 @@ suspend fun loadLinks(
                     val videoName = jsonObject.optString("name", "Direct Video")
                     
                     callback.invoke(
-                        ExtractorLink(
+                        newExtractorLink(
                             source = "GaypornHDfree",
                             name = videoName,
                             url = videoUrl,
                             referer = "https://besthdgayporn.com/",
-                            quality = Qualities.Unknown.value,
-                            isM3u8 = false
+                            quality = Qualities.Unknown.value
                         )
                     )
                     return true
