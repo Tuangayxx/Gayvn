@@ -98,25 +98,28 @@ class BestHDgayporn : MainAPI() {
         val script = document.selectFirst("script[type=application/ld+json]") ?: return false
         try {
             val json = JSONObject(script.data())
-            if (json.has("contentUrl")) {
-                val rawUrl = json.getString("contentUrl").trim()
-                val mp4Url = fixUrlNull(rawUrl)
-                val quality = mp4Url.substringAfterLast(".").substringBefore("?").toIntOrNull() ?: Qualities.P720.value
+            val rawUrl = json.optString("contentUrl", "").trim()
+            if (rawUrl.isBlank()) return false
 
-                // Gọi callback với ExtractorLink (hoạt động ổn định)
-                callback(
-                    ExtractorLink(
-                        source = name,
-                        name = name,
-                        url = mp4Url,
-                        type = ExtractorLinkType.VIDEO,
-                        referer = mainUrl,
-                        quality = quality
-                    )
+            val mp4Url = fixUrlNull(rawUrl) ?: return false
+
+            val quality = mp4Url
+                .substringAfterLast(".", "")
+                .substringBefore("?", "")
+                .toIntOrNull() ?: Qualities.P720.value
+
+            callback(
+                ExtractorLink(
+                    source = name,
+                    name = name,
+                    url = mp4Url,
+                    type = ExtractorLinkType.VIDEO,
+                    referer = mainUrl,
+                    quality = quality
                 )
+            )
 
-                return true
-            }
+            return true
         } catch (e: Exception) {
             e.printStackTrace()
         }
