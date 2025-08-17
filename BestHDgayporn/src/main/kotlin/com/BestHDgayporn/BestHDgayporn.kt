@@ -98,28 +98,60 @@ class BestHDgayporn : MainAPI() {
         val script = document.selectFirst("script[type=application/ld+json]") ?: return false
         try {
             val json = JSONObject(script.data())
+
+            // primary: contentUrl (direct mp4)
             val rawUrl = json.optString("contentUrl", "").trim()
-            if (rawUrl.isBlank()) return false
+            if (rawUrl.isNotBlank()) {
+                val mp4Url = fixUrlNull(rawUrl) ?: return false
 
-            val mp4Url = fixUrlNull(rawUrl) ?: return false
+                val quality = mp4Url
+                    .substringAfterLast(".", "")
+                    .substringBefore("?", "")
+                    .toIntOrNull() ?: Qualities.P720.value
 
-            val quality = mp4Url
-                .substringAfterLast(".", "")
-                .substringBefore("?", "")
-                .toIntOrNull() ?: Qualities.P720.value
-
-            callback(
-                ExtractorLink(
-                    source = name,
-                    name = name,
-                    url = mp4Url,
-                    type = ExtractorLinkType.VIDEO,
-                    referer = mainUrl,
-                    quality = quality
+                callback(
+                    ExtractorLink(
+                        source = name,
+                        name = "${quality}p",
+                        url = mp4Url,
+                        type = ExtractorLinkType.VIDEO,
+                        referer = data, // use page as referer
+                        quality = quality
+                    )
                 )
-            )
+                return true
+            }
 
-            return true
+            // fallback: embedUrl -> fetch embed page and look for .mp4
+            val embed = json.optString("embedUrl", "").trim()
+            if (embed.isNotBlank()) {
+                val embedUrl = fixUrlNull(embed) ?: return false
+                val embedDoc = app.get(embedUrl, headers = ua).document
+                // try common selectors first, then regex search
+                val src = embedDoc.selectFirst("video source")?.attr("src")
+                    ?: embedDoc.selectFirst("source")?.attr("src")
+                    ?: Regex("(https?://[^\\s'\"<>]+\\.mp4[^'\"\\s<>]*)").find(embedDoc.html())?.value
+
+                if (!src.isNullOrBlank()) {
+                    val mp4Url = fixUrlNull(src) ?: return false
+                    val quality = mp4Url
+                        .substringAfterLast(".", "")
+                        .substringBefore("?", "")
+                        .toIntOrNull() ?: Qualities.P720.value
+
+                    callback(
+                        ExtractorLink(
+                            source = name,
+                            name = "${quality}p",
+                            url = mp4Url,
+                            type = ExtractorLinkType.VIDEO,
+                            referer = embedUrl,
+                            quality = quality
+                        )
+                    )
+                    return true
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
