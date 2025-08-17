@@ -39,7 +39,7 @@ class GaypornHDfree : MainAPI() {
         webViewResolver,
         cloudflareKiller
     )
-
+    
     private val headers = mapOf("User-Agent" to USER_AGENT)
 
     private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
