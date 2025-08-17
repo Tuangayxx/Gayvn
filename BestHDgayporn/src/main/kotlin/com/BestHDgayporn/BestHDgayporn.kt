@@ -6,11 +6,15 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.app
-import org.jsoup.nodes.Element
+import org.jsoup.nodes.
 import org.json.JSONObject
+import org.json.JSONArray
+import com.lagradost.cloudstream3.utils.Qualities
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class BestHDgayporn : MainAPI() {
     override var mainUrl = "https://besthdgayporn.com"
@@ -82,41 +86,38 @@ class BestHDgayporn : MainAPI() {
     }
 }
 
-suspend fun loadLinks(
+    override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    val jsonLdScript = document.selectFirst("script[type=application/ld+json]")
 
-    jsonLdScript?.let { script ->
+    document.select("script[type=application/ld+json]").firstOrNull()?.let { script ->
         try {
-            val jsonData = script.html().replace("\\/", "/")
-            val jsonObject = JSONObject(jsonData)
+            val json = Json.parseToJsonElement(script.data()).jsonObject
+            json["contentUrl"]?.jsonPrimitive?.content?.let { mp4Url ->
+                val quality =
+                    mp4Url.substringAfterLast(".").toIntOrNull() ?: Qualities.P720.value // Default quality
 
-            if (jsonObject.optString("@type") == "VideoObject") {
-                val videoUrl = jsonObject.optString("contentUrl", "")
-                
-                if (videoUrl.isNotBlank() && videoUrl.endsWith(".mp4", ignoreCase = true)) {
-                    val videoName = jsonObject.optString("name", "Direct Video")
-                    
-                    callback.invoke(
-                        newExtractorLink(
-                            source = "GaypornHDfree",
-                            name = videoName,
-                            url = videoUrl,
-                            type = INFER_TYPE
-                            ) {
-                            this.referer = "mainUrl"
-                        }
+                callback(
+                    ExtractorLink(
+                        source = name,
+                        name = name,
+                        url = mp4Url,
+                        type = ExtractorLinkType.MP4,
+                        referer = mainUrl,
+                        quality = quality,
                     )
-                    return true
-                }
+                )
+                return true // Indicate that a link was found
             }
         } catch (e: Exception) {
+            // Log the error for debugging
             e.printStackTrace()
         }
     }
-    return false
-} }
+    return false // No link was found
+}
+}
