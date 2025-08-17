@@ -105,9 +105,10 @@ suspend fun loadLinks(
                             source = "GaypornHDfree",
                             name = videoName,
                             url = videoUrl,
-                            referer = "https://besthdgayporn.com/",
-                            quality = Qualities.Unknown.value
-                        )
+                            type = INFER_TYPE
+                            ) {
+                            this.referer = "mainUrl"
+                        }
                     )
                     return true
                 }
