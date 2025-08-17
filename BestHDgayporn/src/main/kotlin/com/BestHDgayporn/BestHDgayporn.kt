@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
+import org.json.JSONObject
 
 class BestHDgayporn : MainAPI() {
     override var mainUrl = "https://besthdgayporn.com"
@@ -80,28 +81,41 @@ class BestHDgayporn : MainAPI() {
     }
 }
 
-    override suspend fun loadLinks(
+suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
+    val document = App.getInstance().createDocument(data)
+    val jsonLdScript = document.selectFirst("script[type=application/ld+json]")
 
-    document.select("script[type=application/ld+json]").firstOrNull()?.let { script ->
-        val json = Json.parseToJsonElement(script.data()).jsonObject
-        json["contentUrl"]?.jsonPrimitive?.content?.let { mp4Url ->
-            callback.invoke(
-                ExtractorLink(
-                    name = "Direct MP4",
-                    source = "FamilyDick",
-                    url = mp4Url,
-                    referer = "",
-                    quality = Qualities.Unknown.value
-                )
-            )
-            return true
+    jsonLdScript?.let { script ->
+        try {
+            val jsonData = script.html().replace("\\/", "/")
+            val jsonObject = JSONObject(jsonData)
+
+            if (jsonObject.optString("@type") == "VideoObject") {
+                val videoUrl = jsonObject.optString("contentUrl", "")
+                
+                if (videoUrl.isNotBlank() && videoUrl.endsWith(".mp4", ignoreCase = true)) {
+                    val videoName = jsonObject.optString("name", "Direct Video")
+                    
+                    callback.invoke(
+                        ExtractorLink(
+                            source = "GaypornHDfree",
+                            name = videoName,
+                            url = videoUrl,
+                            referer = "https://besthdgayporn.com/",
+                            quality = Qualities.Unknown.value,
+                            isM3u8 = false
+                        )
+                    )
+                    return true
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
-}
-}
+    return false
+} }
