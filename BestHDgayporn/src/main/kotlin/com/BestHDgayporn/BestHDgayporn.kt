@@ -95,30 +95,32 @@ class BestHDgayporn : MainAPI() {
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
         val document = app.get(data, headers = ua).document
 
-        document.select("script[type=application/ld+json]").firstOrNull()?.let { script ->
-            try {
-                val json = Json.parseToJsonElement(script.data()).jsonObject
-                json["contentUrl"]?.jsonPrimitive?.content?.let { mp4Url ->
-                    val quality =
-                        mp4Url.substringAfterLast(".").toIntOrNull() ?: Qualities.P720.value // Default quality
+        val script = document.selectFirst("script[type=application/ld+json]") ?: return false
+        try {
+            val json = JSONObject(script.data())
+            if (json.has("contentUrl")) {
+                val rawUrl = json.getString("contentUrl").trim()
+                val mp4Url = fixUrlNull(rawUrl)
+                val quality = mp4Url.substringAfterLast(".").substringBefore("?").toIntOrNull() ?: Qualities.P720.value
 
-                    callback(
-                        ExtractorLink(
-                            source = name,
-                            name = name,
-                            url = mp4Url,
-                            type = ExtractorLinkType.VIDEO,
-                            referer = mainUrl,
-                            quality = quality,
-                        )
+                // Gọi callback với ExtractorLink (hoạt động ổn định)
+                callback(
+                    ExtractorLink(
+                        source = name,
+                        name = name,
+                        url = mp4Url,
+                        type = ExtractorLinkType.VIDEO,
+                        referer = mainUrl,
+                        quality = quality
                     )
-                    return true // Indicate that a link was found
-                }
-            } catch (e: Exception) {
-                // Log the error for debugging
-                e.printStackTrace()
+                )
+
+                return true
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        return false // No link was found
+
+        return false
     }
 }
