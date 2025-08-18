@@ -102,7 +102,7 @@ class BestHDgayporn : MainAPI() {
     var link: String? = null
     try {
         val json = JSONObject(jsonData)
-        link = json.getString("contentUrl").replace("\\/", "/")
+        link = json.getString("contentUrl").replace("\", "")
     } catch (e: Exception) {
         return false // Trả về false khi parse lỗi
     }
