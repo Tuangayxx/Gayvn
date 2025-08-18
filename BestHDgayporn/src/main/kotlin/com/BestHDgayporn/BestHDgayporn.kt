@@ -102,7 +102,7 @@ class BestHDgayporn : MainAPI() {
         val json = JSONObject(jsonData)
         val link = json.getString("contentUrl").replace("\\/", "/")
             } catch (e: Exception) {
-                null
+                empty()
         }
 
                 callback(
@@ -112,7 +112,6 @@ class BestHDgayporn : MainAPI() {
                         url = link,
                         type = ExtractorLinkType.VIDEO,
                         referer = data, // use page as referer
-                        quality = quality
                     )
                 )
                 return true
