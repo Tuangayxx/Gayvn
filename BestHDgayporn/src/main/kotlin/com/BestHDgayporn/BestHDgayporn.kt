@@ -6,9 +6,10 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
+import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.app
-import org.jsoup.nodes.Element // Corrected import
+import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
 import com.lagradost.cloudstream3.utils.Qualities
@@ -87,33 +88,39 @@ class BestHDgayporn : MainAPI() {
     }
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-        val document = app.get(data, headers = ua).document
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+    val document = app.get(data, headers = ua).document
 
-        val script = document.selectFirst("script[type=application/ld+json]")
-        val jsonData = script?.data() ?: return null
+    val script = document.selectFirst("script[type=application/ld+json]")
+    val jsonData = script?.data() ?: return false // Sửa thành false thay vì null
 
-            return try {
+    var link: String? = null
+    try {
         val json = JSONObject(jsonData)
-        val link = json.getString("contentUrl").replace("\\/", "/")
-            } catch (e: Exception) {
-                empty()
-        }
+        link = json.getString("contentUrl").replace("\\/", "/")
+    } catch (e: Exception) {
+        return false // Trả về false khi parse lỗi
+    }
 
-                callback(
-                    ExtractorLink(
-                        source = name,
-                        name = "${quality}p",
-                        url = link,
-                        type = ExtractorLinkType.VIDEO,
-                        referer = data, // use page as referer
-                    )
-                )
-                return true
+    // Kiểm tra link hợp lệ trước khi gọi callback
+    if (!link.isNullOrEmpty()) {
+        callback(
+            ExtractorLink(
+                source = name,
+                name = "source", // Sửa chất lượng mặc định do không xác định được
+                url = link,
+                type = ExtractorLinkType.VIDEO,
+                referer = data,
+                quality = Qualities.Unknown.value // Xử lý chất lượng mặc định
+            )
+        )
+        return true
+    }
+    return false
     }
 }
