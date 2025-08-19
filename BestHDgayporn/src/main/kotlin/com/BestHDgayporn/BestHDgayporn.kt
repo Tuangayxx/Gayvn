@@ -102,13 +102,10 @@ class BestHDgayporn : MainAPI() {
     var link: String? = null
     try {
         val json = JSONObject(jsonData)
-        link = json.getString("contentUrl").replace("\", "")
+        link = json.getString("contentUrl").replace("\/", "/")
     } catch (e: Exception) {
         return false // Trả về false khi parse lỗi
     }
-
-    // Kiểm tra link hợp lệ trước khi gọi callback
-    if (!link.isNullOrEmpty()) {
         callback(
             ExtractorLink(
                 source = name,
@@ -120,7 +117,5 @@ class BestHDgayporn : MainAPI() {
             )
         )
         return true
-    }
-    return false
     }
 }
