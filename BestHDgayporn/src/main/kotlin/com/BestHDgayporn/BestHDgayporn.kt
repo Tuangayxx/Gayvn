@@ -96,7 +96,7 @@ class BestHDgayporn : MainAPI() {
         ): Boolean {
 
         val document = app.get(data).document
-        val link = document.selectFirst("source")?.attr("src") ?:""
+        val link = document.selectFirst("video")?.attr("src") ?:""
 
         callback.invoke(
             newExtractorLink(
