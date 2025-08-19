@@ -122,13 +122,12 @@ class BestHDgayporn : MainAPI() {
 
         if (contentUrl != null) {
             callback.invoke(
-                ExtractorLink(
-                    name,
-                    name,
-                    contentUrl,
-                    mainUrl,
-                    Qualities.Unknown.value,
-                    false
+                newExtractorLink(
+                    source = name,
+                    name = name, 
+                    url = contentUrl,
+                    referer = mainUrl,
+                    quality = Qualities.Unknown.value
                 )
             )
             return true
