@@ -97,19 +97,76 @@ class BestHDgayporn : MainAPI() {
     val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
     val document = app.get(data, headers = ua).document
 
-    val script = document.selectFirst("script[type=application/ld+json]")
-    
-    val jsonData = script?.data() ?: return false // Sửa thành false thay vì null
+    val scripts = document.select("script[type=application/ld+json]")
+        .mapNotNull { it.data()?.trim() }
+        .filter { it.isNotEmpty() }
 
     var link: String? = null
-        val json = JSONObject(jsonData)
-        link = json.getString("contentUrl").replace("\\/", "/")
-        loadExtractor(
-                link,
-                "$mainUrl/",
-                subtitleCallback,
-                callback
-        )
-        return true
+
+    try {
+        for (jsonData in scripts) {
+            try {
+                if (jsonData.trimStart().startsWith("[")) {
+                    val arr = JSONArray(jsonData)
+                    for (i in 0 until arr.length()) {
+                        val item = arr.get(i)
+                        if (item is JSONObject) {
+                            if (item.has("contentUrl")) { link = item.getString("contentUrl"); break }
+                            if (item.has("video") && item.get("video") is JSONObject) {
+                                val v = item.getJSONObject("video")
+                                if (v.has("contentUrl")) { link = v.getString("contentUrl"); break }
+                            }
+                        }
+                    }
+                } else {
+                    val obj = JSONObject(jsonData)
+                    if (obj.has("@graph")) {
+                        val graph = obj.getJSONArray("@graph")
+                        for (i in 0 until graph.length()) {
+                            val g = graph.get(i)
+                            if (g is JSONObject) {
+                                if (g.has("contentUrl")) { link = g.getString("contentUrl"); break }
+                                if (g.has("video") && g.get("video") is JSONObject) {
+                                    val v = g.getJSONObject("video")
+                                    if (v.has("contentUrl")) { link = v.getString("contentUrl"); break }
+                                }
+                            }
+                        }
+                        if (link != null) break
+                    }
+                    if (link == null) {
+                        if (obj.has("contentUrl")) { link = obj.getString("contentUrl") }
+                        else if (obj.has("video") && obj.get("video") is JSONObject) {
+                            val v = obj.getJSONObject("video")
+                            if (v.has("contentUrl")) link = v.getString("contentUrl")
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // tiếp tục script tiếp theo
+            }
+
+            if (link == null) {
+                // fallback: tìm trực tiếp mp4 trong json text
+                val regex = Regex("https?://[^\\s\"']+\\.mp4")
+                val match = regex.find(jsonData)
+                if (match != null) link = match.value
+            }
+
+            if (link != null) break
+        }
+    } catch (e: Exception) {
+        return false
     }
+
+    link = link?.replace("\\/", "/")
+    if (link == null) return false
+
+    loadExtractor(
+        link,
+        "$mainUrl/",
+        subtitleCallback,
+        callback
+    )
+    return true
 }
