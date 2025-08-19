@@ -108,13 +108,11 @@ class BestHDgayporn : MainAPI() {
         return false // Trả về false khi parse lỗi
     }
         callback(
-            ExtractorLink(
+            newExtractorLink(
                 source = name,
                 name = "source", // Sửa chất lượng mặc định do không xác định được
                 url = link,
-                type = ExtractorLinkType.VIDEO,
-                referer = data,
-                quality = Qualities.Unknown.value // Xử lý chất lượng mặc định
+                type = INFER_TYPE
             )
         )
         return true
