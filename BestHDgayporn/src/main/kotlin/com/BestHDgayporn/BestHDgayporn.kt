@@ -97,77 +97,45 @@ class BestHDgayporn : MainAPI() {
     val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
     val document = app.get(data, headers = ua).document
 
-    val scripts = document.select("script[type=application/ld+json]")
-        .mapNotNull { it.data()?.trim() }
-        .filter { it.isNotEmpty() }
-
-    var link: String? = null
+    // Tìm script JSON-LD chứa contentUrl
+    val scriptData = document.select("script[type=application/ld+json]").find {
+        it.data().contains("contentUrl")
+    }?.data() ?: return false
 
     try {
-        for (jsonData in scripts) {
-            try {
-                if (jsonData.trimStart().startsWith("[")) {
-                    val arr = JSONArray(jsonData)
-                    for (i in 0 until arr.length()) {
-                        val item = arr.get(i)
-                        if (item is JSONObject) {
-                            if (item.has("contentUrl")) { link = item.getString("contentUrl"); break }
-                            if (item.has("video") && item.get("video") is JSONObject) {
-                                val v = item.getJSONObject("video")
-                                if (v.has("contentUrl")) { link = v.getString("contentUrl"); break }
-                            }
-                        }
-                    }
-                } else {
-                    val obj = JSONObject(jsonData)
-                    if (obj.has("@graph")) {
-                        val graph = obj.getJSONArray("@graph")
-                        for (i in 0 until graph.length()) {
-                            val g = graph.get(i)
-                            if (g is JSONObject) {
-                                if (g.has("contentUrl")) { link = g.getString("contentUrl"); break }
-                                if (g.has("video") && g.get("video") is JSONObject) {
-                                    val v = g.getJSONObject("video")
-                                    if (v.has("contentUrl")) { link = v.getString("contentUrl"); break }
-                                }
-                            }
-                        }
-                        if (link != null) break
-                    }
-                    if (link == null) {
-                        if (obj.has("contentUrl")) { link = obj.getString("contentUrl") }
-                        else if (obj.has("video") && obj.get("video") is JSONObject) {
-                            val v = obj.getJSONObject("video")
-                            if (v.has("contentUrl")) link = v.getString("contentUrl")
-                        }
-                    }
+        val json = JSONObject(scriptData)
+        val contentUrl = if (json.has("@graph")) {
+            // Nếu có @graph, tìm trong mảng @graph
+            val graph = json.getJSONArray("@graph")
+            for (i in 0 until graph.length()) {
+                val obj = graph.getJSONObject(i)
+                if (obj.has("contentUrl")) {
+                    obj.getString("contentUrl")?.replace("\\/", "/")
+                    break
                 }
-            } catch (_: Exception) {
-                // tiếp tục script tiếp theo
             }
+            null
+        } else {
+            // Lấy trực tiếp từ contentUrl
+            json.getString("contentUrl")?.replace("\\/", "/")
+        }
 
-            if (link == null) {
-                // fallback: tìm trực tiếp mp4 trong json text
-                val regex = Regex("https?://[^\\s\"']+\\.mp4")
-                val match = regex.find(jsonData)
-                if (match != null) link = match.value
-            }
-
-            if (link != null) break
+        if (contentUrl != null) {
+            callback.invoke(
+                ExtractorLink(
+                    name,
+                    name,
+                    contentUrl,
+                    mainUrl,
+                    Qualities.Unknown.value,
+                    false
+                )
+            )
+            return true
         }
     } catch (e: Exception) {
-        return false
+        e.printStackTrace()
     }
-
-    link = link?.replace("\\/", "/")
-    if (link == null) return false
-
-    loadExtractor(
-        link,
-        "$mainUrl/",
-        subtitleCallback,
-        callback
-    )
-    return true
+    return false
 }
 }
