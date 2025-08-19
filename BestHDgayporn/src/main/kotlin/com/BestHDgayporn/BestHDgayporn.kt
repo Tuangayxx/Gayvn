@@ -54,7 +54,7 @@ class BestHDgayporn : MainAPI() {
     private fun Element.toSearchResult(): SearchResponse? {
         val aTag = this.selectFirst("a") ?: return null
         val href = aTag.attr("href")
-        val posterUrl = aTag.selectFirst(".aiovg-thumbnail img")?.attr("src")
+        val posterUrl = this.select("img").attr("src")
         val title = this.selectFirst(".aiovg-link-title")?.text()?.trim() ?: "No Title"
 
         return newMovieSearchResponse(title, href, TvType.NSFW) {
@@ -88,53 +88,26 @@ class BestHDgayporn : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-    val document = app.get(data, headers = ua).document
+     override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+        ): Boolean {
 
-    // Tìm script JSON-LD chứa contentUrl
-    val scriptData = document.select("script[type=application/ld+json]").find {
-        it.data().contains("contentUrl")
-    }?.data() ?: return false
+        val document = app.get(data).document
+        val link = document.selectFirst("source")?.attr("src") ?:""
 
-    try {
-        val json = JSONObject(scriptData)
-        val contentUrl = if (json.has("@graph")) {
-            // Nếu có @graph, tìm trong mảng @graph
-            val graph = json.getJSONArray("@graph")
-            for (i in 0 until graph.length()) {
-                val obj = graph.getJSONObject(i)
-                if (obj.has("contentUrl")) {
-                    obj.getString("contentUrl")?.replace("\\/", "/")
-                    break
-                }
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = this.name,
+                url = link
+            ) {
+                this.referer = ""
+                this.quality = Qualities.Unknown.value
             }
-            null
-        } else {
-            // Lấy trực tiếp từ contentUrl
-            json.getString("contentUrl")?.replace("\\/", "/")
-        }
-
-        if (contentUrl != null) {
-            callback.invoke(
-                newExtractorLink(
-                    source = name,
-                    name = name, 
-                    url = contentUrl,
-                    referer = mainUrl,
-                    quality = Qualities.Unknown.value
-                )
-            )
-            return true
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
+        )
+        return true
     }
-    return false
-}
 }
