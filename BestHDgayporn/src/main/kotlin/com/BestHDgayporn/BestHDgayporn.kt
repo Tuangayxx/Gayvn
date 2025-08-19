@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.extractors.*
 import org.jsoup.nodes.Element
 import org.json.JSONObject
 import org.json.JSONArray
@@ -102,7 +103,7 @@ class BestHDgayporn : MainAPI() {
     var link: String? = null
     try {
         val json = JSONObject(jsonData)
-        link = json.getString("contentUrl").replace("\/", "/")
+        link = json.getString("contentUrl").replace("\\/", "/")
     } catch (e: Exception) {
         return false // Trả về false khi parse lỗi
     }
