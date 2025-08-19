@@ -98,22 +98,17 @@ class BestHDgayporn : MainAPI() {
     val document = app.get(data, headers = ua).document
 
     val script = document.selectFirst("script[type=application/ld+json]")
+    
     val jsonData = script?.data() ?: return false // Sửa thành false thay vì null
 
     var link: String? = null
-    try {
         val json = JSONObject(jsonData)
         link = json.getString("contentUrl").replace("\\/", "/")
-    } catch (e: Exception) {
-        return false // Trả về false khi parse lỗi
-    }
-        callback(
-            newExtractorLink(
-                source = name,
-                name = "source", // Sửa chất lượng mặc định do không xác định được
-                url = link,
-                type = INFER_TYPE
-            )
+        loadExtractor(
+                link,
+                "$mainUrl/",
+                subtitleCallback,
+                callback
         )
         return true
     }
