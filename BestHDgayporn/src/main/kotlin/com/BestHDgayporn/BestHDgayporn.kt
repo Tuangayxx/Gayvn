@@ -88,26 +88,67 @@ class BestHDgayporn : MainAPI() {
         }
     }
 
-     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-        ): Boolean {
-
-        val document = app.get(data).document
-        val link = document.selectFirst("video")?.attr("src") ?:""
-
+     ooverride suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val document = app.get(data).document
+    
+    // First try to find direct video source
+    val directVideoUrl = document.selectFirst("video#player_html5_api")?.attr("src")
+    if (!directVideoUrl.isNullOrEmpty()) {
         callback.invoke(
-            newExtractorLink(
-                source = this.name,
+            ExtractorLink(
                 name = this.name,
-                url = link
-            ) {
-                this.referer = ""
-                this.quality = Qualities.Unknown.value
-            }
+                source = this.name,
+                url = directVideoUrl,
+                referer = data,
+                quality = Qualities.Unknown.value
+            )
         )
         return true
     }
+
+    // If no direct video found, try to find iframe source
+    val iframeSrc = document.selectFirst("div.aiovg-player iframe")?.attr("src")
+    if (!iframeSrc.isNullOrEmpty()) {
+        // If iframe found, get its content and look for video
+        val iframeDoc = app.get(iframeSrc).document
+        val videoUrl = iframeDoc.selectFirst("video#player_html5_api")?.attr("src")
+        
+        if (!videoUrl.isNullOrEmpty()) {
+            callback.invoke(
+                ExtractorLink(
+                    name = this.name,
+                    source = this.name,
+                    url = videoUrl,
+                    referer = iframeSrc,
+                    quality = Qualities.Unknown.value
+                )
+            )
+            return true
+        }
+    }
+
+    // Fallback: look for JSON-LD data containing video URL
+    document.select("script[type=application/ld+json]").firstOrNull()?.data()?.let { jsonData ->
+        val contentUrl = Regex("\"contentUrl\"\\s*:\\s*\"([^\"]+)\"").find(jsonData)?.groupValues?.get(1)
+        if (!contentUrl.isNullOrEmpty()) {
+            callback.invoke(
+                ExtractorLink(
+                    name = this.name,
+                    source = this.name,
+                    url = contentUrl,
+                    referer = data,
+                    quality = Qualities.Unknown.value
+                )
+            )
+            return true
+        }
+    }
+
+    return false
+}
 }
