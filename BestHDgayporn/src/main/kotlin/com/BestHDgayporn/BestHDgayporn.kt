@@ -100,14 +100,17 @@ class BestHDgayporn : MainAPI() {
     val directVideoUrl = document.selectFirst("video#player_html5_api")?.attr("src")
     if (!directVideoUrl.isNullOrEmpty()) {
         callback.invoke(
-            ExtractorLink(
+            newExtractorLink(
                 name = this.name,
                 source = this.name,
                 url = directVideoUrl,
-                referer = data,
-                quality = Qualities.Unknown.value
-            )
+                type = INFER_TYPE
+                    ) {
+                this.referer = mainUrl
+                this.quality = getQualityFromName(quality)
+            }
         )
+        
         return true
     }
 
@@ -120,16 +123,18 @@ class BestHDgayporn : MainAPI() {
         
         if (!videoUrl.isNullOrEmpty()) {
             callback.invoke(
-                ExtractorLink(
-                    name = this.name,
-                    source = this.name,
-                    url = videoUrl,
-                    referer = iframeSrc,
-                    quality = Qualities.Unknown.value
-                )
-            )
-            return true
-        }
+            newExtractorLink(
+                name = this.name,
+                source = this.name,
+                url = directVideoUrl,
+                type = INFER_TYPE
+                    ) {
+                this.referer = mainUrl
+                this.quality = getQualityFromName(quality)
+            }
+        )   
+        return true
+    }
     }
 
     // Fallback: look for JSON-LD data containing video URL
@@ -137,18 +142,20 @@ class BestHDgayporn : MainAPI() {
         val contentUrl = Regex("\"contentUrl\"\\s*:\\s*\"([^\"]+)\"").find(jsonData)?.groupValues?.get(1)
         if (!contentUrl.isNullOrEmpty()) {
             callback.invoke(
-                ExtractorLink(
-                    name = this.name,
-                    source = this.name,
-                    url = contentUrl,
-                    referer = data,
-                    quality = Qualities.Unknown.value
-                )
-            )
-            return true
-        }
+            newExtractorLink(
+                name = this.name,
+                source = this.name,
+                url = directVideoUrl,
+                type = INFER_TYPE
+                    ) {
+                this.referer = mainUrl
+                this.quality = getQualityFromName(quality)
+            }
+        )
+        
+        return true
     }
-
     return false
+    }
 }
 }
