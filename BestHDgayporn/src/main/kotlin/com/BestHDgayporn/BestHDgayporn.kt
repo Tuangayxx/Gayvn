@@ -125,7 +125,7 @@ class BestHDgayporn : MainAPI() {
             newExtractorLink(
                 name = this.name,
                 source = this.name,
-                url = directVideoUrl,
+                url = videoUrl,
                 type = INFER_TYPE
                     ) {
                 this.referer = mainUrl
@@ -143,7 +143,7 @@ class BestHDgayporn : MainAPI() {
             newExtractorLink(
                 name = this.name,
                 source = this.name,
-                url = directVideoUrl,
+                url = contentUrl,
                 type = INFER_TYPE
                     ) {
                 this.referer = mainUrl
