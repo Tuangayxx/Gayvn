@@ -25,58 +25,26 @@ class GaypornHDfree : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    private val cloudflareKiller = CloudflareKiller()
-
-    companion object {
-        private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0"
-    }
-
-    private val webViewResolver = WebViewResolver(
-        userAgent = USER_AGENT,
-        interceptUrl = Regex(".*gaypornhdfree\\.com.*cloudflare.*") // Sửa regex
+    override val mainPage = mainPageOf(
+        "$mainUrl/" to "Latest",
+        "$mainUrl/category/onlyfans/" to "Onlyfans",
     )
-
-    val requestInterceptors: List<Interceptor> = listOf(
-        webViewResolver,
-        cloudflareKiller
-    )
-
-    private val headers = mapOf("User-Agent" to USER_AGENT)
 
     private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
 
-    override val mainPage = mainPageOf(
-        "2025" to "Latest Updates",
-        "2025/07" to "July",
-        "2025/06" to "June",
-        "2025/05" to "May",
-        "2025/04" to "April",     
-        "category/onlyfans" to "Onlyfans",
-        "category/movies" to "Movies",
-        "category/asian-gay-porn-hd" to "Asian",
-        "category/western-gay-porn-hd" to "Western",
-        "category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c" to "Magazines",
-        "category/hunk-channel" to "Hunk Channel",
-    )
-
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse { // Sửa kiểu trả về
-        val url = when {
-            request.data.startsWith("category") && page > 1 -> "$mainUrl/${request.data}/page/$page" // Sửa điều kiện
-            page > 1 -> "$mainUrl/${request.data}/page/$page"
-            else -> "$mainUrl/${request.data}"
-        }
-
-        val document = app.get(url, headers = headers).document
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+        val url = if (page > 1) "${request.data}page/$page/" else request.data
+        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+        val document = app.get(url, headers = ua).document
         val home = document.select("div.videopost").mapNotNull { it.toSearchResult() }
-        val hasNext = document.select("a.next.page-numbers").isNotEmpty()
 
         return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
+            list    = HomePageList(
+                name               = request.name,
+                list               = home,
                 isHorizontalImages = true
             ),
-            hasNext = hasNext
+            hasNext = true
         )
     }
 
