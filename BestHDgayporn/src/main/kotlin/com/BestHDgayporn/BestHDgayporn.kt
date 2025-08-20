@@ -92,7 +92,7 @@ class BestHDgayporn : MainAPI() {
 
         val actors = listOf("Flynn Fenix", "Nicholas Ryder").filter { title.contains(it) }
 
-        val recommendations = document.select("div.aiovg-item-tag").mapNotNull {
+        val recommendations = doc.select("div.aiovg-item-tag").mapNotNull {
             it.toRecommendResult()
     }
 
