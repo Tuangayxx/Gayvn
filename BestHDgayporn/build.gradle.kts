@@ -1,9 +1,9 @@
-version = 1
+version = 2
 
 cloudstream {
     authors     = listOf("Gayvn")
     language    = "en"
-    description = "BestHDgayporn is the best free full length porn video site. Choose from millions of hardcore videos that stream quickly and in high quality and only full length"
+    description = "BestHDgayporn is Stream and download fan content as well as scenes from your favorite studios. This site is up updated daily and is always 100% free gay porn"
 
     /**
      * Status int as the following:

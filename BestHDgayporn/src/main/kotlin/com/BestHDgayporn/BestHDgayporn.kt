@@ -30,7 +30,10 @@ class BestHDgayporn : MainAPI() {
         "$mainUrl/" to "Latest",
         "$mainUrl/video-tag/men-com/" to "MEN.com",
         "$mainUrl/video-tag/bareback-gay-porn/" to "Bareback",
-        "$mainUrl/video-tag/onlyfans/" to "Onlyfans"
+        "$mainUrl/video-tag/onlyfans/" to "Onlyfans",
+        "$mainUrl/video-tag/latino/" to "Latino",
+        "$mainUrl/search-videos/?vi=gang+bang/" to "Gang Bang",
+        "$mainUrl/video-tag/chaos-men/" to "Chaos Men",
     )
 
     private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
