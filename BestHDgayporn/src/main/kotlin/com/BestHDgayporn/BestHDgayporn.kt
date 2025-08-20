@@ -89,36 +89,79 @@ class BestHDgayporn : MainAPI() {
     }
 
         override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val doc = app.get(data).document
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
+    val res = app.get(data, headers = headers)
+    val doc = res.document
 
-        // Lấy src từ <video> trước, nếu không có thì lấy <source>
-        val rawSrc = doc.selectFirst("video[src]")?.attr("abs:src")
-            ?: doc.select("source[src]").firstOrNull()?.attr("abs:src")
+    val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
+    val found = mutableListOf<String>()
 
-        val link = rawSrc?.trim().orEmpty()
-        if (link.isEmpty()) return false
+    // 1) JSON-LD contentUrl
+    doc.select("script[type=application/ld+json]").forEach { s ->
+        urlRegex.findAll(s.data()).forEach { m -> found.add(m.value) }
+    }
 
+    // 2) video / source / data- attributes
+    doc.select("video[src], video > source[src], source[src], video[data-src], source[data-src]").forEach { e ->
+        val v = e.attr("abs:src").ifEmpty { e.attr("abs:data-src") }
+        if (v.isNotBlank()) found.add(v)
+    }
+
+    // 3) iframe embed -> fetch embed and scan
+    doc.select("iframe[src]").mapNotNull { it.attr("abs:src").takeIf { it.isNotBlank() } }.forEach { iframeUrl ->
+        try {
+            val iframeDoc = app.get(iframeUrl, headers = headers).document
+            urlRegex.findAll(iframeDoc.html()).forEach { m -> found.add(m.value) }
+            iframeDoc.select("video[src], source[src]").forEach { el ->
+                val v = el.attr("abs:src").ifEmpty { el.attr("abs:data-src") }
+                if (v.isNotBlank()) found.add(v)
+            }
+        } catch (e: Exception) {
+            // ignore iframe fetch errors
+        }
+    }
+
+    // 4) fallback: scan whole HTML
+    urlRegex.findAll(doc.html()).forEach { found.add(it.value) }
+
+    // Normalize + dedupe
+    val candidates = found.map { it.trim().replace("&amp;", "&").replace(" ", "%20") }
+        .filter { it.isNotBlank() }
+        .distinct()
+
+    if (candidates.isEmpty()) {
+        println("DEBUG: No video links found for $data")
+        return false
+    }
+
+    // Emit mỗi link
+    candidates.forEachIndexed { i, url ->
+        val friendlyName = when {
+            url.contains("aucdn.net", ignoreCase = true) -> "CDN"
+            url.contains("besthdgayporn.com", ignoreCase = true) -> "Origin"
+            else -> "Direct"
+        }
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Direct",
-                url = link
+                name = "$friendlyName ${i + 1}",
+                url = url
             ) {
-                // Referer thường cần thiết cho direct MP4 trên cùng domain
                 this.referer = data
-                // Nếu muốn đoán chất lượng từ tên file (nếu có 720/1080…)
-                this.quality = getQualityFromName(link) ?: Qualities.Unknown.value
-                // Nếu site kén UA thì thêm:
-                this.headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
+                this.isM3u8 = url.contains(".m3u8", ignoreCase = true)
+                this.quality = getQualityFromName(url) ?: Qualities.Unknown.value
+                this.headers = headers
             }
         )
-        return true
     }
+
+    return true
+}
 }
     
     
