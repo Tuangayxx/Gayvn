@@ -114,7 +114,7 @@ class BestHDgayporn : MainAPI() {
                 // Nếu muốn đoán chất lượng từ tên file (nếu có 720/1080…)
                 this.quality = getQualityFromName(link) ?: Qualities.Unknown.value
                 // Nếu site kén UA thì thêm:
-                // this.headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
+                this.headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
             }
         )
         return true
