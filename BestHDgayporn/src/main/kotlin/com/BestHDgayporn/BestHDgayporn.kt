@@ -107,7 +107,6 @@ class BestHDgayporn : MainAPI() {
                 type = INFER_TYPE
                     ) {
                 this.referer = mainUrl
-                this.quality = getQualityFromName(quality)
             }
         )
         
@@ -130,7 +129,6 @@ class BestHDgayporn : MainAPI() {
                 type = INFER_TYPE
                     ) {
                 this.referer = mainUrl
-                this.quality = getQualityFromName(quality)
             }
         )   
         return true
@@ -149,7 +147,6 @@ class BestHDgayporn : MainAPI() {
                 type = INFER_TYPE
                     ) {
                 this.referer = mainUrl
-                this.quality = getQualityFromName(quality)
             }
         )
         
