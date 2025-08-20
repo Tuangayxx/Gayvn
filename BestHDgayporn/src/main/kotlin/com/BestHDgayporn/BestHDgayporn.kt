@@ -153,7 +153,6 @@ class BestHDgayporn : MainAPI() {
                 url = url
             ) {
                 this.referer = data
-                this.isM3u8 = url.contains(".m3u8", ignoreCase = true)
                 this.quality = getQualityFromName(url) ?: Qualities.Unknown.value
                 this.headers = headers
             }
