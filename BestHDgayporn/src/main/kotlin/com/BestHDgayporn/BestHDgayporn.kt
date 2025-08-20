@@ -62,6 +62,17 @@ class BestHDgayporn : MainAPI() {
         }
     }
 
+    private fun Element.toRecommendResult(): SearchResponse? {
+        val aTag = this.selectFirst("a") ?: return null
+        val href = aTag.attr("href")
+        val posterUrl = this.select("img").attr("src")
+        val title = this.selectFirst(".aiovg-link-title")?.text()?.trim() ?: "No Title"
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = fixUrlNull(posterUrl)
+        }
+    }
+
     override suspend fun search(query: String): List<SearchResponse> {
         val searchUrl = "$mainUrl/?s=$query"
         val document = app.get(searchUrl).document
@@ -81,10 +92,15 @@ class BestHDgayporn : MainAPI() {
 
         val actors = listOf("Flynn Fenix", "Nicholas Ryder").filter { title.contains(it) }
 
+        val recommendations = document.select("div.aiovg-item-tag").mapNotNull {
+            it.toRecommendResult()
+    }
+
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
             if (actors.isNotEmpty()) addActors(actors)
+            this.recommendations = recommendations
         }
     }
 
