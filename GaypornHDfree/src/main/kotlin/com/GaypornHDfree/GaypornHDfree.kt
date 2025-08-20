@@ -67,7 +67,7 @@ class GaypornHDfree : MainAPI() {
 
         for (i in 1..5) {
             val encodedQuery = URLEncoder.encode(query, "UTF-8")
-            val document = app.get("$mainUrl/?s=$encodedQuery&page=$i", headers = headers).document
+            val document = app.get("$mainUrl/?s=$encodedQuery&page=$i" ).document
             val results = document.select("div.videopost").mapNotNull { it.toSearchResult() }
                 .filterNot { seenUrls.contains(it.url) }
 
@@ -81,7 +81,8 @@ class GaypornHDfree : MainAPI() {
     }
        
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url, headers = headers).document
+        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+        val document = app.get(url, headers = ua).document
 
         val title = document.selectFirst("meta[property='og:title']")?.attr("content")?.trim() ?: ""
         val poster = document.selectFirst("meta[property='og:image']")?.attr("content") ?: ""
@@ -104,6 +105,7 @@ class GaypornHDfree : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)        
         val document = app.get(data, headers = headers).document
         val videoUrls = mutableSetOf<String>()
 
