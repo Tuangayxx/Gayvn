@@ -88,71 +88,39 @@ class BestHDgayporn : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val document = app.get(data).document
-    
-    // First try to find direct video source
-    val directVideoUrl = document.selectFirst("video#player_html5_api")?.attr("src")
-    if (!directVideoUrl.isNullOrEmpty()) {
+        override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val doc = app.get(data).document
+
+        // Lấy src từ <video> trước, nếu không có thì lấy <source>
+        val rawSrc = doc.selectFirst("video[src]")?.attr("abs:src")
+            ?: doc.select("source[src]").firstOrNull()?.attr("abs:src")
+
+        val link = rawSrc?.trim().orEmpty()
+        if (link.isEmpty()) return false
+
         callback.invoke(
             newExtractorLink(
-                name = this.name,
                 source = this.name,
-                url = directVideoUrl,
-                type = INFER_TYPE
-                    ) {
-                this.referer = mainUrl
+                name = "Direct",
+                url = link
+            ) {
+                // Referer thường cần thiết cho direct MP4 trên cùng domain
+                this.referer = data
+                // Nếu là HLS
+                this.isM3u8 = link.contains(".m3u8", ignoreCase = true)
+                // Nếu muốn đoán chất lượng từ tên file (nếu có 720/1080…)
+                this.quality = getQualityFromName(link) ?: Qualities.Unknown.value
+                // Nếu site kén UA thì thêm:
+                // this.headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
             }
         )
-        
         return true
     }
-
-    // If no direct video found, try to find iframe source
-    val iframeSrc = document.selectFirst("div.aiovg-player iframe")?.attr("src")
-    if (!iframeSrc.isNullOrEmpty()) {
-        // If iframe found, get its content and look for video
-        val iframeDoc = app.get(iframeSrc).document
-        val videoUrl = iframeDoc.selectFirst("video#player_html5_api")?.attr("src")
-        
-        if (!videoUrl.isNullOrEmpty()) {
-            callback.invoke(
-            newExtractorLink(
-                name = this.name,
-                source = this.name,
-                url = videoUrl,
-                type = INFER_TYPE
-                    ) {
-                this.referer = mainUrl
-            }
-        )   
-        return true
-    }
-    }
-
-    // Fallback: look for JSON-LD data containing video URL
-    document.select("script[type=application/ld+json]").firstOrNull()?.data()?.let { jsonData ->
-        val contentUrl = Regex("\"contentUrl\"\\s*:\\s*\"([^\"]+)\"").find(jsonData)?.groupValues?.get(1)
-        if (!contentUrl.isNullOrEmpty()) {
-            callback.invoke(
-            newExtractorLink(
-                name = this.name,
-                source = this.name,
-                url = contentUrl,
-                type = INFER_TYPE
-                    ) {
-                this.referer = mainUrl
-            }
-        )
-        
-        return true
-    }
-    }
-        return false
 }
-}
+    
+    
