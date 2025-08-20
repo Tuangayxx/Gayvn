@@ -12,7 +12,7 @@ cloudstream {
      * 2: Slow
      * 3: Beta only
     **/
-    status  = 1 // will be 3 if unspecified
+    status  = 0 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
     iconUrl = "https://gayxx.net/wp-content/themes/yolotube-mod-v2/images/logo.png"
 }

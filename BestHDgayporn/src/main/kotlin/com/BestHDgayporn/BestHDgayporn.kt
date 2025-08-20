@@ -111,8 +111,6 @@ class BestHDgayporn : MainAPI() {
             ) {
                 // Referer thường cần thiết cho direct MP4 trên cùng domain
                 this.referer = data
-                // Nếu là HLS
-                this.isM3u8 = link.contains(".m3u8", ignoreCase = true)
                 // Nếu muốn đoán chất lượng từ tên file (nếu có 720/1080…)
                 this.quality = getQualityFromName(link) ?: Qualities.Unknown.value
                 // Nếu site kén UA thì thêm:
