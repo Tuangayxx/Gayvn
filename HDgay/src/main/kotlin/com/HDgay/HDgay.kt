@@ -30,7 +30,7 @@ class HDgay : MainAPI() {
         "/2025/02" to "Tháng hai",
         "/2025/01" to "Tháng một",
         "/category/asian-gay-sex" to "Asian",
-        "/hottest-gay-porn-sex/?type=month" to "Hottest",
+        "/hottest-gay-porn-sex" to "Hottest",
         "/category/gay-thailand" to "Thailand",
         "/tag/of/"                 to "Onlyfans",
         "/hottest-gay-porn-sex" to "Hot Videos",

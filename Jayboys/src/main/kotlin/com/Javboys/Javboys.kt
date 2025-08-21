@@ -23,17 +23,21 @@ class Jayboys : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "/2025/" to "Latest Updates",
-        "/2025/07/" to "7",
-        "/2025/06/" to "6",
-        "/2025/05/" to "5",
-        "/2025/04/" to "4",     
+        "/2025/" to "Latest Updates",  
         "/category/onlyfans/" to "Onlyfans",
         "/category/movies/" to "Movies",
         "/category/asian-gay-porn-hd/" to "Châu Á",
+        "/category/tag/gaysianhole/" to "Lỗ Á",
         "/category/western-gay-porn-hd/" to "Châu Mỹ Âu",
         "/category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c/" to "Tạp chí",
         "/category/hunk-channel/" to "Hunk Channel",
+        "/2025/07/" to "7",
+        "/2025/06/" to "6",
+        "/2025/05/" to "5",
+        "/2025/04/" to "4",  
+        "/2025/03/" to "3",
+        "/2025/02/" to "2",
+        "/2025/01/" to "1",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
