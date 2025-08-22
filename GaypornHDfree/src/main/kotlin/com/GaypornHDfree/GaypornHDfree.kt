@@ -249,16 +249,23 @@ class GaypornHDfree : MainAPI() {
                     
                     // Thử extract trực tiếp trước
                     if (fixedUrl.contains(".mp4") || fixedUrl.contains(".m3u8")) {
-                        callback.invoke(
-                            ExtractorLink(
-                                name,
+                        val extractorLink = if (fixedUrl.contains(".m3u8")) {
+                            M3u8Helper.generateM3u8(
                                 name,
                                 fixedUrl,
-                                data,
-                                Qualities.Unknown.value,
-                                fixedUrl.contains(".m3u8")
+                                data
+                            ).forEach(callback)
+                        } else {
+                            callback.invoke(
+                                ExtractorLink(
+                                    name,
+                                    name,
+                                    fixedUrl,
+                                    data,
+                                    Qualities.Unknown.value
+                                )
                             )
-                        )
+                        }
                     } else {
                         // Thử các extractors
                         loadExtractor(fixedUrl, subtitleCallback, callback)
