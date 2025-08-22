@@ -45,9 +45,14 @@ class GaypornHDfree : MainAPI() {
         
         try {
             val document = app.get(url, headers = standardHeaders).document
-            val home = document.select("div.videopost").mapNotNull { 
+            
+            // Debug: Log toàn bộ HTML structure
+            Log.d("GaypornHDfree", "Page HTML preview: ${document.select("div").take(3).map { it.className() }}")
+            
+            val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article").mapNotNull { element ->
                 try {
-                    it.toSearchResult()
+                    Log.d("GaypornHDfree", "Processing element with classes: ${element.className()}")
+                    element.toSearchResult()
                 } catch (e: Exception) {
                     Log.e("GaypornHDfree", "Error parsing search result: ${e.message}")
                     null
@@ -70,34 +75,61 @@ class GaypornHDfree : MainAPI() {
 
     private fun Element.toSearchResult(): SearchResponse? {
         return try {
-            // Thử nhiều selector khác nhau để tìm title
-            val titleElement = this.selectFirst("div.deno.video-title a") 
+            Log.d("GaypornHDfree", "Parsing element HTML: ${this.html()}")
+            
+            // Thử tất cả các selector có thể để tìm title và link
+            val titleElement = this.selectFirst("a[href*='/video/']") 
+                ?: this.selectFirst("a[href*='.html']")
                 ?: this.selectFirst("a[title]")
-                ?: this.selectFirst("h3 a")
-                ?: this.selectFirst(".video-title a")
-                ?: return null
-                
+                ?: this.selectFirst("h2 a, h3 a, h4 a")
+                ?: this.selectFirst("div.title a")
+                ?: this.selectFirst("div.video-title a")
+                ?: this.selectFirst("div.deno.video-title a")
+                ?: this.selectFirst("a")
+            
+            if (titleElement == null) {
+                Log.e("GaypornHDfree", "No title element found")
+                return null
+            }
+            
             val title = titleElement.text().trim().ifEmpty { 
                 titleElement.attr("title").trim()
+            }.ifEmpty {
+                titleElement.attr("alt").trim()
             }
-            if (title.isEmpty()) return null
+            
+            if (title.isEmpty()) {
+                Log.e("GaypornHDfree", "No title text found")
+                return null
+            }
             
             val href = fixUrl(titleElement.attr("href"))
-            if (href.isEmpty()) return null
+            if (href.isEmpty() || href == mainUrl) {
+                Log.e("GaypornHDfree", "Invalid href: $href")
+                return null
+            }
             
-            // Thử nhiều selector khác nhau để tìm poster
-            val img = this.selectFirst("a.thumb-video img") 
-                ?: this.selectFirst("img")
-                ?: this.selectFirst(".thumbnail img")
+            // Tìm poster - thử tất cả các khả năng
+            val img = this.selectFirst("img") 
+                ?: this.selectFirst("video")
+                ?: titleElement.selectFirst("img")
             
             val poster = img?.let { imgEl ->
-                listOf("src", "data-src", "data-lazy-src", "data-original").map { attr ->
-                    imgEl.attr(attr)
-                }.firstOrNull { it.isNotEmpty() }
+                val attrs = listOf("data-src", "data-lazy-src", "data-original", "src", "poster")
+                attrs.map { attr -> imgEl.attr(attr) }
+                    .firstOrNull { it.isNotEmpty() && !it.contains("placeholder") }
             } ?: ""
+            
+            Log.d("GaypornHDfree", "Found: title='$title', href='$href', poster='$poster'")
 
             newMovieSearchResponse(title, href, TvType.NSFW) {
-                this.posterUrl = if (poster.startsWith("http")) poster else fixUrl(poster)
+                this.posterUrl = when {
+                    poster.isEmpty() -> ""
+                    poster.startsWith("http") -> poster
+                    poster.startsWith("//") -> "https:$poster"
+                    poster.startsWith("/") -> "$mainUrl$poster"
+                    else -> "$mainUrl/$poster"
+                }
             }
         } catch (e: Exception) {
             Log.e("GaypornHDfree", "Error in toSearchResult: ${e.message}")
@@ -115,7 +147,11 @@ class GaypornHDfree : MainAPI() {
                 val searchUrl = "$mainUrl/?s=$encodedQuery&page=$i"
                 
                 val document = app.get(searchUrl, headers = standardHeaders).document
-                val results = document.select("div.videopost, .video-item, .post").mapNotNull { 
+                
+                // Log để debug
+                Log.d("GaypornHDfree", "Search page classes: ${document.select("div").take(5).map { it.className() }}")
+                
+                val results = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article").mapNotNull { 
                     try {
                         it.toSearchResult()
                     } catch (e: Exception) {
