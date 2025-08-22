@@ -250,7 +250,7 @@ class GaypornHDfree : MainAPI() {
                     // Thử extract trực tiếp trước
                     if (fixedUrl.contains(".mp4") || fixedUrl.contains(".m3u8")) {
                         callback.invoke(
-                            ExtractorLink(
+                            newExtractorLink(
                                 source = name,
                                 name = name,
                                 url = fixedUrl,
