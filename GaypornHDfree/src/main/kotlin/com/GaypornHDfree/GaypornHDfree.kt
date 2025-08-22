@@ -247,29 +247,9 @@ class GaypornHDfree : MainAPI() {
                     
                     Log.d("GaypornHDfree", "Processing URL: $fixedUrl")
                     
-                    // Thử extract trực tiếp trước
-                    if (fixedUrl.contains(".mp4") || fixedUrl.contains(".m3u8")) {
-                        val extractorLink = if (fixedUrl.contains(".m3u8")) {
-                            M3u8Helper.generateM3u8(
-                                name,
-                                fixedUrl,
-                                data
-                            ).forEach(callback)
-                        } else {
-                            callback.invoke(
-                                ExtractorLink(
-                                    name,
-                                    name,
-                                    fixedUrl,
-                                    data,
-                                    Qualities.Unknown.value
-                                )
-                            )
-                        }
-                    } else {
-                        // Thử các extractors
-                        loadExtractor(fixedUrl, subtitleCallback, callback)
-                    }
+                    // Thử extract với loadExtractor
+                    Log.d("GaypornHDfree", "Processing URL: $fixedUrl")
+                    loadExtractor(fixedUrl, subtitleCallback, callback)
                 } catch (e: Exception) {
                     Log.e("GaypornHDfree", "Error processing URL $url: ${e.message}")
                 }
