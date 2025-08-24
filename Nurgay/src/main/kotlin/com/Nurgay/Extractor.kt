@@ -44,6 +44,11 @@ open class VID : ExtractorApi() {
     }
 }
 
+class boynextdoors : Voe() {
+    override var mainUrl = "https://boynextdoors.link"
+    override var name = "boynextdoors"
+}
+
 class Bigwarpio : Bigwarp() {
     override var mainUrl = "https://bigwarp.io/"
 }
