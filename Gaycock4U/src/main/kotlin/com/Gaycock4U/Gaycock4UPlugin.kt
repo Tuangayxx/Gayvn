@@ -12,5 +12,9 @@ import com.lagradost.cloudstream3.extractors.*
 class Gaycock4UPlugin: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Gaycock4U())
+        registerExtractorAPI(DoodLaExtractor())
+        registerExtractorAPI(dsio())
+        registerExtractorAPI(DoodstreamCom())
+        registerExtractorAPI(vide0())
     }
 }
