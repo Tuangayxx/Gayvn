@@ -234,7 +234,7 @@ class GaypornHDfree : MainAPI() {
         }
     }
 
-    private fun parseLoadResponse(document: Document, url: String): LoadResponse {
+    private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
         // Thử nhiều cách để lấy title
         val title = listOf(
             document.selectFirst("meta[property='og:title']")?.attr("content"),
