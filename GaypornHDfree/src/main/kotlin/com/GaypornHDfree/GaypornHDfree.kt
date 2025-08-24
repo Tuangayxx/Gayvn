@@ -44,33 +44,61 @@ class GaypornHDfree : MainAPI() {
         val url = if (page > 1) "${request.data}page/$page/" else request.data
         
         try {
-            val document = app.get(url, headers = standardHeaders).document
+            // Sử dụng WebView để bypass Cloudflare
+            val document = app.get(
+                url, 
+                headers = standardHeaders,
+                interceptor = CloudflareKiller()
+            ).document
             
-            // Debug: Log toàn bộ HTML structure
-            Log.d("GaypornHDfree", "Page HTML preview: ${document.select("div").take(3).map { it.className() }}")
-            
-            val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article").mapNotNull { element ->
-                try {
-                    Log.d("GaypornHDfree", "Processing element with classes: ${element.className()}")
-                    element.toSearchResult()
-                } catch (e: Exception) {
-                    Log.e("GaypornHDfree", "Error parsing search result: ${e.message}")
-                    null
-                }
+            // Nếu gặp Cloudflare challenge, dùng WebViewResolver
+            if (document.selectFirst("div.main-wrapper")?.text()?.contains("gaypornhdfree.com cần đánh giá") == true ||
+                document.html().contains("challenge-platform")) {
+                
+                Log.d("GaypornHDfree", "Cloudflare detected, using WebView...")
+                
+                val webViewDocument = WebViewResolver(
+                    Regex("""gaypornhdfree\.com""")
+                ).resolveUsingWebView(
+                    requestCreator = {
+                        app.get(url, headers = standardHeaders)
+                    }
+                ).document
+                
+                return parseMainPageContent(webViewDocument, request.name)
+            } else {
+                return parseMainPageContent(document, request.name)
             }
-
-            return newHomePageResponse(
-                list = HomePageList(
-                    name = request.name,
-                    list = home,
-                    isHorizontalImages = true
-                ),
-                hasNext = home.isNotEmpty() // Chỉ có next nếu có kết quả
-            )
+            
         } catch (e: Exception) {
             Log.e("GaypornHDfree", "Error in getMainPage: ${e.message}")
             return newHomePageResponse(HomePageList(request.name, listOf()), false)
         }
+    }
+
+    private fun parseMainPageContent(document: Document, requestName: String): HomePageResponse {
+        // Debug: Log toàn bộ HTML structure
+        Log.d("GaypornHDfree", "Page title: ${document.title()}")
+        Log.d("GaypornHDfree", "Page classes: ${document.select("div").take(5).map { it.className() }}")
+        
+        val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article, .post").mapNotNull { element ->
+            try {
+                Log.d("GaypornHDfree", "Processing element with classes: ${element.className()}")
+                element.toSearchResult()
+            } catch (e: Exception) {
+                Log.e("GaypornHDfree", "Error parsing search result: ${e.message}")
+                null
+            }
+        }
+
+        return newHomePageResponse(
+            list = HomePageList(
+                name = requestName,
+                list = home,
+                isHorizontalImages = true
+            ),
+            hasNext = home.isNotEmpty() // Chỉ có next nếu có kết quả
+        )
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
@@ -177,31 +205,42 @@ class GaypornHDfree : MainAPI() {
        
     override suspend fun load(url: String): LoadResponse {
         return try {
-            val document = app.get(url, headers = standardHeaders).document
+            val document = try {
+                app.get(url, headers = standardHeaders, interceptor = CloudflareKiller()).document
+            } catch (e: Exception) {
+                Log.d("GaypornHDfree", "Cloudflare detected in load, using WebView...")
+                WebViewResolver(
+                    Regex("""gaypornhdfree\.com""")
+                ).resolveUsingWebView(
+                    requestCreator = {
+                        app.get(url, headers = standardHeaders)
+                    }
+                ).document
+            }
 
             // Thử nhiều cách để lấy title
             val title = listOf(
                 document.selectFirst("meta[property='og:title']")?.attr("content"),
-                document.selectFirst("title")?.text(),
+                document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
                 document.selectFirst("h1")?.text(),
-                document.selectFirst(".video-title")?.text()
+                document.selectFirst(".video-title, .entry-title")?.text()
             ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
 
             // Thử nhiều cách để lấy poster
             val poster = listOf(
                 document.selectFirst("meta[property='og:image']")?.attr("content"),
                 document.selectFirst("video")?.attr("poster"),
-                document.selectFirst(".video-thumb img")?.attr("src")
+                document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
             ).firstOrNull { !it.isNullOrBlank() } ?: ""
 
             // Thử nhiều cách để lấy description
             val description = listOf(
                 document.selectFirst("meta[property='og:description']")?.attr("content"),
                 document.selectFirst("meta[name='description']")?.attr("content"),
-                document.selectFirst(".video-description")?.text()
+                document.selectFirst(".video-description, .entry-content p")?.text()
             ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
 
-            val recommendations = document.select("div.videopost, .related-video, .video-item").take(10).mapNotNull { 
+            val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull { 
                 try {
                     it.toSearchResult()
                 } catch (e: Exception) {
@@ -210,8 +249,16 @@ class GaypornHDfree : MainAPI() {
                 }
             }
 
+            Log.d("GaypornHDfree", "Loaded: title='$title', poster='$poster'")
+
             newMovieLoadResponse(title, url, TvType.NSFW, url) {
-                this.posterUrl = if (poster.startsWith("http")) poster else fixUrl(poster)
+                this.posterUrl = when {
+                    poster.isEmpty() -> ""
+                    poster.startsWith("http") -> poster
+                    poster.startsWith("//") -> "https:$poster"
+                    poster.startsWith("/") -> "$mainUrl$poster"
+                    else -> "$mainUrl/$poster"
+                }
                 this.plot = description
                 this.recommendations = recommendations
             }
