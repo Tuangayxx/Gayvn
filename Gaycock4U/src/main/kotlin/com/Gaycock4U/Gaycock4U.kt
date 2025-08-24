@@ -23,7 +23,7 @@ class Gaycock4U : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "/" to "Latest Updates",  
+        "" to "Latest Updates",  
         "$mainUrl/studio/onlyfans/" to "Onlyfans",
         "$mainUrl/category/latino/" to "Latino",
         "$mainUrl/studio/rawfuckclub/" to "Raw Fuck Club",
@@ -32,9 +32,9 @@ class Gaycock4U : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = when {
-            request.data.startsWith("/category/") && page > 1 -> "$mainUrl${request.data}page/$page/"
-            page > 1 -> "$mainUrl${request.data}page/$page/"
-            else -> "$mainUrl${request.data}"
+            request.data.startsWith("/category/") && page > 1 -> "$mainUrl/${request.data}page/$page/"
+            page > 1 -> "$mainUrl/${request.data}page/$page/"
+            else -> "$mainUrl/${request.data}"
         }
 
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
