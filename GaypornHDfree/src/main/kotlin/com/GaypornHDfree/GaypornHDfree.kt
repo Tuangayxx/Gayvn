@@ -44,28 +44,31 @@ class GaypornHDfree : MainAPI() {
         val url = if (page > 1) "${request.data}page/$page/" else request.data
         
         try {
-            // Sử dụng WebView để bypass Cloudflare
-            val document = app.get(
-                url, 
-                headers = standardHeaders,
-                interceptor = CloudflareKiller()
-            ).document
+            // Thêm cookies và headers để bypass Cloudflare
+            val cfHeaders = standardHeaders + mapOf(
+                "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
+                "Cache-Control" to "no-cache",
+                "Pragma" to "no-cache"
+            )
             
-            // Nếu gặp Cloudflare challenge, dùng WebViewResolver
+            val document = app.get(url, headers = cfHeaders).document
+            
+            // Nếu gặp Cloudflare challenge, thử với WebViewResolver cơ bản
             if (document.selectFirst("div.main-wrapper")?.text()?.contains("gaypornhdfree.com cần đánh giá") == true ||
                 document.html().contains("challenge-platform")) {
                 
-                Log.d("GaypornHDfree", "Cloudflare detected, using WebView...")
+                Log.d("GaypornHDfree", "Cloudflare detected, trying alternative approach...")
                 
-                val webViewDocument = WebViewResolver(
-                    Regex("""gaypornhdfree\.com""")
-                ).resolveUsingWebView(
-                    requestCreator = {
-                        app.get(url, headers = standardHeaders)
-                    }
-                ).document
+                // Thử với delay và retry
+                kotlinx.coroutines.delay(3000)
+                val retryDocument = app.get(url, headers = cfHeaders).document
                 
-                return parseMainPageContent(webViewDocument, request.name)
+                if (retryDocument.html().contains("challenge-platform")) {
+                    Log.w("GaypornHDfree", "Cloudflare still active, returning empty")
+                    return newHomePageResponse(HomePageList(request.name, listOf()), false)
+                } else {
+                    return parseMainPageContent(retryDocument, request.name)
+                }
             } else {
                 return parseMainPageContent(document, request.name)
             }
@@ -205,66 +208,76 @@ class GaypornHDfree : MainAPI() {
        
     override suspend fun load(url: String): LoadResponse {
         return try {
-            val document = try {
-                app.get(url, headers = standardHeaders, interceptor = CloudflareKiller()).document
-            } catch (e: Exception) {
-                Log.d("GaypornHDfree", "Cloudflare detected in load, using WebView...")
-                WebViewResolver(
-                    Regex("""gaypornhdfree\.com""")
-                ).resolveUsingWebView(
-                    requestCreator = {
-                        app.get(url, headers = standardHeaders)
-                    }
-                ).document
-            }
+            val cfHeaders = standardHeaders + mapOf(
+                "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
+                "Cache-Control" to "no-cache"
+            )
+            
+            val document = app.get(url, headers = cfHeaders).document
 
-            // Thử nhiều cách để lấy title
-            val title = listOf(
-                document.selectFirst("meta[property='og:title']")?.attr("content"),
-                document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
-                document.selectFirst("h1")?.text(),
-                document.selectFirst(".video-title, .entry-title")?.text()
-            ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
-
-            // Thử nhiều cách để lấy poster
-            val poster = listOf(
-                document.selectFirst("meta[property='og:image']")?.attr("content"),
-                document.selectFirst("video")?.attr("poster"),
-                document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
-            ).firstOrNull { !it.isNullOrBlank() } ?: ""
-
-            // Thử nhiều cách để lấy description
-            val description = listOf(
-                document.selectFirst("meta[property='og:description']")?.attr("content"),
-                document.selectFirst("meta[name='description']")?.attr("content"),
-                document.selectFirst(".video-description, .entry-content p")?.text()
-            ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
-
-            val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull { 
-                try {
-                    it.toSearchResult()
-                } catch (e: Exception) {
-                    Log.e("GaypornHDfree", "Error parsing recommendation: ${e.message}")
-                    null
+            // Nếu gặp Cloudflare, thử retry
+            if (document.html().contains("challenge-platform")) {
+                Log.d("GaypornHDfree", "Cloudflare detected in load, retrying...")
+                kotlinx.coroutines.delay(3000)
+                val retryDoc = app.get(url, headers = cfHeaders).document
+                
+                if (retryDoc.html().contains("challenge-platform")) {
+                    throw Exception("Cloudflare protection active")
                 }
-            }
-
-            Log.d("GaypornHDfree", "Loaded: title='$title', poster='$poster'")
-
-            newMovieLoadResponse(title, url, TvType.NSFW, url) {
-                this.posterUrl = when {
-                    poster.isEmpty() -> ""
-                    poster.startsWith("http") -> poster
-                    poster.startsWith("//") -> "https:$poster"
-                    poster.startsWith("/") -> "$mainUrl$poster"
-                    else -> "$mainUrl/$poster"
-                }
-                this.plot = description
-                this.recommendations = recommendations
+                return parseLoadResponse(retryDoc, url)
+            } else {
+                return parseLoadResponse(document, url)
             }
         } catch (e: Exception) {
             Log.e("GaypornHDfree", "Error in load: ${e.message}")
             throw e
+        }
+    }
+
+    private fun parseLoadResponse(document: Document, url: String): LoadResponse {
+        // Thử nhiều cách để lấy title
+        val title = listOf(
+            document.selectFirst("meta[property='og:title']")?.attr("content"),
+            document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
+            document.selectFirst("h1")?.text(),
+            document.selectFirst(".video-title, .entry-title")?.text()
+        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
+
+        // Thử nhiều cách để lấy poster
+        val poster = listOf(
+            document.selectFirst("meta[property='og:image']")?.attr("content"),
+            document.selectFirst("video")?.attr("poster"),
+            document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
+        ).firstOrNull { !it.isNullOrBlank() } ?: ""
+
+        // Thử nhiều cách để lấy description
+        val description = listOf(
+            document.selectFirst("meta[property='og:description']")?.attr("content"),
+            document.selectFirst("meta[name='description']")?.attr("content"),
+            document.selectFirst(".video-description, .entry-content p")?.text()
+        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
+
+        val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull { 
+            try {
+                it.toSearchResult()
+            } catch (e: Exception) {
+                Log.e("GaypornHDfree", "Error parsing recommendation: ${e.message}")
+                null
+            }
+        }
+
+        Log.d("GaypornHDfree", "Loaded: title='$title', poster='$poster'")
+
+        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = when {
+                poster.isEmpty() -> ""
+                poster.startsWith("http") -> poster
+                poster.startsWith("//") -> "https:$poster"
+                poster.startsWith("/") -> "$mainUrl$poster"
+                else -> "$mainUrl/$poster"
+            }
+            this.plot = description
+            this.recommendations = recommendations
         }
     }
 
