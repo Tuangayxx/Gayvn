@@ -12,6 +12,7 @@ class NurgayProvider: Plugin() {
         registerMainAPI(Nurgay())
         registerExtractorAPI(VID())
         registerExtractorAPI(Bigwarp())
+        registerExtractorAPI(Bigwarpio())
         registerExtractorAPI(GXtapesnewExtractor())
         registerExtractorAPI(GXtape44Extractor())
         registerExtractorAPI(DoodExtractor())
@@ -19,5 +20,6 @@ class NurgayProvider: Plugin() {
         registerExtractorAPI(DoodExtractor())
         registerExtractorAPI(doodso())
         registerExtractorAPI(dsio())
+        registerExtractorAPI(Voe())
     }
 }

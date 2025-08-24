@@ -44,6 +44,11 @@ open class VID : ExtractorApi() {
     }
 }
 
+class Bigwarpio : Bigwarp() {
+    override var mainUrl = "https://bigwarp.io/"
+}
+
+
 open class Bigwarp : ExtractorApi() {
     override val name = "Bigwarp"
     override val mainUrl = "https://bigwarp.cc/"
