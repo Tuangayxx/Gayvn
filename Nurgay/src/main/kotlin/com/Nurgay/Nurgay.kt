@@ -119,7 +119,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         loadExtractor(url, subtitleCallback, callback)
     }
 
-    return listOf(
+    return callback.invoke(
             newExtractorLink(
                 source = name,
                 name = name,
