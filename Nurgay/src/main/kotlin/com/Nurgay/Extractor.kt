@@ -21,6 +21,7 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.extractors.StreamTape
 import org.json.JSONObject
 
+
 open class VID : ExtractorApi() {
     override var name = "VID Xtapes"
     override var mainUrl = "https://vid.nurgay.to"
@@ -42,6 +43,11 @@ open class VID : ExtractorApi() {
         )
     }
 }
+
+class Bigwarpio : Bigwarp() {
+    override var mainUrl = "https://bigwarp.io/"
+}
+
 
 open class Bigwarp : ExtractorApi() {
     override val name = "Bigwarp"
