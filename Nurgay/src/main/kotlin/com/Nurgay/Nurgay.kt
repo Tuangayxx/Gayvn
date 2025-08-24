@@ -94,21 +94,25 @@ override suspend fun search(query: String): List<SearchResponse> {
 
 
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
 
-        val document = app.get(data).document
+    val document = app.get(data).document
     val videoUrls = mutableSetOf<String>()
 
-        document.select("div.notranslate a[href]").forEach { player ->
-        player.attr("href").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    // Sửa selector để lấy link từ dropdown menu
+    document.select("#mirrorMenu a.mirror-opt").forEach { element ->
+        element.attr("data-url").takeIf { it.isNotBlank() }?.let(videoUrls::add)
     }
 
-    document.select("div.desc a[href]").forEach {
-        it.attr("herf").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    // Thêm các nguồn dự phòng từ JavaScript (nếu cần)
+    val scriptContent = document.select("script").html()
+    val regex = """url":"(https?[^"]+)""".toRegex()
+    regex.findAll(scriptContent).forEach { match ->
+        match.groupValues[1].takeIf { it.isNotBlank() }?.let(videoUrls::add)
     }
 
     videoUrls.forEach { url ->
@@ -116,5 +120,5 @@ override suspend fun search(query: String): List<SearchResponse> {
     }
 
     return videoUrls.isNotEmpty()
-    }
+}
 }
