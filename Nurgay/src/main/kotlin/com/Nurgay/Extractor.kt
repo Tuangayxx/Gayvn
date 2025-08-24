@@ -22,28 +22,6 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 import org.json.JSONObject
 
 
-open class VID : ExtractorApi() {
-    override var name = "VID Xtapes"
-    override var mainUrl = "https://vid.nurgay.to"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val response = app.get(url).document.toString()
-        val link = response.substringAfter("src: '").substringBefore("',")
-        return listOf(
-            newExtractorLink(
-                this.name,
-                this.name,
-                link,
-                type = INFER_TYPE
-            )
-            {
-                this.referer = referer ?: ""
-            }
-        )
-    }
-}
-
 class boynextdoors : Voe() {
     override var mainUrl = "https://boynextdoors.link"
     override var name = "boynextdoors"
@@ -79,34 +57,27 @@ open class Bigwarp : ExtractorApi() {
     }
 }
 
-class GXtapesnewExtractor(
-    override val name: String = "88z.io",
-    override val mainUrl: String = "https://88z.io",
+class NurgayExtractor(
+    override val name: String = "Nurgay",
+    override val mainUrl: String = "https://nurgay.to",
     override val requiresReferer: Boolean = false
 ) : ExtractorApi() {
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val document = app.get(url).document
-        var found = false
+    val document = app.get(data).document
+    val videoUrls = mutableSetOf<String>()
 
-        document.select("#video-code iframe").forEach { iframe ->
-            val src = iframe.attr("src")
-            val videoHash = src.substringAfter("/")
-            val directUrl = "$mainUrl/$videoHash"
-        callback(
-                newExtractorLink(
-                    this.name,
-                    this.name,
-                    directUrl,
-                    ExtractorLinkType.M3U8
-                )
-            )
-        }
+    // Sửa selector để lấy link từ dropdown menu
+    document.select("#mirrorMenu a.mirror-opt").forEach { element ->
+        element.attr("data-url").takeIf { it.isNotBlank() }?.let(videoUrls::add)
     }
+
+    // Thêm các nguồn dự phòng từ JavaScript (nếu cần)
+    val scriptContent = document.select("script").html()
+    val regex = """url":"(https?[^"]+)""".toRegex()
+    regex.findAll(scriptContent).forEach { match ->
+        match.groupValues[1].takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    }
+
+    videoUrls.forEach { url ->
 }
 
 class GXtape44Extractor(
