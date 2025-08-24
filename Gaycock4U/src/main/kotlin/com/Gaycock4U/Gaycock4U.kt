@@ -123,13 +123,13 @@ class Gaycock4U : MainAPI() {
 ): Boolean {
     val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
     val res = app.get(data, headers = headers)
-    val doc = res.document
+    val doc = res.doc
 
     val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
     val found = mutableListOf<String>()
 
     // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
-    document.select("iframe").forEach { iframe ->
+    doc.select("iframe").forEach { iframe ->
         iframe.attr("data-src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
             ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
     }
