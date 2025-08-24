@@ -121,33 +121,50 @@ class Gaycock4U : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+    // Header + request
     val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
     val res = app.get(data, headers = headers)
-    val doc = res.doc // nếu lib của bạn dùng `res.document` thì đổi sang đó
+    // Thường là res.document; nếu lib của bạn dùng res.doc thì đổi lại
+    val doc = try {
+        res.document
+    } catch (e: Throwable) {
+        // Nếu res.document không tồn tại, thử res.doc (nếu lib của bạn có)
+        try {
+            // dùng reflection fallback nếu muốn, hoặc thay bằng res.doc nếu chắc chắn
+            @Suppress("UNCHECKED_CAST")
+            val fallback = res::class.members.firstOrNull { it.name == "doc" || it.name == "document" }
+                ?.call(res) as? org.jsoup.nodes.Document
+            fallback
+        } catch (_: Throwable) {
+            null
+        }
+    } ?: return false // không lấy được HTML -> thoát
 
     val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
     val videoUrls = mutableListOf<String>()
 
-    // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
-    doc.select("iframe").forEach { iframe ->
-        iframe.attr("data-src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
-            ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
+    // 1) Thu thập từ iframe: ưu tiên data-src rồi src
+    for (iframe in doc.select("iframe")) {
+        val dataSrc = iframe.attr("data-src").takeIf { it.isNotBlank() }
+        val src = dataSrc ?: iframe.attr("src").takeIf { it.isNotBlank() }
+        if (src != null) videoUrls.add(src)
     }
 
-    // Tìm URL trực tiếp trong toàn bộ HTML (script, data-attr, ...)
+    // 2) Tìm URL trực tiếp trong toàn bộ HTML (script, attribute, ...)
     urlRegex.findAll(doc.html()).forEach { match ->
         videoUrls.add(match.value)
     }
 
-    // Loại bỏ trùng lặp và lọc rỗng
     val candidates = videoUrls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
 
-    // Gọi callback cho từng link tìm được
-    candidates.forEachIndexed { i, url ->
+    val namePrefix = this.name
+
+    for ((index, url) in candidates.withIndex()) {
+
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "$friendlyName ${i + 1}",
+                name = "$namePrefix ${index + 1}",
                 url = url
             ) {
                 this.referer = data
