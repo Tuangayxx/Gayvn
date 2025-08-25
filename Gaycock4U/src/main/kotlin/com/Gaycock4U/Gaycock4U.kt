@@ -31,16 +31,19 @@ private val headers = mapOf(
     )
 
     override val mainPage = mainPageOf(
-        "" to "Latest Updates",  
-        "$mainUrl/studio/onlyfans/" to "Onlyfans",
+        "" to "Latest Updates",
+        "$mainUrl/category/amateur/" to "Amateur",
+        "$mainUrl/category/bareback/" to "Bareback",
+        "$mainUrl/category/group/" to "Group",
         "$mainUrl/category/latino/" to "Latino",
+        "$mainUrl/studio/onlyfans/" to "Onlyfans",
         "$mainUrl/studio/rawfuckclub/" to "Raw Fuck Club",
         "$mainUrl/studio/ragingstallion/" to "Ragingstallion",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
-            "$mainUrl/page/$page${request.data}"
+            "$mainUrl/${request.data}page/$page"
         } else {
             "$mainUrl/${request.data}"
         }
