@@ -39,19 +39,15 @@ private val headers = mapOf(
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = when {
-            request.data.startsWith("/category/") && page > 1 -> "$mainUrl/${request.data}page/$page/"
-            page > 1 -> "$mainUrl/${request.data}page/$page/"
-            else -> "$mainUrl/${request.data}"
+        val url = if (page > 1) {
+            "$mainUrl/page/$page${request.data}"
+        } else {
+            "$mainUrl/${request.data}"
         }
 
-        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
-        val document = app.get(url, headers = ua).document
+        val document = app.get(url, headers = headers).document
         // Fixed selector - using correct container class
         val home = document.select("article.elementor-post").mapNotNull { it.toSearchResult() }
-
-        // Fixed pagination detection
-        val hasNext = document.selectFirst("a.page-numbers.next") != null
 
         return newHomePageResponse(
             list = HomePageList(
@@ -59,7 +55,7 @@ private val headers = mapOf(
                 list = home,
                 isHorizontalImages = true
             ),
-            hasNext = hasNext
+            hasNext = true
         )
     }
 
