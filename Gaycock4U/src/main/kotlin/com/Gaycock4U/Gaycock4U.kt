@@ -64,7 +64,7 @@ private val headers = mapOf(
 
     private fun Element.toSearchResult(): SearchResponse {
         // Fixed selectors to match actual HTML structure
-        val title = this.selectFirst("a.title")?.text()?.trim() ?: ""
+        val title = this.selectFirst("p.elementor-heading-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a")?.attr("href")?.trim() ?: ""
         val posterUrl = this.selectFirst("a img")?.attr("src")?.trim() ?: ""
         
@@ -74,7 +74,7 @@ private val headers = mapOf(
     }
 
     private fun Element.toRecommendResult(): SearchResponse? {
-        val title = this.selectFirst("a.title")?.text()?.trim() ?: ""
+        val title = this.selectFirst("p.elementor-heading-title a")?.text()?.trim() ?: ""
         val href = this.selectFirst("a")?.attr("href")?.trim() ?: ""
         val posterUrl = this.selectFirst("a img")?.attr("src")?.trim() ?: ""
         
