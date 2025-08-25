@@ -42,7 +42,7 @@ class Gaycock4U : MainAPI() {
 
         val document = app.get(url).document
         // Fixed selector - using correct container class
-        val home = document.select("article.elementor-post").mapNotNull { it.toSearchResult() }
+        val home = document.select("div.elementor-widget-container article.elementor-post").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
@@ -81,7 +81,7 @@ class Gaycock4U : MainAPI() {
         for (i in 1..5) {
             val document = app.get("${mainUrl}/page/$i/?s=$query").document
 
-            val results = document.select("article.elementor-post").mapNotNull { it.toSearchResult() }
+            val results = document.select("div.elementor-widget-container article.elementor-post").mapNotNull { it.toSearchResult() }
 
             if (!searchResponse.containsAll(results)) {
                 searchResponse.addAll(results)
@@ -103,7 +103,7 @@ class Gaycock4U : MainAPI() {
         val poster = fixUrlNull(document.selectFirst("[property='og:image']")?.attr("content"))
         val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
 
-        val recommendations = document.select("article.elementor-post").mapNotNull {
+        val recommendations = document.select("div.elementor-widget-container article.elementor-post").mapNotNull {
             it.toRecommendResult()
     }
 
