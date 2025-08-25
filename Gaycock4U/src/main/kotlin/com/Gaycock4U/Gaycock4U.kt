@@ -22,6 +22,14 @@ class Gaycock4U : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
+private val headers = mapOf(
+        "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language" to "en-US,en;q=0.5",
+        "Connection" to "keep-alive",
+        "Upgrade-Insecure-Requests" to "1"
+    )
+
     override val mainPage = mainPageOf(
         "" to "Latest Updates",  
         "$mainUrl/studio/onlyfans/" to "Onlyfans",
@@ -121,59 +129,29 @@ class Gaycock4U : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    // Header + request
-    val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
-    val res = app.get(data, headers = headers)
-    // Thường là res.document; nếu lib của bạn dùng res.doc thì đổi lại
-    val doc = try {
-        res.document
-    } catch (e: Throwable) {
-        // Nếu res.document không tồn tại, thử res.doc (nếu lib của bạn có)
-        try {
-            // dùng reflection fallback nếu muốn, hoặc thay bằng res.doc nếu chắc chắn
-            @Suppress("UNCHECKED_CAST")
-            val fallback = res::class.members.firstOrNull { it.name == "doc" || it.name == "document" }
-                ?.call(res) as? org.jsoup.nodes.Document
-            fallback
-        } catch (_: Throwable) {
-            null
+    val document = app.get(data, headers = headers).document
+    var found = false
+
+    fun normalize(u: String): String {
+        val url = u.trim()
+        return when {
+            url.isEmpty() -> ""
+            url.startsWith("//") -> "https:$url"
+            else -> url
         }
-    } ?: return false // không lấy được HTML -> thoát
-
-    val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
-    val videoUrls = mutableListOf<String>()
-
-    // 1) Thu thập từ iframe: ưu tiên data-src rồi src
-    for (iframe in doc.select("iframe")) {
-        val dataSrc = iframe.attr("data-src").takeIf { it.isNotBlank() }
-        val src = dataSrc ?: iframe.attr("src").takeIf { it.isNotBlank() }
-        if (src != null) videoUrls.add(src)
     }
 
-    // 2) Tìm URL trực tiếp trong toàn bộ HTML (script, attribute, ...)
-    urlRegex.findAll(doc.html()).forEach { match ->
-        videoUrls.add(match.value)
+    document.select("iframe[src], iframe[data-src]").forEach { f ->
+        val url = f.absUrl("src").ifBlank { f.attr("src") }
+            .ifBlank { f.absUrl("data-src") }
+            .ifBlank { f.attr("data-src") }
+        if (url.isNotBlank()) {
+            found = true
+            loadExtractor(normalize(url), subtitleCallback, callback)
+        }
     }
 
-    val candidates = videoUrls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-
-    val namePrefix = this.name
-
-    for ((index, url) in candidates.withIndex()) {
-
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = "$namePrefix ${index + 1}",
-                url = url
-            ) {
-                this.referer = data
-                this.quality = getQualityFromName(url) ?: Qualities.Unknown.value
-                this.headers = headers
-            }
-        )
-    }
-
-    return true
+    return found
 }
+
 }
