@@ -22,14 +22,6 @@ class Gaycock4U : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-private val headers = mapOf(
-        "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-        "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language" to "en-US,en;q=0.5",
-        "Connection" to "keep-alive",
-        "Upgrade-Insecure-Requests" to "1"
-    )
-
     override val mainPage = mainPageOf(
         "" to "Latest Updates",
         "$mainUrl/category/amateur/" to "Amateur",
@@ -48,7 +40,7 @@ private val headers = mapOf(
             "$mainUrl/${request.data}"
         }
 
-        val document = app.get(url, headers = headers).document
+        val document = app.get(url).document
         // Fixed selector - using correct container class
         val home = document.select("article.elementor-post").mapNotNull { it.toSearchResult() }
 
@@ -128,7 +120,7 @@ private val headers = mapOf(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data, headers = headers).document
+    val document = app.get(data).document
     var found = false
 
     fun normalize(u: String): String {
