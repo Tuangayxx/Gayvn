@@ -99,8 +99,8 @@ override suspend fun search(query: String): List<SearchResponse> {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-
-    val document = app.get(data).document
+    val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
+    val document = app.get(data, header =header).document
     val videoUrls = mutableSetOf<String>()
 
     // Sửa selector để lấy link từ dropdown menu
@@ -125,6 +125,7 @@ override suspend fun search(query: String): List<SearchResponse> {
             ) {
                 this.referer = data
                 this.quality = getQualityFromName(url) ?: Qualities.Unknown.value
+                this.headers = headers
             }
         )
     }
