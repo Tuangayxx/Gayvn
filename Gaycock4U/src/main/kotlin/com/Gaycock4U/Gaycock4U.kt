@@ -48,7 +48,8 @@ class Gaycock4U : MainAPI() {
             "${request.data}"
         }
 
-        val document = app.get(url).document
+        val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
+        val document = app.get(url, headers = ua).document
         // Fixed selector - using correct container class
         val home = document.select("div.elementor-widget-container article.elementor-post").mapNotNull { it.toSearchResult() }
 
