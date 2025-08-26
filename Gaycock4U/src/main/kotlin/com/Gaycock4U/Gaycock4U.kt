@@ -26,8 +26,16 @@ class Gaycock4U : MainAPI() {
         "" to "Latest Updates",
         "$mainUrl/category/amateur/" to "Amateur",
         "$mainUrl/category/bareback/" to "Bareback",
+        "$mainUrl/category/bigcock/" to "Big Cock",
         "$mainUrl/category/group/" to "Group",
+        "$mainUrl/category/hardcore/" to "Hardcore",
         "$mainUrl/category/latino/" to "Latino",
+        "$mainUrl/category/interracial/" to "Interracial",
+        "$mainUrl/category/twink/" to "Twink",
+        "$mainUrl/studio/asianetwork/" to "Asianetwork",
+        "$mainUrl/studio/bromo/" to "Bromo",
+        "$mainUrl/studio/latinonetwork/" to "Latino Network",
+        "$mainUrl/studio/lucasentertainment/" to "Lucas Entertainment",
         "$mainUrl/studio/onlyfans/" to "Onlyfans",
         "$mainUrl/studio/rawfuckclub/" to "Raw Fuck Club",
         "$mainUrl/studio/ragingstallion/" to "Ragingstallion",
@@ -35,9 +43,9 @@ class Gaycock4U : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
-            "$mainUrl/${request.data}page/$page"
+            "${request.data}page/$page"
         } else {
-            "$mainUrl/${request.data}"
+            "${request.data}"
         }
 
         val document = app.get(url).document
