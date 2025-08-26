@@ -101,76 +101,144 @@ override suspend fun search(query: String): List<SearchResponse> {
 ): Boolean {
     val document = app.get(data).document
     var found = false
-
-    // thu thập các url duy nhất để tránh gọi lặp
     val urls = linkedSetOf<String>()
 
-    // normalize an url: handle protocol-relative, relative paths, and invalid cases
     fun normalize(raw: String): String {
         val u = raw.trim()
         if (u.isEmpty()) return ""
-        // ignore JS/data/about pseudo-URLs
-        if (u.startsWith("javascript:", ignoreCase = true)
-            || u.startsWith("data:", ignoreCase = true)
-            || u.startsWith("about:", ignoreCase = true)
-        ) return ""
-        // protocol-relative
+        if (u.startsWith("javascript:", true) || u.startsWith("data:", true) || u.startsWith("about:", true)) return ""
         if (u.startsWith("//")) return "https:$u"
-        // absolute already
         if (u.startsWith("http://") || u.startsWith("https://")) return u
-        // try to resolve relative against document.baseUri()
+        // resolve relative using baseUri of document
         return try {
             val base = java.net.URL(document.baseUri())
             java.net.URL(base, u).toString()
         } catch (e: Exception) {
-            // fallback: return as-is (may be resolved by extractors or fail later)
             u
         }
     }
 
-    // check typical iframe attributes (src, data-src, data-lazy-src, data-embed, etc.)
+    // build embed variants for known hosts
+    fun buildCandidates(orig: String): List<String> {
+        val n = normalize(orig)
+        if (n.isBlank()) return emptyList()
+        val candidates = mutableListOf<String>()
+        candidates += n
+
+        val host = try {
+            java.net.URI(n).host?.lowercase()?.removePrefix("www.") ?: ""
+        } catch (e: Exception) { "" }
+
+        // helper to extract last path token or query id
+        fun extractId(u: String): String {
+            val uri = try { java.net.URI(u) } catch (e: Exception) { return "" }
+            // check query parameters common names
+            val q = uri.query ?: ""
+            val byQuery = listOf("id", "v", "video", "file", "VID").firstOrNull { q.contains("$it=") }?.let {
+                q.split("&").firstOrNull { p -> p.startsWith("$it=") }?.substringAfter("=")
+            } ?: ""
+            if (byQuery?.isNotBlank() == true) return byQuery
+            val path = uri.path ?: ""
+            val last = path.trimEnd('/').substringAfterLast('/')
+            return last
+        }
+
+        val id = extractId(n)
+
+        when {
+            host.contains("voe") -> {
+                if (id.isNotBlank()) {
+                    candidates += "https://$host/e/$id"
+                    candidates += "https://$host/embed/$id"
+                }
+                // sometimes /v/ or /f/ variants
+                candidates += n.replace("/f/", "/e/")
+            }
+            host.contains("d-s.io") || host.contains("d-s") -> {
+                if (id.isNotBlank()) {
+                    candidates += "https://$host/e/$id"
+                    candidates += "https://$host/embed/$id"
+                }
+            }
+            host.contains("bigwarp") -> {
+                if (id.isNotBlank()) {
+                    candidates += "https://$host/e/$id"
+                    candidates += "https://$host/embed/$id"
+                }
+            }
+            host.contains("vinovo") || host.contains("vinov") -> {
+                if (id.isNotBlank()) {
+                    candidates += "https://$host/e/$id"
+                    candidates += "https://$host/embed/$id"
+                }
+            }
+            else -> {
+                // keep original only
+            }
+        }
+
+        // make unique and normalized
+        return candidates.mapNotNull { normalize(it).takeIf { it.isNotBlank() } }.distinct()
+    }
+
+    // collect from iframes (common)
     document.select("iframe").forEach { f ->
-        val candidates = listOf("src", "data-src", "data-lazy-src", "data-embed", "data-srcset")
-        var foundAttr: String? = null
-        for (a in candidates) {
-            // try absUrl first (resolves relative), then raw attr
-            val abs = f.absUrl(a)
-            if (abs.isNotBlank()) { foundAttr = abs; break }
-            val raw = f.attr(a)
-            if (raw.isNotBlank()) { foundAttr = raw; break }
+        // try absUrl first then attributes
+        val attrs = listOf("src", "data-src", "data-lazy-src", "data-embed", "srcdoc")
+        for (a in attrs) {
+            val v = when (a) {
+                "src" -> f.absUrl("src").ifBlank { f.attr("src") }
+                "data-src" -> f.absUrl("data-src").ifBlank { f.attr("data-src") }
+                "data-lazy-src" -> f.absUrl("data-lazy-src").ifBlank { f.attr("data-lazy-src") }
+                "data-embed" -> f.absUrl("data-embed").ifBlank { f.attr("data-embed") }
+                "srcdoc" -> f.attr("srcdoc")
+                else -> ""
+            }
+            if (v.isNotBlank()) {
+                urls += v
+            }
         }
-        // if no candidate found, also try attributes in case plugin uses other names
-        if (foundAttr == null) {
-            val src = f.attr("src")
-            if (src.isNotBlank()) foundAttr = src
-        }
-
-        val n = foundAttr?.let { normalize(it) }.orEmpty()
-        if (n.isNotBlank()) urls += n
     }
 
-    // also look for <video> and <source> tags and common embed anchors
+    // also check <video> <source> and anchors that likely point to players
     document.select("video source[src], video[src]").forEach { s ->
-        s.attr("src").takeIf { it.isNotBlank() }?.let { urls += normalize(it) }
+        s.attr("src").takeIf { it.isNotBlank() }?.let { urls += it }
     }
-
     document.select("a[href]").forEach { a ->
         val href = a.absUrl("href").ifBlank { a.attr("href") }
-        // only add likely embed/player links (avoid all links)
-        if (href.contains("player") || href.contains("embed") || href.contains("stream") || href.contains("cdn")) {
-            normalize(href).takeIf { it.isNotBlank() }?.let { urls += it }
+        if (href.isNotBlank() && (href.contains("voe") || href.contains("d-s.io") || href.contains("bigwarp") || href.contains("vinovo") || href.contains("player") || href.contains("embed") || href.contains("cdn"))) {
+            urls += href
         }
     }
 
-    // call extractor for each unique url
-    for (u in urls) {
-        try {
-            // nếu loadExtractor là suspend và trả về Boolean bạn có thể kiểm tra kết quả
-            val ok = loadExtractor(u, subtitleCallback, callback)
-            if (ok) found = true
-        } catch (e: Exception) {
-            // bỏ qua lỗi 1 url, tiếp tục url khác
+    // prefer processing links that contain our 4 hosts first
+    val preferred = urls.filter { u ->
+        val h = try { java.net.URI(normalize(u)).host?.lowercase() ?: "" } catch (e: Exception) { "" }
+        listOf("voe", "d-s.io", "bigwarp", "vinovo").any { h.contains(it) }
+    }
+    val others = urls.filterNot { preferred.contains(it) }
+    val ordered = (preferred + others).distinct()
+
+    val seenCandidates = linkedSetOf<String>()
+    for (u in ordered) {
+        val candidates = buildCandidates(u)
+        for (c in candidates) {
+            if (seenCandidates.contains(c)) continue
+            seenCandidates += c
+            try {
+                // nếu loadExtractor trả về Boolean thì dùng kết quả; nếu không, chỉ gọi và set found = true khi muốn
+                val ok = loadExtractor(c, subtitleCallback, callback) // giả sử trả về Boolean
+                if (ok) {
+                    found = true
+                    // nếu muốn dừng sớm sau link thành công cho host ưu tiên, uncomment break
+                    // break
+                }
+            } catch (e: Exception) {
+                // log nếu cần, nhưng không throw
+            }
         }
+        // nếu bạn muốn dừng khi đã tìm thấy 1 link thành công, bỏ comment bên dưới
+        // if (found) break
     }
 
     return found
