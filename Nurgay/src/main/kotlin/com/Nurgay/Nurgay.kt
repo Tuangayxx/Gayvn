@@ -100,7 +100,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
-    val document = app.get(data, header =header).document
+    val document = app.get(data, headers = headers).document
     val videoUrls = mutableSetOf<String>()
 
     // Sửa selector để lấy link từ dropdown menu
