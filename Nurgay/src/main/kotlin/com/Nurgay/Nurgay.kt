@@ -119,6 +119,16 @@ override suspend fun search(query: String): List<SearchResponse> {
         loadExtractor(url, subtitleCallback, callback)
     }
 
-    return videoUrls.isNotEmpty()
+    return listOf(
+            newExtractorLink(
+                this.name,
+                this.name,
+                url,
+                type = INFER_TYPE
+            )
+            {
+                this.referer = referer ?: ""
+            }
+        )
 }
 }
