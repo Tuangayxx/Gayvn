@@ -10,16 +10,5 @@ import com.Nurgay.Nurgay
 class NurgayProvider: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Nurgay())
-        registerExtractorAPI(VID())
-        registerExtractorAPI(Bigwarp())
-        registerExtractorAPI(Bigwarpio())
-        registerExtractorAPI(GXtapesnewExtractor())
-        registerExtractorAPI(GXtape44Extractor())
-        registerExtractorAPI(DoodExtractor())
-        registerExtractorAPI(vide0Extractor())
-        registerExtractorAPI(DoodExtractor())
-        registerExtractorAPI(doodso())
-        registerExtractorAPI(dsio())
-        registerExtractorAPI(Voe())
     }
 }
