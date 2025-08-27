@@ -48,6 +48,10 @@ open class yi069website : ExtractorApi() {
     }
 }
 
+class Voe : Voe() {
+    override var mainUrl = "https://voe.sx"
+}
+
 open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
     override val mainUrl = "https://jilliandescribecompany.com"
