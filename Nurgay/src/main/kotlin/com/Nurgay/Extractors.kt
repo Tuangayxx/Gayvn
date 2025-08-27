@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.extractors.StreamTape
+import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.*
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -20,7 +21,7 @@ class Voe : Voe() {
 }
 
 class Voesx : Voesx() {
-    override val name = "Voe"
+    override val name = "Voesx"
     override var mainUrl = "https://voe.sx"
 }
 
@@ -117,7 +118,38 @@ class FileMoon : FilemoonV2() {
     override var name = "FileMoon"
 }
 
-class bigwarp : Bigwarp() {
+class Bgwp : Bigwarp() {
     override var mainUrl = "https://bigwarp.cc"
-    override var name = "Bigwarpcc"
+}
+
+open class Bigwarp : ExtractorApi() {
+    override var name = "Bigwarp"
+    override var mainUrl = "https://bigwarp.io"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val link = app.get(url, allowRedirects = false).headers["location"] ?: url
+        val source = app.get(link).document.selectFirst("body > script").toString()
+        val regex = Regex("""file:\s*\"((?:https?://|//)[^\"]+)""")
+        val matchResult = regex.find(source)
+        val match = matchResult?.groupValues?.get(1)
+
+        if (match != null) {
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = match
+                ) {
+                    this.referer = ""
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+    }
 }
