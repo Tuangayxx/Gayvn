@@ -136,23 +136,3 @@ override suspend fun loadLinks(
     return true
 }
 }
-
-    class VoeExtractor : Voe()  {
-        override var mainUrl = "https://voe.sx"
-        override var name = "VoeExtractor"
-    }
-
-    class Voesx : Voesx()  {
-        override var mainUrl = "https://voe.sx"
-        override var name = "Voesx"
-    }
-
-    class Bigwarp : Bigwarp()  {
-        override var mainUrl = "https://bigwarp.io"
-        override var name = "Bigwarp"
-    }
-
-    class dsio : DoodLaExtractor()  {
-        override var mainUrl = "https://d-s.io"
-        override var name = "dsio"
-    }
