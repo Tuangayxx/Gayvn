@@ -119,11 +119,12 @@ override suspend fun loadLinks(
             newExtractorLink(
                 source = this.name,
                 name = "Mirror ${index + 1}",
-                url = url,
-                referer = data,
-                quality = Qualities.Unknown.value,
+                url = url
+                    )   {
+                referer = data
+                quality = Qualities.Unknown.value
                 headers = headers
-            )
+                    }
         )
     }
 
