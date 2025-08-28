@@ -105,10 +105,14 @@ override suspend fun loadLinks(
     val videoUrls = mutableListOf<String>()
 
     // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
-    document.select("iframe").forEach { iframe ->
+    document.select("div.responsive-player[iframe]").forEach { iframe ->
         iframe.attr("data-src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
             ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
     }
+
+    document.select(ul.dropdown-menu a").forEach { url ->
+        url.attr("data-url").takeIf { it.isNotBlank() }?.let { videoUrls.add(it)}
+            }
 
     // Tìm URL trực tiếp trong toàn bộ HTML (script, data-attr, ...)
     urlRegex.findAll(document.html()).forEach { match ->
