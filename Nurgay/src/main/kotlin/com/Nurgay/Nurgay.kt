@@ -123,7 +123,7 @@ override suspend fun loadLinks(
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "$friendlyName ${i + 1}",
+                name = "Nur ${i + 1}",
                 url = url
             ) {
                 this.referer = data
@@ -135,5 +135,24 @@ override suspend fun loadLinks(
 
     return true
 }
+    class VoeExtractor : Voe()  {
+        override var mainUrl = "https://voe.sx"
+        override var name = "VoeExtractor"
+    }
+
+    class Voesx : Voesx()  {
+        override var mainUrl = "https://voe.sx"
+        override var name = "Voesx"
+    }
+
+    class Bigwarp : Bigwarp()  {
+        override var mainUrl = "https://bigwarp.io"
+        override var name = "Bigwarp"
+    }
+
+    class dsio : DoodLaExtractor()  {
+        override var mainUrl = "https://d-s.io"
+        override var name = "dsio"
+    }
 
 }
