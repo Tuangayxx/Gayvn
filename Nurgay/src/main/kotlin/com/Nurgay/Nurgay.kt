@@ -97,18 +97,43 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    
-    val document = app.get(data).document
-    val videoUrls = mutableSetOf<String>()
+    val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
+    val res = app.get(data, headers = headers)
+    val doc = res.doc // nếu lib của bạn dùng `res.document` thì đổi sang đó
 
-    document.select("ul.dropdown-menu a[data-url]").forEach {
-        it.attr("data-url").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
+    val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
+    val videoUrls = mutableListOf<String>()
+
+    // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
+    doc.select("iframe").forEach { iframe ->
+        iframe.attr("data-src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
+            ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
     }
 
-    videoUrls.forEach { url ->
-        loadExtractor(url, subtitleCallback, callback)
+    // Tìm URL trực tiếp trong toàn bộ HTML (script, data-attr, ...)
+    urlRegex.findAll(doc.html()).forEach { match ->
+        videoUrls.add(match.value)
     }
 
-    return videoUrls.isNotEmpty()
+    // Loại bỏ trùng lặp và lọc rỗng
+    val candidates = videoUrls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
+    // Gọi callback cho từng link tìm được
+    candidates.forEachIndexed { i, url ->
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = "$friendlyName ${i + 1}",
+                url = url
+            ) {
+                this.referer = data
+                this.quality = getQualityFromName(url) ?: Qualities.Unknown.value
+                this.headers = headers
+            }
+        )
     }
+
+    return true
+}
+
 }

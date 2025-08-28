@@ -129,29 +129,43 @@ class Gaycock4U : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
-    var found = false
+    val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
+    val res = app.get(data, headers = headers)
+    val doc = res.doc // nếu lib của bạn dùng `res.document` thì đổi sang đó
 
-    fun normalize(u: String): String {
-        val url = u.trim()
-        return when {
-            url.isEmpty() -> ""
-            url.startsWith("//") -> "https:$url"
-            else -> url
-        }
+    val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
+    val videoUrls = mutableListOf<String>()
+
+    // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
+    doc.select("iframe").forEach { iframe ->
+        iframe.attr("data-src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
+            ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
     }
 
-    document.select("iframe[src], iframe[data-src]").forEach { f ->
-        val url = f.absUrl("src").ifBlank { f.attr("src") }
-            .ifBlank { f.absUrl("data-src") }
-            .ifBlank { f.attr("data-src") }
-        if (url.isNotBlank()) {
-            found = true
-            loadExtractor(normalize(url), subtitleCallback, callback)
-        }
+    // Tìm URL trực tiếp trong toàn bộ HTML (script, data-attr, ...)
+    urlRegex.findAll(doc.html()).forEach { match ->
+        videoUrls.add(match.value)
     }
 
-    return found
+    // Loại bỏ trùng lặp và lọc rỗng
+    val candidates = videoUrls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
+    // Gọi callback cho từng link tìm được
+    candidates.forEachIndexed { i, url ->
+        callback.invoke(
+            newExtractorLink(
+                source = this.name,
+                name = "$friendlyName ${i + 1}",
+                url = url
+            ) {
+                this.referer = data
+                this.quality = getQualityFromName(url) ?: Qualities.Unknown.value
+                this.headers = headers
+            }
+        )
+    }
+
+    return true
 }
 
 }
