@@ -135,6 +135,8 @@ override suspend fun loadLinks(
 
     return true
 }
+}
+
     class VoeExtractor : Voe()  {
         override var mainUrl = "https://voe.sx"
         override var name = "VoeExtractor"
@@ -154,5 +156,3 @@ override suspend fun loadLinks(
         override var mainUrl = "https://d-s.io"
         override var name = "dsio"
     }
-
-}
