@@ -98,45 +98,35 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
-    val res = app.get(data, headers = headers)
-    val document = res.document // nếu lib của bạn dùng `res.document` thì đổi sang đó
+    val document = app.get(data, headers = headers).document
 
-    val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
-    val videoUrls = mutableListOf<String>()
-
-    // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
-    document.select("div.responsive-player[iframe]").forEach { iframe ->
-        iframe.attr("data-src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
-            ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
+    // Extract mirror links from dropdown menu
+    val mirrorLinks = document.select("ul.dropdown-menu a.mirror-opt").mapNotNull {
+        it.attr("data-url").takeIf { url -> url.isNotBlank() }
     }
 
-    document.select("ul.dropdown-menu[a]").forEach { url ->
-        url.attr("data-url").takeIf { it.isNotBlank() }?.let { videoUrls.add(it)}
-            }
-
-    // Tìm URL trực tiếp trong toàn bộ HTML (script, data-attr, ...)
-    urlRegex.findAll(document.html()).forEach { match ->
-        videoUrls.add(match.value)
+    // Also check the currently active iframe
+    val activeIframe = document.selectFirst("#mirrorFrame")?.attr("src")
+    activeIframe?.takeIf { it.isNotBlank() }?.let {
+        if (!mirrorLinks.contains(it)) {
+            mirrorLinks.toMutableList().add(it)
+        }
     }
 
-    // Loại bỏ trùng lặp và lọc rỗng
-    val candidates = videoUrls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-
-    // Gọi callback cho từng link tìm được
-    candidates.forEachIndexed { i, url ->
+    // Process all found mirror links
+    mirrorLinks.forEachIndexed { index, url ->
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Nur ${i + 1}",
-                url = url
-            ) {
-                this.referer = data
-                this.quality = getQualityFromName(url) ?: Qualities.Unknown.value
-                this.headers = headers
-            }
+                name = "Mirror ${index + 1}",
+                url = url,
+                referer = data,
+                quality = Qualities.Unknown.value,
+                headers = headers
+            )
         )
     }
 
-    return true
-}
+    return mirrorLinks.isNotEmpty()
+    }
 }
