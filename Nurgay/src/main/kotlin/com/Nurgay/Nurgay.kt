@@ -110,7 +110,7 @@ override suspend fun loadLinks(
             ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
     }
 
-    document.select(ul.dropdown-menu a").forEach { url ->
+    document.select("ul.dropdown-menu[a]").forEach { url ->
         url.attr("data-url").takeIf { it.isNotBlank() }?.let { videoUrls.add(it)}
             }
 
