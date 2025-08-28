@@ -99,19 +99,19 @@ override suspend fun loadLinks(
 ): Boolean {
     val headers = mapOf("User-Agent" to "Mozilla/5.0", "Referer" to data)
     val res = app.get(data, headers = headers)
-    val doc = res.doc // nếu lib của bạn dùng `res.document` thì đổi sang đó
+    val document = res.document // nếu lib của bạn dùng `res.document` thì đổi sang đó
 
     val urlRegex = Regex("""https?://[^\s'"]+?\.(?:mp4|m3u8|webm)(\?[^'"\s<>]*)?""", RegexOption.IGNORE_CASE)
     val videoUrls = mutableListOf<String>()
 
     // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
-    doc.select("iframe").forEach { iframe ->
+    document.select("iframe").forEach { iframe ->
         iframe.attr("data-src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
             ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(it) }
     }
 
     // Tìm URL trực tiếp trong toàn bộ HTML (script, data-attr, ...)
-    urlRegex.findAll(doc.html()).forEach { match ->
+    urlRegex.findAll(document.html()).forEach { match ->
         videoUrls.add(match.value)
     }
 
