@@ -16,5 +16,6 @@ class NurgayProvider: Plugin() {
         registerExtractorAPI(dsio())
         registerExtractorAPI(DoodstreamCom())
         registerExtractorAPI(vide0())
+        registerExtractorAPI(linkmirror())
     }
 }

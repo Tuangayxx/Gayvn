@@ -14,16 +14,16 @@ import com.lagradost.cloudstream3.extractors.*
 import com.fasterxml.jackson.annotation.JsonProperty
 
 
-open class yi069website : ExtractorApi() {
-    override val name = "yi069website"
-    override val mainUrl = "https://1069.website"
+open class linkmirror : ExtractorApi() {
+    override val name = "linkmirror"
+    override val mainUrl = "https://linkmirror.com"
     override val requiresReferer = false 
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val response = app.get(url)
         val document = response.document
 
-        val finalLink = document.select("ul.dropdown-menu a").attr("data-url")
+        val finalLink = document.select("ul.dropdown-item mirror-opt").attr("href")
         if (finalLink.isBlank()) return null
 
         return listOf(
@@ -163,8 +163,4 @@ open class Bigwarp : ExtractorApi() {
 
 class Bigwarpcc : Bigwarp() {
     override var mainUrl = "https://bigwarp.cc"
-}
-
-class listmirror : Bigwarp() {
-    override var mainUrl = "https://listmirror.com"    
 }
