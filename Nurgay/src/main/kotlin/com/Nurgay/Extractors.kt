@@ -10,7 +10,6 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
-import com.lagradost.cloudstream3.extractors.Bigwarp
 import com.lagradost.cloudstream3.extractors.*
 import com.fasterxml.jackson.annotation.JsonProperty
 
