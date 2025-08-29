@@ -98,47 +98,34 @@ override suspend fun search(query: String): List<SearchResponse> {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    val videoUrls = linkedSetOf<String>()
+    val found = linkedSetOf<String>()
 
-    // 1) meta embedURL
-    document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let {
-        videoUrls.add(if (it.startsWith("http")) it else fixUrl(it))
-    }
+    // thu thập mọi candidate URL như trước (meta, iframe, data-url, a[href])
+    document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
+    document.select("div.responsive-player iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
+    document.select("iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
+    document.select("[data-url]").forEach { it.attr("data-url").takeIf { s -> s.isNotBlank() }?.let(found::add) }
+    document.select("a[href]").forEach { it.attr("href").takeIf { s -> s.isNotBlank() }?.let(found::add) }
 
-    // 2) iframe trong responsive-player
-    document.select("div.responsive-player iframe[src]").forEach { iframe ->
-        iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(if (it.startsWith("http")) it else fixUrl(it)) }
-    }
-
-    // 3) tất cả iframe có src (dự phòng)
-    document.select("iframe[src]").forEach { iframe ->
-        iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(if (it.startsWith("http")) it else fixUrl(it)) }
-    }
-
-    // 4) các thẻ có data-url (ví dụ dropdown / JS-inserted links)
-    document.select("[data-url]").forEach {
-        it.attr("data-url").takeIf { v -> v.isNotBlank() }?.let { v ->
-            videoUrls.add(if (v.startsWith("http")) v else fixUrl(v))
+    // chuẩn hoá và lọc chỉ lấy host cho phép
+    val allowedHosts = listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx")
+    val candidates = found.mapNotNull { raw ->
+        val url = if (raw.startsWith("//")) "https:$raw" else if (raw.startsWith("/")) fixUrl(raw) else if (!raw.startsWith("http")) fixUrl(raw) else raw
+        try {
+            val host = java.net.URI(url).host?.lowercase()?.removePrefix("www.")
+            if (host != null && allowedHosts.any { host.endsWith(it) }) url else null
+        } catch (e: Exception) {
+            // nếu parse lỗi, fallback kiểm tra chuỗi
+            if (allowedHosts.any { raw.contains(it, ignoreCase = true) }) url else null
         }
-    }
+    }.toSet() // loại trùng
 
-    // 5) anchors tới host phổ biến (mở rộng tuỳ bạn)
-    val hosts = listOf("listmirror","doodstream","bigwarp","vide0","d-s.io","pixeldrain","hide.cx","ddownload","rapidgator","pixeldrain.com")
-    document.select("a[href]").forEach { a ->
-        val href = a.attr("href")
-        if (href.isNotBlank() && hosts.any { host -> href.contains(host, ignoreCase = true) }) {
-            videoUrls.add(if (href.startsWith("http")) href else fixUrl(href))
-        }
-    }
+    com.lagradost.api.Log.d("Nurgay", "All found URLs: $found")
+    com.lagradost.api.Log.d("Nurgay", "Filtered allowed URLs: $candidates")
 
-    // Debug log (bật nếu cần)
-    com.lagradost.api.Log.d("Nurgay", "Found video URLs: $videoUrls")
-
-    // xử lý
-    videoUrls.forEach { url ->
+    // gọi extractor chỉ cho các link đã lọc
+    candidates.forEach { url ->
         loadExtractor(url, subtitleCallback, callback)
-    }
 
-    return videoUrls.isNotEmpty()
 }
 }
