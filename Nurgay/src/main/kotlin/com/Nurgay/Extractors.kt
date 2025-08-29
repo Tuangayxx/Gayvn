@@ -145,12 +145,7 @@ open class BigwarpIO : ExtractorApi() {
     private val sourceRegex = Regex("""file:\s*['"](.*?)['"],label:\s*['"](.*?)['"]""")
     private val qualityRegex = Regex("""\d+x(\d+) .*""")
 
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val resp = app.get(url).text
 
         for (sourceMatch in sourceRegex.findAll(resp)) {
