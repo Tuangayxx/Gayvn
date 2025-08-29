@@ -119,8 +119,7 @@ override suspend fun loadLinks(
             newExtractorLink(
                 source = this.name,
                 name = this.name,
-                url = url,
-                headers = headers
+                url = url
             ){
                 referer = data
                 quality = Qualities.Unknown.value
