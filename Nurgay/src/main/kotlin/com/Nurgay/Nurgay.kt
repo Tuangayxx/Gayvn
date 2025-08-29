@@ -110,8 +110,8 @@ override suspend fun search(query: String): List<SearchResponse> {
     }
 
     // anchors chung (backup)
-    document.select("a[href]").forEach { a ->
-        val href = a.attr("href")
+    document.select("a[data-url]").forEach { a ->
+        val href = a.attr("data-url")
         if (href.isNotBlank()) found.add(href)
     }
 

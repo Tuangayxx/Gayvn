@@ -164,3 +164,7 @@ open class Bigwarp : ExtractorApi() {
 class Bigwarpcc : Bigwarp() {
     override var mainUrl = "https://bigwarp.cc"
 }
+
+class listmirror : Bigwarp() {
+    override var mainUrl = "https://listmirror.com"    
+}
