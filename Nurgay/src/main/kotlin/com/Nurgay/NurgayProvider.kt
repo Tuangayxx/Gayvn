@@ -13,9 +13,9 @@ class NurgayProvider: Plugin() {
         registerMainAPI(Voe())
         registerMainAPI(VoeExtractor())
         registerMainAPI(dsio())
-        registerMainAPI(Ds())
-        registerMainAPI(Bigwarp())
+        registerMainAPI(BigwarpIO())
         registerMainAPI(vide0())
         registerMainAPI(Nurgay())
     }
 }
+c
