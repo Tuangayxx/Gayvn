@@ -98,79 +98,27 @@ override suspend fun search(query: String): List<SearchResponse> {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    var found = false
+    val videoUrls = mutableSetOf<String>()
 
-    // thu thập các url duy nhất để tránh gọi lặp
-    val urls = linkedSetOf<String>()
-
-    // normalize an url: handle protocol-relative, relative paths, and invalid cases
-    fun normalize(raw: String): String {
-        val u = raw.trim()
-        if (u.isEmpty()) return ""
-        // ignore JS/data/about pseudo-URLs
-        if (u.startsWith("javascript:", ignoreCase = true)
-            || u.startsWith("data:", ignoreCase = true)
-            || u.startsWith("about:", ignoreCase = true)
-        ) return ""
-        // protocol-relative
-        if (u.startsWith("//")) return "https:$u"
-        // absolute already
-        if (u.startsWith("http://") || u.startsWith("https://")) return u
-        // try to resolve relative against document.baseUri()
-        return try {
-            val base = java.net.URL(document.baseUri())
-            java.net.URL(base, u).toString()
-        } catch (e: Exception) {
-            // fallback: return as-is (may be resolved by extractors or fail later)
-            u
-        }
+    document.select("ul.dropdown-menu a.dropdown-item").forEach { links ->
+        links.attr("data-url").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+            ?: links.attr("href").takeIf { it.isNotBlank() }?.let(videoUrls::add)
     }
 
-    // check typical iframe attributes (src, data-src, data-lazy-src, data-embed, etc.)
-    document.select("iframe").forEach { f ->
-        val candidates = listOf("src", "data-src", "data-lazy-src", "data-embed", "data-srcset")
-        var foundAttr: String? = null
-        for (a in candidates) {
-            // try absUrl first (resolves relative), then raw attr
-            val abs = f.absUrl(a)
-            if (abs.isNotBlank()) { foundAttr = abs; break }
-            val raw = f.attr(a)
-            if (raw.isNotBlank()) { foundAttr = raw; break }
-        }
-        // if no candidate found, also try attributes in case plugin uses other names
-        if (foundAttr == null) {
-            val src = f.attr("src")
-            if (src.isNotBlank()) foundAttr = src
-        }
-
-        val n = foundAttr?.let { normalize(it) }.orEmpty()
-        if (n.isNotBlank()) urls += n
+    document.select("div.responsive-player[iframe]").forEach {
+        iframe.attr("src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
     }
 
-    // also look for <video> and <source> tags and common embed anchors
-    document.select("video source[src], video[src]").forEach { s ->
-        s.attr("src").takeIf { it.isNotBlank() }?.let { urls += normalize(it) }
+    // Thu thập URL từ download button
+    document.select("iframe.mirrorFrame").forEach {
+        it.attr("src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
     }
 
-    document.select("a[href]").forEach { a ->
-        val href = a.absUrl("href").ifBlank { a.attr("href") }
-        // only add likely embed/player links (avoid all links)
-        if (href.contains("player") || href.contains("embed") || href.contains("stream") || href.contains("cdn")) {
-            normalize(href).takeIf { it.isNotBlank() }?.let { urls += it }
-        }
+    // Xử lý tất cả URL đã thu thập
+    videoUrls.forEach { url ->
+        loadExtractor(url, subtitleCallback, callback)
     }
 
-    // call extractor for each unique url
-    for (u in urls) {
-        try {
-            // nếu loadExtractor là suspend và trả về Boolean bạn có thể kiểm tra kết quả
-            val ok = loadExtractor(u, subtitleCallback, callback)
-            if (ok) found = true
-        } catch (e: Exception) {
-            // bỏ qua lỗi 1 url, tiếp tục url khác
-        }
+    return videoUrls.isNotEmpty()
     }
-
-    return found
-}
 }

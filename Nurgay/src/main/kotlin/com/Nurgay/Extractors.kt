@@ -160,3 +160,7 @@ open class Bigwarp : ExtractorApi() {
         return null
     }
 }
+
+class Bigwarpcc : Bigwarp() {
+    override var mainUrl = "https://bigwarp.cc"
+}
