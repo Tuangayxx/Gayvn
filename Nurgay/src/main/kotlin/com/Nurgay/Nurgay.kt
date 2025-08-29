@@ -98,27 +98,47 @@ override suspend fun search(query: String): List<SearchResponse> {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    val videoUrls = mutableSetOf<String>()
+    val videoUrls = linkedSetOf<String>()
 
-    document.select("ul.dropdown-menu a.dropdown-item").forEach { links ->
-        links.attr("data-url").takeIf { it.isNotBlank() }?.let(videoUrls::add)
-            ?: links.attr("href").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    // 1) meta embedURL
+    document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let {
+        videoUrls.add(if (it.startsWith("http")) it else fixUrl(it))
     }
 
-    document.select("div.responsive-player[iframe]").forEach { iframe ->
-        iframe.attr("src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
+    // 2) iframe trong responsive-player
+    document.select("div.responsive-player iframe[src]").forEach { iframe ->
+        iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(if (it.startsWith("http")) it else fixUrl(it)) }
     }
 
-    // Thu thập URL từ download button
-    document.select("iframe.mirrorFrame").forEach {
-        it.attr("src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
+    // 3) tất cả iframe có src (dự phòng)
+    document.select("iframe[src]").forEach { iframe ->
+        iframe.attr("src").takeIf { it.isNotBlank() }?.let { videoUrls.add(if (it.startsWith("http")) it else fixUrl(it)) }
     }
 
-    // Xử lý tất cả URL đã thu thập
+    // 4) các thẻ có data-url (ví dụ dropdown / JS-inserted links)
+    document.select("[data-url]").forEach {
+        it.attr("data-url").takeIf { v -> v.isNotBlank() }?.let { v ->
+            videoUrls.add(if (v.startsWith("http")) v else fixUrl(v))
+        }
+    }
+
+    // 5) anchors tới host phổ biến (mở rộng tuỳ bạn)
+    val hosts = listOf("listmirror","doodstream","bigwarp","vide0","d-s.io","pixeldrain","hide.cx","ddownload","rapidgator","pixeldrain.com")
+    document.select("a[href]").forEach { a ->
+        val href = a.attr("href")
+        if (href.isNotBlank() && hosts.any { host -> href.contains(host, ignoreCase = true) }) {
+            videoUrls.add(if (href.startsWith("http")) href else fixUrl(href))
+        }
+    }
+
+    // Debug log (bật nếu cần)
+    com.lagradost.api.Log.d("Nurgay", "Found video URLs: $videoUrls")
+
+    // xử lý
     videoUrls.forEach { url ->
         loadExtractor(url, subtitleCallback, callback)
     }
 
     return videoUrls.isNotEmpty()
-    }
+}
 }
