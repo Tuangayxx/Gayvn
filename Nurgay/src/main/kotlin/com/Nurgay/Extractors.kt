@@ -153,7 +153,6 @@ open class Bigwarp : ExtractorApi() {
                         INFER_TYPE
                     ) {
                         this.referer = referer ?: "$mainUrl/"
-                        this.quality = Qualities.P1080.value
                     }
                 )
         }
