@@ -10,11 +10,9 @@ import com.Nurgay.Nurgay
 class NurgayProvider: Plugin() {
     override fun load(context: Context) {
         registerMainAPI(Nurgay())
-        registerMainAPI(Voe())
         registerMainAPI(VoeExtractor())
         registerMainAPI(dsio())
-        registerMainAPI(BigwarpIO())
+        registerMainAPI(Bigwarp())
         registerMainAPI(vide0())
-        registerMainAPI(Nurgay())
     }
 }

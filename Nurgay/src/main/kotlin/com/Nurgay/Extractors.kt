@@ -40,10 +40,6 @@ open class yi069website : ExtractorApi() {
     }
 }
 
-class Voe : Voe() {
-    override var mainUrl = "https://voe.sx"
-}
-
 open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
     override val mainUrl = "https://jilliandescribecompany.com"
@@ -137,32 +133,30 @@ class FileMoon : FilemoonV2() {
     override var name = "FileMoon"
 }
 
-open class BigwarpIO : ExtractorApi() {
-    override var name = "Bigwarp"
-    override var mainUrl = "https://bigwarp.io"
+open class Bigwarp : ExtractorApi() {
+    override val name = "Bigwarp"
+    override val mainUrl = "https://bigwarp.io"
     override val requiresReferer = false
 
-    private val sourceRegex = Regex("""file:\s*['"](.*?)['"],label:\s*['"](.*?)['"]""")
-    private val qualityRegex = Regex("""\d+x(\d+) .*""")
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val resp = app.get(url).text
-
-        for (sourceMatch in sourceRegex.findAll(resp)) {
-            val label = sourceMatch.groupValues[2]
-
-            return listOf(
-                newExtractorLink(
-                    name,
-                    "$name ${label.split(" ", limit = 2).getOrNull(1)}",
-                    sourceMatch.groupValues[1], // streams are usually in mp4 format
-                ) {
-                    this.referer = url
-                    this.quality =
-                        qualityRegex.find(label)?.groupValues?.getOrNull(1)?.toIntOrNull()
-                            ?: Qualities.Unknown.value
-                }
-            )
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+    ): List<ExtractorLink>? {
+        val response =app.get(url).document
+        val script = response.selectFirst("script:containsData(sources)")?.data().toString()
+        Regex("sources:\\s*\\[.file:\"(.*)\".*").find(script)?.groupValues?.get(1)?.let { link ->
+                return listOf(
+                    newExtractorLink(
+                        source = name,
+                        name = name,
+                        url = link,
+                        INFER_TYPE
+                    ) {
+                        this.referer = referer ?: "$mainUrl/"
+                        this.quality = Qualities.P1080.value
+                    }
+                )
         }
+        return null
     }
 }
