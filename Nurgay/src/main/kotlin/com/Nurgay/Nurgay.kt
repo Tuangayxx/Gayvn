@@ -104,7 +104,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
     document.select("div.responsive-player iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
     document.select("iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
-    document.select("[data-url]").forEach { it.attr("data-url").takeIf { s -> s.isNotBlank() }?.let(found::add) }
+    document.select("a[data-url]").forEach { it.attr("data-url").takeIf { s -> s.isNotBlank() }?.let(found::add) }
     document.select("a[href]").forEach { it.attr("href").takeIf { s -> s.isNotBlank() }?.let(found::add) }
 
     // chuẩn hoá và lọc chỉ lấy host cho phép
