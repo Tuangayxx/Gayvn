@@ -101,12 +101,12 @@ override suspend fun loadLinks(
     val document = app.get(data, headers = headers).document
 
     // Extract mirror links from dropdown menu
-    val mirrorLinks = document.select("ul.dropdown-menu a.mirror-opt").mapNotNull {
+    val mirrorLinks = document.select("ul.dropdown-menu li a.mirror-opt").mapNotNull {
         it.attr("data-url").takeIf { url -> url.isNotBlank() }
-    }
+    }.distinct()
 
     // Also check the currently active iframe
-    val activeIframe = document.selectFirst("#mirrorFrame")?.attr("src")
+    val activeIframe = document.selectFirst("iframe#mirrorFrame")?.attr("src")
     activeIframe?.takeIf { it.isNotBlank() }?.let {
         if (!mirrorLinks.contains(it)) {
             mirrorLinks.toMutableList().add(it)
@@ -118,15 +118,17 @@ override suspend fun loadLinks(
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Mirror ${index + 1}",
+                name = "Mirror ${indFex + 1}",
                 url = url
-                    )   {
+                type = INFER_TYPE
+            ){
                 referer = data
                 quality = Qualities.Unknown.value
-                    }
+                headers = headers
+            }
         )
     }
 
     return mirrorLinks.isNotEmpty()
-    }
+}
 }
