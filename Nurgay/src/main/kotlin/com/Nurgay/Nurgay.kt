@@ -105,7 +105,7 @@ override suspend fun search(query: String): List<SearchResponse> {
             ?: links.attr("href").takeIf { it.isNotBlank() }?.let(videoUrls::add)
     }
 
-    document.select("div.responsive-player[iframe]").forEach {
+    document.select("div.responsive-player[iframe]").forEach { iframe ->
         iframe.attr("src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
     }
 
