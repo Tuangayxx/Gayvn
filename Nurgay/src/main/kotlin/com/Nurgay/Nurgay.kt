@@ -100,30 +100,39 @@ override suspend fun search(query: String): List<SearchResponse> {
     val document = app.get(data).document
     val found = linkedSetOf<String>()
 
-    // thu thập mọi candidate URL như trước (meta, iframe, data-url, a[href])
     document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
     document.select("div.responsive-player iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
     document.select("iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
-    document.select("a[data-url]").forEach { it.attr("data-url").takeIf { s -> s.isNotBlank() }?.let(found::add) }
-    document.select("a[href]").forEach { it.attr("href").takeIf { s -> s.isNotBlank() }?.let(found::add) }
 
-    // chuẩn hoá và lọc chỉ lấy host cho phép
-    val allowedHosts = listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx")
+    // <- SỬA Ở ĐÂY: chỉ lấy từ thẻ <a> có data-url
+    document.select("a[data-url]").forEach {
+        it.attr("data-url").takeIf { s -> s.isNotBlank() }?.let(found::add)
+    }
+
+    // anchors chung (backup)
+    document.select("a[href]").forEach { a ->
+        val href = a.attr("href")
+        if (href.isNotBlank()) found.add(href)
+    }
+
+    val allowedHosts = listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx", "listmirror.com")
     val candidates = found.mapNotNull { raw ->
-        val url = if (raw.startsWith("//")) "https:$raw" else if (raw.startsWith("/")) fixUrl(raw) else if (!raw.startsWith("http")) fixUrl(raw) else raw
+        val url = when {
+            raw.startsWith("//") -> "https:$raw"
+            raw.startsWith("/") -> fixUrl(raw)
+            !raw.startsWith("http") -> fixUrl(raw)
+            else -> raw
+        }
         try {
             val host = java.net.URI(url).host?.lowercase()?.removePrefix("www.")
             if (host != null && allowedHosts.any { host.endsWith(it) }) url else null
         } catch (e: Exception) {
-            // nếu parse lỗi, fallback kiểm tra chuỗi
             if (allowedHosts.any { raw.contains(it, ignoreCase = true) }) url else null
         }
-    }.toSet() // loại trùng
+    }.toSet()
 
-    com.lagradost.api.Log.d("Nurgay", "All found URLs: $found")
     com.lagradost.api.Log.d("Nurgay", "Filtered allowed URLs: $candidates")
 
-    // gọi extractor chỉ cho các link đã lọc
     candidates.forEach { url ->
         loadExtractor(url, subtitleCallback, callback)
     }
