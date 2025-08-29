@@ -23,7 +23,7 @@ open class linkmirror : ExtractorApi() {
         val response = app.get(url)
         val document = response.document
 
-        val finalLink = document.select("ul.dropdown-item mirror-opt").attr("href")
+        val finalLink = document.select("ul.dropdown-item.mirror-opt").attr("href")
         if (finalLink.isBlank()) return null
 
         return listOf(
