@@ -151,7 +151,7 @@ open class BigwarpIO : ExtractorApi() {
         for (sourceMatch in sourceRegex.findAll(resp)) {
             val label = sourceMatch.groupValues[2]
 
-            callback.invoke(
+            return listOf(
                 newExtractorLink(
                     name,
                     "$name ${label.split(" ", limit = 2).getOrNull(1)}",
