@@ -18,4 +18,3 @@ class NurgayProvider: Plugin() {
         registerMainAPI(Nurgay())
     }
 }
-c
