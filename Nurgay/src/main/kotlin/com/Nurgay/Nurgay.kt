@@ -126,6 +126,9 @@ override suspend fun search(query: String): List<SearchResponse> {
     // gọi extractor chỉ cho các link đã lọc
     candidates.forEach { url ->
         loadExtractor(url, subtitleCallback, callback)
+    }
 
+    return candidates.isNotEmpty()
 }
+
 }
