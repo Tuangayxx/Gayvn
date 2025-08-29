@@ -123,6 +123,7 @@ override suspend fun loadLinks(
             ){
                 referer = data
                 quality = Qualities.Unknown.value
+                this.header =header
             }
         )
     }
