@@ -100,34 +100,35 @@ override suspend fun loadLinks(
     val document = app.get(data).document
     var found = false
 
-    // 1. Try to extract from JavaScript sources array
-    val scriptContent = document.select("script:containsData(sources)").firstOrNull()?.data()
-    val mirrors = mutableListOf<String>()
+    // 1. Extract links from dropdown menu
+    val mirrors = document.select("ul.dropdown-menu#mirrorMenu a.mirror-opt, div.dropdown-menu a.mirror-opt")
+        .mapNotNull { 
+            val url = it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" }
+            url ?: it.attr("href").takeIf { u -> u.isNotBlank() && u != "#" }
+        }
+        .toMutableList()
 
-    if (scriptContent != null) {
-        val sourcesRegex = """sources\s*=\s*\[(.*?)\]""".toRegex(RegexOption.DOT_MATCHES_ALL)
-        val match = sourcesRegex.find(scriptContent)
-        match?.groups?.get(1)?.value?.let { jsonArray ->
-            val urlRegex = """url":\s*"([^"]+)"""".toRegex()
-            val urls = urlRegex.findAll(jsonArray)
-                .map { it.groups[1]?.value }
-                .filterNotNull()
-                .toList()
-            mirrors.addAll(urls)
+    // 2. If no dropdown links found, try to extract from JavaScript
+    if (mirrors.isEmpty()) {
+        val scriptContent = document.select("script:containsData(sources)").firstOrNull()?.data()
+        if (scriptContent != null) {
+            val sourcesRegex = """sources\s*:\s*\[(.*?)\]""".toRegex(RegexOption.DOT_MATCHES_ALL)
+            val match = sourcesRegex.find(scriptContent)
+            match?.groups?.get(1)?.value?.let { jsonArray ->
+                val urlRegex = """url":\s*"([^"]+)"""".toRegex()
+                val urls = urlRegex.findAll(jsonArray)
+                    .map { it.groups[1]?.value }
+                    .filterNotNull()
+                    .toList()
+                mirrors.addAll(urls)
+            }
         }
     }
 
-    // 2. Fallback to iframe source
+    // 3. Fallback to iframe source
     if (mirrors.isEmpty()) {
         document.select("iframe[src]").forEach { iframe ->
             iframe.attr("src").takeIf { it.isNotBlank() }?.let { mirrors.add(it) }
-        }
-    }
-
-    // 3. Additional fallback: check for alternative stream links
-    if (mirrors.isEmpty()) {
-        document.select("a[href*='hide.cx'], a[href*='listmirror']").forEach { link ->
-            link.attr("href").takeIf { it.isNotBlank() }?.let { mirrors.add(it) }
         }
     }
 
