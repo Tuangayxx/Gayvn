@@ -98,46 +98,34 @@ override suspend fun search(query: String): List<SearchResponse> {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    val found = linkedSetOf<String>()
+    val found = mutableSetOf<String>()
 
+    // Extract embed URL from meta tag
     document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
-    document.select("div.responsive-player iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
-    document.select("iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
 
-    // <- SỬA Ở ĐÂY: chỉ lấy từ thẻ <a> có data-url
-    document.select("a[data-url]").forEach {
-        it.attr("data-url").takeIf { s -> s.isNotBlank() }?.let(found::add)
+    // Extract iframe sources
+    document.select("iframe[src]").forEach { 
+        it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) 
     }
 
-    // anchors chung (backup)
-    document.select("a[data-url]").forEach { a ->
-        val href = a.attr("data-url")
-        if (href.isNotBlank()) found.add(href)
+    // Extract specific streaming links from the description
+    document.select("div.desc a[href]").forEach { a ->
+        val href = a.attr("href")
+        if (href.isNotBlank() && (
+            href.contains("bigwarp.io", ignoreCase = true) ||
+            href.contains("voe.sx", ignoreCase = true) ||
+            href.contains("vinovo.to", ignoreCase = true) ||
+            href.contains("d-s.io", ignoreCase = true)
+        )) {
+            found.add(href)
+        }
     }
 
-    val allowedHosts = listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx", "listmirror.com")
-    val candidates = found.mapNotNull { raw ->
-        val url = when {
-            raw.startsWith("//") -> "https:$raw"
-            raw.startsWith("/") -> fixUrl(raw)
-            !raw.startsWith("http") -> fixUrl(raw)
-            else -> raw
-        }
-        try {
-            val host = java.net.URI(url).host?.lowercase()?.removePrefix("www.")
-            if (host != null && allowedHosts.any { host.endsWith(it) }) url else null
-        } catch (e: Exception) {
-            if (allowedHosts.any { raw.contains(it, ignoreCase = true) }) url else null
-        }
-    }.toSet()
-
-    com.lagradost.api.Log.d("Nurgay", "Filtered allowed URLs: $candidates")
-
-    candidates.forEach { url ->
+    // Process all found URLs
+    found.forEach { url ->
         loadExtractor(url, subtitleCallback, callback)
     }
 
-    return candidates.isNotEmpty()
+    return found.isNotEmpty()
 }
-
 }
