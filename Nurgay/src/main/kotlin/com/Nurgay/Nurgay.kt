@@ -98,28 +98,35 @@ override suspend fun search(query: String): List<SearchResponse> {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    val found = mutableSetOf<String>()
+    val found = linkedSetOf<String>()
 
-    // Extract embed URL from meta tag
-    document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
-
-    // Extract iframe sources
-    document.select("iframe[src]").forEach { 
-        it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) 
-    }
-
-    // Extract specific streaming links from the description
-    document.select("div.desc a[href]").forEach { a ->
-        val href = a.attr("href")
-        if (href.isNotBlank() && (
-            href.contains("bigwarp.io", ignoreCase = true) ||
-            href.contains("voe.sx", ignoreCase = true) ||
-            href.contains("vinovo.to", ignoreCase = true) ||
-            href.contains("d-s.io", ignoreCase = true)
-        )) {
-            found.add(href)
+    // Extract links from dropdown menu with data-url attributes
+    document.select("ul.dropdown-menu a[data-url]").forEach { link ->
+        link.attr("data-url").takeIf { it.isNotBlank() }?.let { url ->
+            // Check if URL is from one of the allowed hosts
+            val normalizedUrl = when {
+                url.startsWith("//") -> "https:$url"
+                url.startsWith("/") -> "$mainUrl$url"
+                !url.startsWith("http") -> "$mainUrl/$url"
+                else -> url
+            }
+            
+            if (listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx").any { 
+                host -> normalizedUrl.contains(host, ignoreCase = true) 
+            }) {
+                found.add(normalizedUrl)
+            }
         }
     }
+
+    // Fallback to other extraction methods if no links found in dropdown
+    if (found.isEmpty()) {
+        document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
+        document.select("div.responsive-player iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
+        document.select("iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
+    }
+
+    com.lagradost.api.Log.d("Nurgay", "Found URLs: $found")
 
     // Process all found URLs
     found.forEach { url ->
