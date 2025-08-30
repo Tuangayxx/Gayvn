@@ -100,20 +100,31 @@ override suspend fun loadLinks(
     val document = app.get(data).document
     var found = false
 
-    // 1. Thu thập link từ dropdown mirrors
-    val mirrors = document.select("ul#mirrorMenu a.mirror-opt, a.dropdown-item.mirror-opt")
-        .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
-        .toMutableSet()
+    // 1. Extract from script containing sources
+    val scriptContent = document.select("script:containsData(const sources)").firstOrNull()?.data()
+    val mirrors = mutableListOf<String>()
 
-    // 2. Fallback: nếu không có mirror thì lấy iframe chính
+    if (scriptContent != null) {
+        val regex = """const sources = \[(.*?)\]""".toRegex(RegexOption.DOT_MATCHES_ALL)
+        val match = regex.find(scriptContent)
+        match?.groups?.get(1)?.value?.let { jsonArray ->
+            val urls = """url":"(.*?)"""".toRegex().findAll(jsonArray)
+                .map { it.groups[1]?.value }
+                .filterNotNull()
+                .toList()
+            mirrors.addAll(urls)
+        }
+    }
+
+    // 2. Fallback to iframe source
     if (mirrors.isEmpty()) {
         document.select("iframe[src]").attr("src")
             .takeIf { it.isNotBlank() }
             ?.let { mirrors.add(it) }
     }
 
-    // 3. Dùng extractor cho từng link
-    mirrors.toList().amap { url ->
+    // 3. Process all found URLs
+    mirrors.distinct().apmap { url ->
         val ok = loadExtractor(
             url,
             referer = data,
