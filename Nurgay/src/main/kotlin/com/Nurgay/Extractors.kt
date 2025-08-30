@@ -138,10 +138,6 @@ class Bgwp : Bigwarp() {
     override var mainUrl = "https://bgwp.cc"
 }
 
-class Bigwarpcc : Bigwarp() {
-    override var mainUrl = "https://bigwarp.cc"
-}
-
 open class Bigwarp : ExtractorApi() {
     override var name = "Bigwarp"
     override var mainUrl = "https://bigwarp.io"
@@ -155,7 +151,7 @@ open class Bigwarp : ExtractorApi() {
         val match = matchResult?.groupValues?.get(1)
 
         if (match != null) {
-            callback.invoke(
+            return listOf(
                 newExtractorLink(
                     source = this.name,
                     name = this.name,
