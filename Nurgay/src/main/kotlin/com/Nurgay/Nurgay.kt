@@ -91,22 +91,37 @@ override suspend fun search(query: String): List<SearchResponse> {
         }
     }
 
-    override suspend fun loadLinks(
+override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    
-document.select("ul#mirrorMenu a.mirror-opt, ul.dropdown-menu a.mirror-opt, a.dropdown-item.mirror-opt[data-url]").amap {
-    loadExtractor(
-        it.attr("data-url"),
-        referer = data,
-        subtitleCallback,
-        callback
-    )
-}
-    return true
+    var found = false
+
+    // Thu thập tất cả link từ dropdown mirrors
+    val urls = document.select("a.mirror-opt[data-url]")
+        .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
+        .toMutableSet()
+
+    // Nếu không có mirror thì fallback lấy iframe chính
+    if (urls.isEmpty()) {
+        document.select("iframe[src]").attr("src")
+            .takeIf { it.isNotBlank() }
+            ?.let { urls.add(it) }
     }
+
+    urls.amap { url ->
+        val ok = loadExtractor(
+            url,
+            referer = data,
+            subtitleCallback = subtitleCallback,
+            callback = callback
+        )
+        if (ok) found = true
+    }
+
+    return found
+}
 }
