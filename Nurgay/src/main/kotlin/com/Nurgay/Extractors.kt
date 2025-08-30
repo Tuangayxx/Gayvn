@@ -143,7 +143,12 @@ open class Bigwarp : ExtractorApi() {
     override var mainUrl = "https://bigwarp.io"
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
         val link = app.get(url, allowRedirects = false).headers["location"] ?: url
         val source = app.get(link).document.selectFirst("body > script").toString()
         val regex = Regex("""file:\s*\"((?:https?://|//)[^\"]+)""")
@@ -151,7 +156,7 @@ open class Bigwarp : ExtractorApi() {
         val match = matchResult?.groupValues?.get(1)
 
         if (match != null) {
-            return listOf(
+            callback.invoke(
                 newExtractorLink(
                     source = this.name,
                     name = this.name,

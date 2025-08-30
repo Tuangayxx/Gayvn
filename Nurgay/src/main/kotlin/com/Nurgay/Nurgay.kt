@@ -98,29 +98,15 @@ override suspend fun search(query: String): List<SearchResponse> {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    val found = linkedSetOf<String>()
-
-    // Extract links from the dropdown menu with data-url attributes
-    document.select("ul.dropdown-menu a.mirror-opt[data-url]").forEach { link ->
-        val url = link.attr("data-url").takeIf { it.isNotBlank() }
-        url?.let {
-            // Only add URLs from the specified hosts
-            if (listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx").any { host -> 
-                url.contains(host, ignoreCase = true) 
-            }) {
-                found.add(url)
-            }
-        }
-    }
-
-    // Log found URLs for debugging
-    com.lagradost.api.Log.d("Nurgay", "Found streaming URLs: $found")
-
-    // Process all found URLs
-    found.forEach { url ->
-        loadExtractor(url, subtitleCallback, callback)
-    }
-
-    return found.isNotEmpty()
+    
+document.select("ul.dropdown-menu a.mirror-opt").amap {
+    loadExtractor(
+        it.attr("data-url"),
+        referer = data,
+        subtitleCallback,
+        callback
+    )
 }
+    return true
+    }
 }
