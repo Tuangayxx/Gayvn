@@ -100,15 +100,16 @@ override suspend fun loadLinks(
     val document = app.get(data).document
     var found = false
 
-    // 1. Extract from script containing sources
-    val scriptContent = document.select("script:containsData(const sources)").firstOrNull()?.data()
+    // 1. Try to extract from JavaScript sources array
+    val scriptContent = document.select("script:containsData(sources)").firstOrNull()?.data()
     val mirrors = mutableListOf<String>()
 
     if (scriptContent != null) {
-        val regex = """const sources = \[(.*?)\]""".toRegex(RegexOption.DOT_MATCHES_ALL)
-        val match = regex.find(scriptContent)
+        val sourcesRegex = """sources\s*=\s*\[(.*?)\]""".toRegex(RegexOption.DOT_MATCHES_ALL)
+        val match = sourcesRegex.find(scriptContent)
         match?.groups?.get(1)?.value?.let { jsonArray ->
-            val urls = """url":"(.*?)"""".toRegex().findAll(jsonArray)
+            val urlRegex = """url":\s*"([^"]+)"""".toRegex()
+            val urls = urlRegex.findAll(jsonArray)
                 .map { it.groups[1]?.value }
                 .filterNotNull()
                 .toList()
@@ -118,12 +119,19 @@ override suspend fun loadLinks(
 
     // 2. Fallback to iframe source
     if (mirrors.isEmpty()) {
-        document.select("iframe[src]").attr("src")
-            .takeIf { it.isNotBlank() }
-            ?.let { mirrors.add(it) }
+        document.select("iframe[src]").forEach { iframe ->
+            iframe.attr("src").takeIf { it.isNotBlank() }?.let { mirrors.add(it) }
+        }
     }
 
-    // 3. Process all found URLs
+    // 3. Additional fallback: check for alternative stream links
+    if (mirrors.isEmpty()) {
+        document.select("a[href*='hide.cx'], a[href*='listmirror']").forEach { link ->
+            link.attr("href").takeIf { it.isNotBlank() }?.let { mirrors.add(it) }
+        }
+    }
+
+    // 4. Process all found URLs
     mirrors.distinct().apmap { url ->
         val ok = loadExtractor(
             url,
