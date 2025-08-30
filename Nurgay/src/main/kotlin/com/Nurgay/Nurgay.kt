@@ -99,35 +99,38 @@ override suspend fun loadLinks(
 ): Boolean {
     val document = app.get(data).document
     Log.d("Nurgay", "=== LOAD LINKS for: $data ===")
-    Log.d("Nurgay", "Document title: ${document.selectFirst("title")?.text()}")
-    // write out the first 60KB of HTML so we can inspect (avoid super long logs)
-    val html = document.html()
-    Log.d("Nurgay", "Page HTML (prefix): ${html.take(60000)}")
+    Log.d("Nurgay", "Document title: ${document.selectFirst("title")?.text() ?: "no title"}")
+    val htmlPrefix = document.html().take(60000)
+    Log.d("Nurgay", "Page HTML (prefix 60KB): ${htmlPrefix.replace("\n","\\n").take(8000)}")
 
     var found = false
 
-    // Mirrors in dropdown
+    // Mirrors
     val mirrors = document.select("ul#mirrorMenu a.mirror-opt, a.dropdown-item.mirror-opt")
         .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
         .toMutableSet()
     Log.d("Nurgay", "Mirrors found from data-url: ${mirrors.joinToString()}")
 
-    // If none, try iframe src
+    // Fallback iframe
     if (mirrors.isEmpty()) {
         val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
         Log.d("Nurgay", "No mirrors; iframe src = $iframeSrc")
         iframeSrc?.let { mirrors.add(it) }
     }
 
-    // Try each mirror and log result
+    // Wrap the callback to log every link returned by the extractor
     mirrors.toList().amap { url ->
         Log.d("Nurgay", "Trying loadExtractor for: $url (referer=$data)")
         val ok = loadExtractor(
             url,
             referer = data,
-            subtitleCallback = subtitleCallback,
-            callback = callback
-        )
+            subtitleCallback = subtitleCallback
+        ) { link ->
+            // This runs when extractor yields a link
+            Log.d("Nurgay", "EXTRACTOR CALLBACK -> url=${link.url} quality=${link.quality} isVideo=${link.isVideo} name=${link.name}")
+            // forward to main callback so CloudStream receives it
+            callback(link)
+        }
         Log.d("Nurgay", "loadExtractor returned $ok for $url")
         if (ok) found = true
     }
@@ -135,5 +138,4 @@ override suspend fun loadLinks(
     Log.d("Nurgay", "=== finished loadLinks; found=$found ===")
     return found
 }
-
 }
