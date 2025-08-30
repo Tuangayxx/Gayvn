@@ -126,8 +126,8 @@ override suspend fun loadLinks(
             referer = data,
             subtitleCallback = subtitleCallback
         ) { link ->
-            // This runs when extractor yields a link
-            Log.d("Nurgay", "EXTRACTOR CALLBACK -> url=${link.url} quality=${link.quality} isVideo=${link.isVideo} name=${link.name}")
+            // SAFE logging: don't reference unknown properties (like isVideo)
+            Log.d("Nurgay", "EXTRACTOR CALLBACK -> ${link.toString()}")
             // forward to main callback so CloudStream receives it
             callback(link)
         }
