@@ -99,7 +99,7 @@ override suspend fun search(query: String): List<SearchResponse> {
 ): Boolean {
     val document = app.get(data).document
     
-document.select("ul.dropdown-menu a.mirror-opt").amap {
+document.select("ul#mirrorMenu a.mirror-opt, ul.dropdown-menu a.mirror-opt, a.dropdown-item.mirror-opt[data-url]").amap {
     loadExtractor(
         it.attr("data-url"),
         referer = data,
