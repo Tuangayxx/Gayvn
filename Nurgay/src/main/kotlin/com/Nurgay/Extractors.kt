@@ -15,33 +15,44 @@ import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.*
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jsoup.nodes.Element
+import org.json.JSONArray
 
+class ListMirror : ExtractorApi() {
+    override val name = "ListMirror"
+    override val mainUrl = "https://listmirror.com"
+    override val requiresReferer = false
 
-open class linkmirror : ExtractorApi() {
-    override val name = "linkmirror"
-    override val mainUrl = "https://linkmirror.com"
-    override val requiresReferer = false 
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
+        val links = mutableListOf<ExtractorLink>()
+        val doc = app.get(url).document
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        val response = app.get(url)
-        val document = response.document
+        // Lấy script có chứa "sources = [ ... ];"
+        val script = doc.select("script").mapNotNull { it.data() }
+            .firstOrNull { it.contains("sources") }
 
-        val finalLink = document.select("ul.dropdown-item.mirror-opt").attr("href")
-        if (finalLink.isBlank()) return null
+        if (script != null) {
+            val regex = Regex("""sources\s*=\s*(\[.*?]);""", RegexOption.DOT_MATCHES_ALL)
+            val match = regex.find(script)
+            val json = match?.groupValues?.get(1)
 
-        return listOf(
-            newExtractorLink(
-                source = name,
-                name = name,
-                url = finalLink,
-                type = INFER_TYPE
-            ) {
-                this.referer = url
-                this.quality = Qualities.Unknown.value
+            if (json != null) {
+                val arr = JSONArray(json)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val mirrorUrl = obj.optString("url")
+                    if (mirrorUrl.isNotBlank()) {
+                        loadExtractor(mirrorUrl, referer, { /* subs */ }) { link ->
+                            links.add(link)
+                        }
+                    }
+                }
             }
-        )
+        }
+
+        return links
     }
 }
+
 
 open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
