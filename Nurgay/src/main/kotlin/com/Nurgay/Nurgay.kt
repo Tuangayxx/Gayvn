@@ -100,33 +100,21 @@ override suspend fun search(query: String): List<SearchResponse> {
     val document = app.get(data).document
     val found = linkedSetOf<String>()
 
-    // Extract links from dropdown menu with data-url attributes
-    document.select("ul.dropdown-menu a[data-url]").forEach { link ->
-        link.attr("data-url").takeIf { it.isNotBlank() }?.let { url ->
-            // Check if URL is from one of the allowed hosts
-            val normalizedUrl = when {
-                url.startsWith("//") -> "https:$url"
-                url.startsWith("/") -> "$mainUrl$url"
-                !url.startsWith("http") -> "$mainUrl/$url"
-                else -> url
-            }
-            
-            if (listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx").any { 
-                host -> normalizedUrl.contains(host, ignoreCase = true) 
+    // Extract links from the dropdown menu with data-url attributes
+    document.select("ul.dropdown-menu a.mirror-opt[data-url]").forEach { link ->
+        val url = link.attr("data-url").takeIf { it.isNotBlank() }
+        url?.let {
+            // Only add URLs from the specified hosts
+            if (listOf("bigwarp.io", "d-s.io", "vinovo.to", "voe.sx").any { host -> 
+                url.contains(host, ignoreCase = true) 
             }) {
-                found.add(normalizedUrl)
+                found.add(url)
             }
         }
     }
 
-    // Fallback to other extraction methods if no links found in dropdown
-    if (found.isEmpty()) {
-        document.selectFirst("meta[itemprop=embedURL]")?.attr("content")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
-        document.select("div.responsive-player iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
-        document.select("iframe[src]").forEach { it.attr("src").takeIf { s -> s.isNotBlank() }?.let(found::add) }
-    }
-
-    com.lagradost.api.Log.d("Nurgay", "Found URLs: $found")
+    // Log found URLs for debugging
+    com.lagradost.api.Log.d("Nurgay", "Found streaming URLs: $found")
 
     // Process all found URLs
     found.forEach { url ->
