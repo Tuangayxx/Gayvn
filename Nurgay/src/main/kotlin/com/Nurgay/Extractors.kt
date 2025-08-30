@@ -12,7 +12,9 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.*
 import com.fasterxml.jackson.annotation.JsonProperty
+import org.jsoup.nodes.Element
 
 
 open class linkmirror : ExtractorApi() {
