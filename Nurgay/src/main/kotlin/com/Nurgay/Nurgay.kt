@@ -98,51 +98,42 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
+    Log.d("Nurgay", "=== LOAD LINKS for: $data ===")
+    Log.d("Nurgay", "Document title: ${document.selectFirst("title")?.text()}")
+    // write out the first 60KB of HTML so we can inspect (avoid super long logs)
+    val html = document.html()
+    Log.d("Nurgay", "Page HTML (prefix): ${html.take(60000)}")
+
     var found = false
 
-    // 1. Extract links from dropdown menu
-    val mirrors = document.select("ul.dropdown-menu#mirrorMenu a.mirror-opt, div.dropdown-menu a.mirror-opt")
-        .mapNotNull { 
-            val url = it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" }
-            url ?: it.attr("href").takeIf { u -> u.isNotBlank() && u != "#" }
-        }
-        .toMutableList()
+    // Mirrors in dropdown
+    val mirrors = document.select("ul#mirrorMenu a.mirror-opt, a.dropdown-item.mirror-opt")
+        .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
+        .toMutableSet()
+    Log.d("Nurgay", "Mirrors found from data-url: ${mirrors.joinToString()}")
 
-    // 2. If no dropdown links found, try to extract from JavaScript
+    // If none, try iframe src
     if (mirrors.isEmpty()) {
-        val scriptContent = document.select("script:containsData(sources)").firstOrNull()?.data()
-        if (scriptContent != null) {
-            val sourcesRegex = """sources\s*:\s*\[(.*?)\]""".toRegex(RegexOption.DOT_MATCHES_ALL)
-            val match = sourcesRegex.find(scriptContent)
-            match?.groups?.get(1)?.value?.let { jsonArray ->
-                val urlRegex = """url":\s*"([^"]+)"""".toRegex()
-                val urls = urlRegex.findAll(jsonArray)
-                    .map { it.groups[1]?.value }
-                    .filterNotNull()
-                    .toList()
-                mirrors.addAll(urls)
-            }
-        }
+        val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
+        Log.d("Nurgay", "No mirrors; iframe src = $iframeSrc")
+        iframeSrc?.let { mirrors.add(it) }
     }
 
-    // 3. Fallback to iframe source
-    if (mirrors.isEmpty()) {
-        document.select("iframe[src]").forEach { iframe ->
-            iframe.attr("src").takeIf { it.isNotBlank() }?.let { mirrors.add(it) }
-        }
-    }
-
-    // 4. Process all found URLs
-    mirrors.distinct().apmap { url ->
+    // Try each mirror and log result
+    mirrors.toList().amap { url ->
+        Log.d("Nurgay", "Trying loadExtractor for: $url (referer=$data)")
         val ok = loadExtractor(
             url,
             referer = data,
             subtitleCallback = subtitleCallback,
             callback = callback
         )
+        Log.d("Nurgay", "loadExtractor returned $ok for $url")
         if (ok) found = true
     }
 
+    Log.d("Nurgay", "=== finished loadLinks; found=$found ===")
     return found
 }
+
 }
