@@ -97,45 +97,112 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
-    Log.d("Nurgay", "=== LOAD LINKS for: $data ===")
-    Log.d("Nurgay", "Document title: ${document.selectFirst("title")?.text() ?: "no title"}")
-    val htmlPrefix = document.html().take(60000)
-    Log.d("Nurgay", "Page HTML (prefix 60KB): ${htmlPrefix.replace("\n","\\n").take(8000)}")
+    return try {
+        val headers = standardHeaders + mapOf("Referer" to data)
 
-    var found = false
-
-    // Mirrors
-    val mirrors = document.select("ul#mirrorMenu a.mirror-opt, a.dropdown-item.mirror-opt")
-        .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
-        .toMutableSet()
-    Log.d("Nurgay", "Mirrors found from data-url: ${mirrors.joinToString()}")
-
-    // Fallback iframe
-    if (mirrors.isEmpty()) {
-        val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
-        Log.d("Nurgay", "No mirrors; iframe src = $iframeSrc")
-        iframeSrc?.let { mirrors.add(it) }
-    }
-
-    // Wrap the callback to log every link returned by the extractor
-    mirrors.toList().amap { url ->
-        Log.d("Nurgay", "Trying loadExtractor for: $url (referer=$data)")
-        val ok = loadExtractor(
-            url,
-            referer = data,
-            subtitleCallback = subtitleCallback
-        ) { link ->
-            // SAFE logging: don't reference unknown properties (like isVideo)
-            Log.d("Nurgay", "EXTRACTOR CALLBACK -> ${link.toString()}")
-            // forward to main callback so CloudStream receives it
-            callback(link)
+        // 1) Lấy HTML (ưu tiên fetchHtmlSafely nếu có)
+        val html = fetchHtmlSafely(data, mapOf("Referer" to mainUrl)).ifEmpty {
+            try {
+                Jsoup.connect(data)
+                    .headers(standardHeaders)
+                    .userAgent(standardHeaders["User-Agent"] ?: "")
+                    .timeout(15_000)
+                    .get()
+                    .html()
+            } catch (e: Exception) { "" }
         }
-        Log.d("Nurgay", "loadExtractor returned $ok for $url")
-        if (ok) found = true
-    }
 
-    Log.d("Nurgay", "=== finished loadLinks; found=$found ===")
-    return found
+        if (html.isBlank()) {
+            Log.w("GaypornHDfree", "loadLinks: empty html for $data")
+            return false
+        }
+
+        val doc = Jsoup.parse(html, data)
+        val videoUrls = mutableSetOf<String>()
+
+        // 2) Các selector hay chứa nguồn
+        val selectors = listOf(
+            "video source[src]",
+            "video[src]",
+            "iframe[src]",
+            "iframe[data-src]",
+            "embed[src]",
+            "[data-src]",
+            "a[href$=.mp4]",
+            "a[href$=.m3u8]",
+            "a[href*='.mp4']",
+            "a[href*='.m3u8']"
+        )
+
+        selectors.forEach { sel ->
+            doc.select(sel).forEach { el ->
+                val found = listOf("src", "data-src", "href").map { k -> el.attr(k) }.firstOrNull { it.isNotBlank() }
+                found?.let { videoUrls.add(it) }
+            }
+        }
+
+        // 3) Tìm trong script JSON / player config / og:video
+        doc.select("meta[property=og:video], meta[property=og:video:secure_url], meta[name=og:video]").forEach {
+            val c = it.attr("content")
+            if (c.isNotBlank()) videoUrls.add(c)
+        }
+
+        val scriptsCombined = doc.select("script").map { it.data() + it.html() }.joinToString("\n")
+        val fileRegex = Regex("""(?i)(?:file|src|url)\s*[:=]\s*['"]((?:https?:)?\/\/[^'"\s]+)['"]""")
+        fileRegex.findAll(scriptsCombined).forEach { m ->
+            val u = m.groups[1]?.value ?: ""
+            if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
+        }
+
+        // 4) Heuristic: direct links to common video ext
+        val genericRegex = Regex("""https?:\/\/[^\s'"]+?\.(mp4|m3u8|webm|mpd)(\?[^\s'"]*)?""", RegexOption.IGNORE_CASE)
+        genericRegex.findAll(html).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
+
+        // 5) Nếu có iframe/embed pointing to another page, try fetch minimal iframe content and extract more links
+        val iframeCandidates = videoUrls.filter { it.contains("/e/") || it.contains("embed") || it.contains("player") }
+        for (ifr in iframeCandidates) {
+            try {
+                val ifHtml = fetchHtmlSafely(ifr, mapOf("Referer" to data)).ifEmpty {
+                    try {
+                        Jsoup.connect(ifr).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(8000).get().html()
+                    } catch (_: Exception) { "" }
+                }
+                if (ifHtml.isNotBlank()) {
+                    genericRegex.findAll(ifHtml).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
+                    fileRegex.findAll(ifHtml).forEach { m ->
+                        val u = m.groups[1]?.value ?: ""
+                        if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
+                    }
+                }
+            } catch (_: Exception) { /* ignore iframe failures */ }
+        }
+
+        Log.d("GaypornHDfree", "Found ${videoUrls.size} candidate video URLs for $data")
+
+        // 6) Chuẩn hoá URL & gọi loadExtractor cho từng URL
+        var called = false
+        videoUrls.map { it.trim() }.filter { it.isNotBlank() }.distinct().forEach { raw ->
+            try {
+                val fixedUrl = when {
+                    raw.startsWith("http://") || raw.startsWith("https://") -> raw
+                    raw.startsWith("//") -> "https:$raw"
+                    raw.startsWith("/") -> "$mainUrl${raw}"
+                    else -> if (raw.startsWith("http")) raw else "$mainUrl/${raw.removePrefix("/")}"
+                }.replace("\\/", "/")
+
+                Log.d("GaypornHDfree", "Calling loadExtractor for: $fixedUrl")
+                // Gọi trực tiếp loadExtractor để extractor đã đăng ký xử lý (không tạo ExtractorLink thủ công)
+                loadExtractor(fixedUrl, subtitleCallback, callback)
+                called = true
+            } catch (e: Throwable) {
+                Log.w("GaypornHDfree", "loadExtractor failed for $raw : ${e.message}")
+            }
+        }
+
+        called
+    } catch (e: Exception) {
+        Log.e("GaypornHDfree", "Error in loadLinks: ${e.message}")
+        false
+    }
 }
 }
