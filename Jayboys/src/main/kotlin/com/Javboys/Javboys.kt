@@ -132,29 +132,33 @@ class Jayboys : MainAPI() {
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    val videoUrls = mutableSetOf<String>()
+    var found = false
+    val videoUrls = document.select("div#player, div.video-player")
+        .mapNotNull { it.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" } }
+        .toMutableSet()
 
-    // Thu thập URL từ iframe (ưu tiên data-src trước, fallback sang src)
-    document.select("iframe").forEach { iframe ->
-        iframe.attr("data-src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
-            ?: iframe.attr("src").takeIf { it.isNotBlank() }?.let(videoUrls::add)
+    // Fallback iframe
+    if (videoUrls.isEmpty()) {
+        val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
+        iframeSrc?.let { videoUrls.add(it) }
     }
 
-    // Thu thập URL từ player
-    document.select("div.video-player[data-src]").forEach {
-        it.attr("data-src").takeIf { src -> src.isNotBlank() }?.let(videoUrls::add)
-    }
 
     // Thu thập URL từ download button
-    document.select("div.download-button-wrapper a[href]").forEach {
-        it.attr("href").takeIf { href -> href.isNotBlank() }?.let(videoUrls::add)
-    }
+        val button = document.select("div.download-button-wrapper a[href]")?.attr("href")
+        button?.let { videoUrls.add(it) }
+    
 
     // Xử lý tất cả URL đã thu thập
-    videoUrls.forEach { url ->
-        loadExtractor(url, subtitleCallback, callback)
+    videoUrls.toList().amap { url ->
+        val ok = loadExtractor(
+            url,
+            referer = data,
+            subtitleCallback = subtitleCallback
+        ) { link ->  callback(link)
+        }
+            if (ok) found = true
     }
-
-    return videoUrls.isNotEmpty()
-    }
+    return found
+}
 }
