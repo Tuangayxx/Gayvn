@@ -7,12 +7,19 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import okhttp3.Headers
+import okhttp3.Headers.Companion.toHeaders
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.ByteArrayInputStream
 import java.util.zip.GZIPInputStream
 import java.net.URLEncoder
 
+/*
+  GaypornHDfree.kt (fixed v2)
+  - Sửa: dùng headersMap.toHeaders() thay vì Headers.of(...)
+  - Đảm bảo không có top-level override / hàm ngoài class
+  - Loại bỏ gọi tới API không tồn tại
+*/
 
 class GaypornHDfree : MainAPI() {
     // Match MainAPI signatures (use var if base uses var)
@@ -40,7 +47,7 @@ class GaypornHDfree : MainAPI() {
             headersMap.putAll(extraHeaders)
             // avoid brotli to reduce binary responses
             headersMap["Accept-Encoding"] = "gzip, deflate"
-            val headers = Headers.of(headersMap)
+            val headers: Headers = headersMap.toHeaders()
 
             val req = Request.Builder()
                 .url(url)
@@ -375,83 +382,4 @@ class GaypornHDfree : MainAPI() {
         }
     }
 
-} 
-
-
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        return try {
-            val headers = standardHeaders + mapOf("Referer" to data)
-            val document = app.get(data, headers = headers).document
-            val videoUrls = mutableSetOf<String>()
-
-            // Tìm tất cả các nguồn video có thể
-            val selectors = listOf(
-                "iframe[src]",
-                "iframe[data-src]", 
-                "video source[src]",
-                "video[src]",
-                "div.video-player[data-src]",
-                "div.player-container iframe",
-                "embed[src]",
-                ".download-button-wrapper a[href]",
-                "a[href*='.mp4']",
-                "a[href*='.m3u8']"
-            )
-
-            selectors.forEach { selector ->
-                document.select(selector).forEach { element ->
-                    val url = listOf("src", "data-src", "href").map { 
-                        element.attr(it) 
-                    }.firstOrNull { it.isNotBlank() }
-                    
-                    url?.let { videoUrls.add(it) }
-                }
-            }
-
-            // Tìm trong JavaScript
-            val scriptTags = document.select("script").map { it.data() }.joinToString(" ")
-            val urlPatterns = listOf(
-                Regex("(?:src|url)\\s*[:=]\\s*[\"'](https?://[^\"']+)[\"']"),
-                Regex("player_url\\s*[:=]\\s*[\"'](https?://[^\"']+)[\"']"),
-                Regex("video_url\\s*[:=]\\s*[\"'](https?://[^\"']+)[\"']")
-            )
-            
-            urlPatterns.forEach { pattern ->
-                pattern.findAll(scriptTags).forEach { match ->
-                    videoUrls.add(match.groupValues[1])
-                }
-            }
-
-            Log.d("GaypornHDfree", "Found ${videoUrls.size} video URLs")
-
-            // Process tất cả URLs
-            videoUrls.forEach { url ->
-                try {
-                    val fixedUrl = when {
-                        url.startsWith("http") -> url
-                        url.startsWith("//") -> "https:$url"
-                        else -> "$mainUrl/${url.removePrefix("/")}"
-                    }
-                    
-                    Log.d("GaypornHDfree", "Processing URL: $fixedUrl")
-                    
-                    // Thử extract với loadExtractor
-                    Log.d("GaypornHDfree", "Processing URL: $fixedUrl")
-                    loadExtractor(fixedUrl, subtitleCallback, callback)
-                } catch (e: Exception) {
-                    Log.e("GaypornHDfree", "Error processing URL $url: ${e.message}")
-                }
-            }
-
-            videoUrls.isNotEmpty()
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in loadLinks: ${e.message}")
-            false
-        }
-    }
-}
+} // end class
