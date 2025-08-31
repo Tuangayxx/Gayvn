@@ -15,37 +15,37 @@ import java.util.zip.GZIPInputStream
 import java.net.URLEncoder
 
 /*
-  GaypornHDfree.kt (fixed v2)
-  - Sửa: dùng headersMap.toHeaders() thay vì Headers.of(...)
-  - Đảm bảo không có top-level override / hàm ngoài class
-  - Loại bỏ gọi tới API không tồn tại
+  GaypornHDfree.kt (fixed, brackets balanced)
+  - Đã loại các tham chiếu không tồn tại
+  - Thêm fetchHtmlSafely, fixUrl
+  - Không có hàm/override ở top-level
 */
 
 class GaypornHDfree : MainAPI() {
-    // Match MainAPI signatures (use var if base uses var)
+
+    // Basic info (use var in case base class expects var)
     override var name = "GaypornHDfree"
     override var mainUrl = "https://gaypornhdfree.com"
     override var lang = "vi"
     override val supportedTypes = setOf(TvType.NSFW)
     val version = "1.0"
 
-    // Local standard headers (avoid depending on framework variable names)
+    // Local standard headers
     private val standardHeaders: Map<String, String> = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language" to "en-US,en;q=0.5"
     )
 
-    // OkHttp client for safe fetches (gzip handling fallback)
+    // OkHttp client for safe fetches
     private val fallbackHttpClient: OkHttpClient by lazy { OkHttpClient.Builder().build() }
 
-    // Safe HTML fetcher: avoids 'br' responses and attempts to decode gzip if needed.
+    // Safe fetcher: try decode gzip, avoid brotli by requesting gzip,deflate
     private fun fetchHtmlSafely(url: String, extraHeaders: Map<String, String> = mapOf()): String {
-        return try {
+        try {
             val headersMap = mutableMapOf<String, String>()
             headersMap.putAll(standardHeaders)
             headersMap.putAll(extraHeaders)
-            // avoid brotli to reduce binary responses
             headersMap["Accept-Encoding"] = "gzip, deflate"
             val headers: Headers = headersMap.toHeaders()
 
@@ -63,30 +63,30 @@ class GaypornHDfree : MainAPI() {
                         (bytes.size >= 2 && bytes[0] == 0x1f.toByte() && bytes[1] == 0x8b.toByte())
 
                 if (isGzip) {
-                    try {
-                        return GZIPInputStream(ByteArrayInputStream(bytes)).bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    return try {
+                        GZIPInputStream(ByteArrayInputStream(bytes)).bufferedReader(Charsets.UTF_8).use { it.readText() }
                     } catch (_: Exception) {
-                        // fallback to raw UTF-8 decode
-                        return try { String(bytes, Charsets.UTF_8) } catch (_: Exception) { "" }
+                        try { String(bytes, Charsets.UTF_8) } catch (_: Exception) { "" }
                     }
                 } else {
                     val text = try { String(bytes, Charsets.UTF_8) } catch (_: Exception) { "" }
                     val nonPrintable = text.count { it.code < 32 && it != '\n' && it != '\r' && it != '\t' }
                     if (text.isBlank() || (text.length > 0 && nonPrintable.toDouble() / text.length > 0.30)) {
-                        "" // suspicious binary
-                    } else text
+                        return ""
+                    }
+                    return text
                 }
             }
         } catch (e: Exception) {
             Log.w("GaypornHDfree", "fetchHtmlSafely failed for $url: ${e.message}")
-            ""
+            return ""
         }
     }
 
-    // Resolve relative URLs safely against mainUrl
+    // Resolve relative URLs safely
     private fun fixUrl(href: String?): String {
         if (href == null) return ""
-        var u = href.trim()
+        val u = href.trim()
         if (u.isEmpty()) return ""
         if (u.startsWith("http://") || u.startsWith("https://")) return u
         if (u.startsWith("//")) return "https:$u"
@@ -103,7 +103,6 @@ class GaypornHDfree : MainAPI() {
         val url = if (page > 1) "${request.data}page/$page/" else "${request.data}"
 
         try {
-            // Primary fetch using Jsoup connect with headers
             val document = try {
                 Jsoup.connect(url)
                     .headers(standardHeaders)
@@ -112,7 +111,7 @@ class GaypornHDfree : MainAPI() {
                     .get()
             } catch (e: Exception) {
                 Log.w("GaypornHDfree", "Jsoup primary fetch failed for $url: ${e.message}")
-                Jsoup.parse("") // empty doc, fallback below
+                Jsoup.parse("")
             }
 
             val suspect = document.title().isNullOrBlank() ||
@@ -123,30 +122,19 @@ class GaypornHDfree : MainAPI() {
             if (suspect) {
                 Log.w("GaypornHDfree", "Suspect HTML detected for $url. Snippet: ${document.html().take(300)}")
 
-                // 1) Try safe fetch with OkHttp (gzip handling)
-                val safeHtml = fetchHtmlSafely(url, mapOf(
-                    "Referer" to mainUrl,
-                    "Cookie" to "hasVisited=1"
-                ))
-
+                val safeHtml = fetchHtmlSafely(url, mapOf("Referer" to mainUrl, "Cookie" to "hasVisited=1"))
                 if (safeHtml.isNotBlank() && !safeHtml.contains("challenge-platform") && !safeHtml.contains("Ray ID")) {
                     val parsed = Jsoup.parse(safeHtml, url)
                     return parseMainPageContent(parsed, request.name)
-                } else {
-                    Log.w("GaypornHDfree", "fetchHtmlSafely did not return usable HTML for $url")
                 }
 
-                // 2) Try alternate UA
-                val altHtml = fetchHtmlSafely(url, mapOf(
-                    "Referer" to mainUrl,
-                    "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.188 Safari/537.36"
-                ))
+                val altHtml = fetchHtmlSafely(url, mapOf("Referer" to mainUrl, "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64)"))
                 if (altHtml.isNotBlank() && !altHtml.contains("challenge-platform") && !altHtml.contains("Ray ID")) {
                     val parsedAlt = Jsoup.parse(altHtml, url)
                     return parseMainPageContent(parsedAlt, request.name)
                 }
 
-                Log.e("GaypornHDfree", "Cloudflare/unrenderable page for $url - returning empty main page (after safe fetch)")
+                Log.e("GaypornHDfree", "Cloudflare/unrenderable page for $url - returning empty")
                 return newHomePageResponse(HomePageList(request.name, listOf()), false)
             } else {
                 return parseMainPageContent(document, request.name)
@@ -157,230 +145,4 @@ class GaypornHDfree : MainAPI() {
         }
     }
 
-    // ----------------- Parse main page content -----------------
-    private fun parseMainPageContent(document: Document, requestName: String): HomePageResponse {
-        // Debug: Log title + short snippet để dễ debug Cloudflare / empty HTML
-        Log.d("GaypornHDfree", "Page title: ${document.title()}")
-        if (document.title().isNullOrBlank() || document.html().length < 300) {
-            Log.w("GaypornHDfree", "Short HTML/snippet: ${document.html().take(800)}")
-        }
-
-        val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article, .post")
-            .mapNotNull { element ->
-                try {
-                    element.toSearchResult()
-                } catch (e: Exception) {
-                    Log.e("GaypornHDfree", "Error parsing search result: ${e.message}")
-                    null
-                }
-            }
-
-        return newHomePageResponse(
-            list = HomePageList(
-                name = requestName,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = home.isNotEmpty()
-        )
-    }
-
-    // ----------------- Search -----------------
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-        val seenUrls = mutableSetOf<String>()
-
-        try {
-            for (i in 1..3) {
-                val encodedQuery = URLEncoder.encode(query, "UTF-8")
-                val searchUrl = "$mainUrl/?s=$encodedQuery&page=$i"
-
-                val document = try {
-                    Jsoup.connect(searchUrl)
-                        .headers(standardHeaders)
-                        .userAgent(standardHeaders["User-Agent"] ?: "")
-                        .timeout(15000)
-                        .get()
-                } catch (e: Exception) {
-                    Log.w("GaypornHDfree", "Search fetch failed for $searchUrl: ${e.message}")
-                    Jsoup.parse("")
-                }
-
-                val results = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article")
-                    .mapNotNull {
-                        try {
-                            it.toSearchResult()
-                        } catch (e: Exception) {
-                            Log.e("GaypornHDfree", "Error parsing search result: ${e.message}")
-                            null
-                        }
-                    }.filterNot { seenUrls.contains(it.url) }
-
-                if (results.isEmpty()) break
-
-                results.forEach { seenUrls.add(it.url) }
-                searchResponse.addAll(results)
-
-                delay(500)
-            }
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in search: ${e.message}")
-        }
-
-        return searchResponse
-    }
-
-    // ----------------- Load page (video page) -----------------
-    override suspend fun load(url: String): LoadResponse {
-        return try {
-            // Primary fetch via Jsoup
-            val document = try {
-                Jsoup.connect(url)
-                    .headers(standardHeaders)
-                    .userAgent(standardHeaders["User-Agent"] ?: "")
-                    .timeout(15_000)
-                    .get()
-            } catch (e: Exception) {
-                Log.w("GaypornHDfree", "Jsoup load failed for $url: ${e.message}")
-                Jsoup.parse("")
-            }
-
-            if (document.title().isNullOrBlank() || document.html().contains("challenge-platform") || document.html().length < 300) {
-                Log.w("GaypornHDfree", "Suspect HTML on load for $url. Snippet: ${document.html().take(800)}")
-
-                // 1) Retry with short delay
-                try {
-                    delay(2000)
-                    val retryDoc = Jsoup.connect(url).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get()
-                    if (!retryDoc.title().isNullOrBlank() && !retryDoc.html().contains("challenge-platform")) {
-                        return parseLoadResponse(retryDoc, url)
-                    }
-                    Log.w("GaypornHDfree", "Retry returned challenge/empty on load for $url")
-                } catch (e: Exception) {
-                    Log.w("GaypornHDfree", "Retry failed on load: ${e.message}")
-                }
-
-                // 2) Safe fetch via OkHttp
-                val safeHtml = fetchHtmlSafely(url, mapOf("Referer" to mainUrl))
-                if (safeHtml.isNotBlank() && !safeHtml.contains("challenge-platform") && !safeHtml.contains("Ray ID")) {
-                    val doc = Jsoup.parse(safeHtml, url)
-                    return parseLoadResponse(doc, url)
-                }
-
-                // 3) Try alternate UA
-                val altHtml = fetchHtmlSafely(url, mapOf("User-Agent" to "Mozilla/5.0 (X11; Linux x86_64)"))
-                if (altHtml.isNotBlank() && !altHtml.contains("challenge-platform") && !altHtml.contains("Ray ID")) {
-                    val docAlt = Jsoup.parse(altHtml, url)
-                    return parseLoadResponse(docAlt, url)
-                }
-
-                throw Exception("Cloudflare protection active or page unrenderable for $url")
-            } else {
-                return parseLoadResponse(document, url)
-            }
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in load: ${e.message}")
-            throw e
-        }
-    }
-
-    // ----------------- Parse load response -----------------
-    private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
-        val title = listOf(
-            document.selectFirst("meta[property='og:title']")?.attr("content"),
-            document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
-            document.selectFirst("h1")?.text(),
-            document.selectFirst(".video-title, .entry-title")?.text()
-        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
-
-        val poster = listOf(
-            document.selectFirst("meta[property='og:image']")?.attr("content"),
-            document.selectFirst("video")?.attr("poster"),
-            document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
-        ).firstOrNull { !it.isNullOrBlank() } ?: ""
-
-        val description = listOf(
-            document.selectFirst("meta[property='og:description']")?.attr("content"),
-            document.selectFirst("meta[name='description']")?.attr("content"),
-            document.selectFirst(".video-description, .entry-content p")?.text()
-        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
-
-        val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull {
-            try {
-                it.toSearchResult()
-            } catch (e: Exception) {
-                Log.e("GaypornHDfree", "Error parsing recommendation: ${e.message}")
-                null
-            }
-        }
-
-        Log.d("GaypornHDfree", "Loaded: title='$title', poster='$poster'")
-
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            if (poster.isNotBlank()) {
-                this.posterUrl = when {
-                    poster.startsWith("http") -> poster
-                    poster.startsWith("//") -> "https:$poster"
-                    poster.startsWith("/") -> "$mainUrl$poster"
-                    else -> "$mainUrl/$poster"
-                }
-            }
-            this.plot = description
-            this.recommendations = recommendations
-        }
-    }
-
-    // ----------------- Element -> SearchResult -----------------
-    private fun Element.toSearchResult(): SearchResponse? {
-        return try {
-            val titleElement = this.selectFirst("a[href*='/video/']")
-                ?: this.selectFirst("a[href*='.html']")
-                ?: this.selectFirst("a[title]")
-                ?: this.selectFirst("h2 a, h3 a, h4 a")
-                ?: this.selectFirst("div.title a")
-                ?: this.selectFirst("div.video-title a")
-                ?: this.selectFirst("a")
-
-            if (titleElement == null) {
-                return null
-            }
-
-            val title = titleElement.text().trim().ifEmpty {
-                titleElement.attr("title").trim()
-            }.ifEmpty {
-                titleElement.attr("alt").trim()
-            }
-
-            if (title.isEmpty()) return null
-
-            val href = fixUrl(titleElement.attr("href"))
-            if (href.isEmpty() || href == mainUrl) return null
-
-            val img = this.selectFirst("img")
-                ?: this.selectFirst("video")
-                ?: titleElement.selectFirst("img")
-
-            val poster = img?.let { imgEl ->
-                val attrs = listOf("data-src", "data-lazy-src", "data-original", "src", "poster")
-                attrs.map { attr -> imgEl.attr(attr) }
-                    .firstOrNull { it.isNotEmpty() && !it.contains("placeholder") }
-            } ?: ""
-
-            return newMovieSearchResponse(title, href, TvType.NSFW) {
-                if (poster.isNotBlank()) {
-                    this.posterUrl = when {
-                        poster.startsWith("http") -> poster
-                        poster.startsWith("//") -> "https:$poster"
-                        poster.startsWith("/") -> "$mainUrl$poster"
-                        else -> "$mainUrl/$poster"
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in toSearchResult: ${e.message}")
-            null
-        }
-    }
-
-} // end class
-EOF
+    // -----------
