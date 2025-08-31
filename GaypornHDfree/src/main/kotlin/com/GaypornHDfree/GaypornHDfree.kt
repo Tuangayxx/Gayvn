@@ -26,10 +26,10 @@ class GaypornHDfree : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "$mainUrl/" to "Latest",
+        "/" to "Latest",
         "$mainUrl/category/onlyfans/" to "Onlyfans",
     )
-    
+
     // Thêm User-Agent và headers chuẩn
     private val standardHeaders = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -37,20 +37,18 @@ class GaypornHDfree : MainAPI() {
         "Accept-Language" to "en-US,en;q=0.5",
         "Accept-Encoding" to "gzip, deflate",
         "Connection" to "keep-alive",
-        "Upgrade-Insecure-Requests" to "1",
-        "X-Requested-With" to "XMLHttpRequest"
+        "Upgrade-Insecure-Requests" to "1"
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page > 1) "${request.data}page/$page/" else request.data
+        val url = if (page > 1) "${request.data}page/$page/" else "${request.data}"
         
         try {
             // Thêm cookies và headers để bypass Cloudflare
             val cfHeaders = standardHeaders + mapOf(
                 "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
                 "Cache-Control" to "no-cache",
-                "Pragma" to "no-cache")
-                + mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1")
+                "Pragma" to "no-cache"
             )
             
             val document = app.get(url, headers = cfHeaders).document
