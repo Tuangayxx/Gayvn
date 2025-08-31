@@ -2,7 +2,6 @@ package com.GaypornHDfree
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.api.*
 import kotlinx.coroutines.delay
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -14,16 +13,9 @@ import java.io.ByteArrayInputStream
 import java.util.zip.GZIPInputStream
 import java.net.URLEncoder
 
-/*
-  GaypornHDfree_fixed.kt
-  - Phiên bản "fix & disable": tắt các gọi không xác định, dùng Jsoup + OkHttp fallback để fetch HTML.
-  - Mục tiêu: biên dịch thành công và vẫn giữ parsing logic.
-  - Nếu build tiếp tục báo lỗi tên symbol từ framework (ví dụ newHomePageResponse), gửi lại log để mình điều chỉnh.
-*/
 
 class GaypornHDfree : MainAPI() {
-    // NOTE: MainAPI in your framework declares these as var in some versions,
-    // so we use var to avoid "cannot be overridden by val" errors.
+    // Match MainAPI signatures (use var if base uses var)
     override var name = "GaypornHDfree"
     override var mainUrl = "https://gaypornhdfree.com"
     override var lang = "vi"
@@ -104,11 +96,11 @@ class GaypornHDfree : MainAPI() {
         val url = if (page > 1) "${request.data}page/$page/" else "${request.data}"
 
         try {
-            // Primary fetch using Jsoup connect with headers (avoid calling unknown app.get signatures)
+            // Primary fetch using Jsoup connect with headers
             val document = try {
                 Jsoup.connect(url)
                     .headers(standardHeaders)
-                    .userAgent(standardHeaders["User-Agent"])
+                    .userAgent(standardHeaders["User-Agent"] ?: "")
                     .timeout(15_000)
                     .get()
             } catch (e: Exception) {
@@ -199,7 +191,7 @@ class GaypornHDfree : MainAPI() {
                 val document = try {
                     Jsoup.connect(searchUrl)
                         .headers(standardHeaders)
-                        .userAgent(standardHeaders["User-Agent"])
+                        .userAgent(standardHeaders["User-Agent"] ?: "")
                         .timeout(15000)
                         .get()
                 } catch (e: Exception) {
@@ -238,7 +230,7 @@ class GaypornHDfree : MainAPI() {
             val document = try {
                 Jsoup.connect(url)
                     .headers(standardHeaders)
-                    .userAgent(standardHeaders["User-Agent"])
+                    .userAgent(standardHeaders["User-Agent"] ?: "")
                     .timeout(15_000)
                     .get()
             } catch (e: Exception) {
@@ -252,7 +244,7 @@ class GaypornHDfree : MainAPI() {
                 // 1) Retry with short delay
                 try {
                     delay(2000)
-                    val retryDoc = Jsoup.connect(url).headers(standardHeaders).userAgent(standardHeaders["User-Agent"]).timeout(15000).get()
+                    val retryDoc = Jsoup.connect(url).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get()
                     if (!retryDoc.title().isNullOrBlank() && !retryDoc.html().contains("challenge-platform")) {
                         return parseLoadResponse(retryDoc, url)
                     }
@@ -382,7 +374,9 @@ class GaypornHDfree : MainAPI() {
             null
         }
     }
-}
+
+} 
+
 
     override suspend fun loadLinks(
         data: String,
