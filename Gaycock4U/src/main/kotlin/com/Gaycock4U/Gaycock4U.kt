@@ -24,7 +24,7 @@ class Gaycock4U : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "" to "Latest Updates",
+        "$mainUrl/" to "Latest Updates",
         "$mainUrl/category/amateur/" to "Amateur",
         "$mainUrl/category/bareback/" to "Bareback",
         "$mainUrl/category/bigcock/" to "Big Cock",
