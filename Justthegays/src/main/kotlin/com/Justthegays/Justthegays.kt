@@ -51,33 +51,35 @@ class Justthegays : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val aTag = this.selectFirst("a") ?: return null
-        val href = aTag.attr("href")
-        val posterUrl = this.select("img").attr("src")
-        val title = this.selectFirst("title")?.text()?.trim() ?: "No Title"
+    val article = this.selectFirst("article") ?: return null
+    val aTag = article.selectFirst("div.item-img a") ?: return null
+    val href = aTag.attr("href")
+    val posterUrl = article.selectFirst("div.item-img img")?.attr("src")
+    val title = article.selectFirst("h3.post-title a")?.text()?.trim() ?: "No Title"
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = fixUrlNull(posterUrl)
-        }
+    return newMovieSearchResponse(title, href, TvType.NSFW) {
+        this.posterUrl = fixUrlNull(posterUrl)
     }
+}
 
-    private fun Element.toRecommendResult(): SearchResponse? {
-        val aTag = this.selectFirst("a") ?: return null
-        val href = aTag.attr("href")
-        val posterUrl = this.select("img").attr("src")
-        val title = this.selectFirst("title")?.text()?.trim() ?: "No Title"
+private fun Element.toRecommendResult(): SearchResponse? {
+    val article = this.selectFirst("article") ?: return null
+    val aTag = article.selectFirst("div.item-img a") ?: return null
+    val href = aTag.attr("href")
+    val posterUrl = article.selectFirst("div.item-img img")?.attr("src")
+    val title = article.selectFirst("h3.post-title a")?.text()?.trim() ?: "No Title"
 
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = fixUrlNull(posterUrl)
-        }
+    return newMovieSearchResponse(title, href, TvType.NSFW) {
+        this.posterUrl = fixUrlNull(posterUrl)
     }
+}
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchUrl = "$mainUrl/?s=$query"
-        val document = app.get(searchUrl).document
-        val items = document.select("div.col-xl-4")
-        return items.mapNotNull { it.toSearchResult() }
-    }
+override suspend fun search(query: String): List<SearchResponse> {
+    val searchUrl = "$mainUrl/?s=$query"
+    val document = app.get(searchUrl).document
+    val items = document.select("article")
+    return items.mapNotNull { it.toSearchResult() }
+}
 
     override suspend fun load(url: String): LoadResponse {
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
