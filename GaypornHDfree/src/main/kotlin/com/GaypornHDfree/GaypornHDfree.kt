@@ -40,68 +40,57 @@ class GaypornHDfree : MainAPI() {
         "Upgrade-Insecure-Requests" to "1"
     )
 
-    // ---------- SỬA: getMainPage ----------
-override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val url = if (page > 1) "${request.data}page/$page/" else "${request.data}"
 
     try {
-        // Thêm cookies và headers để giảm khả năng bị chặn
         val cfHeaders = standardHeaders + mapOf(
             "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
             "Cache-Control" to "no-cache",
             "Pragma" to "no-cache"
         )
 
+        // Lấy lần đầu bằng HTTP client
         var document = app.get(url, headers = cfHeaders).document
 
-        // Nếu HTML nghi ngờ (title rỗng / challenge), log snippet và thử fallback render
-        if (document.title().isNullOrBlank() || document.html().length < 300 || document.html().contains("challenge-platform") ||
-            document.selectFirst("div.main-wrapper")?.text()?.contains("gaypornhdfree.com cần đánh giá") == true) {
-
+        // Nếu HTML khả nghi (rỗng / chứa challenge), thử retry nhẹ thay vì gọi api không chắc
+        if (document.title().isNullOrBlank()
+            || document.html().length < 300
+            || document.html().contains("challenge-platform")
+            || document.selectFirst("div.main-wrapper")?.text()?.contains("gaypornhdfree.com cần đánh giá") == true
+        ) {
             Log.w("GaypornHDfree", "Suspect HTML detected for $url. Snippet: ${document.html().take(800)}")
 
-            // 1) Thử WebViewResolver (render JS => lấy HTML đã render) -- nếu lib có API khác, đổi tương ứng
+            // 1) Retry nhỏ bằng cùng header (thêm delay để chờ challenge hết)
             try {
-                Log.d("GaypornHDfree", "Trying WebViewResolver fallback for $url")
-                val renderedHtml = WebViewResolver.getHtml(url, headers = cfHeaders) // đổi tên hàm nếu cần
-                val renderedDoc = Jsoup.parse(renderedHtml, url)
-                if (!renderedDoc.title().isNullOrBlank() && !renderedDoc.html().contains("challenge-platform")) {
-                    return parseMainPageContent(renderedDoc, request.name)
-                } else {
-                    Log.w("GaypornHDfree", "WebViewResolver returned challenge/empty for $url")
+                kotlinx.coroutines.delay(2500)
+                val retryDoc = app.get(url, headers = cfHeaders).document
+                if (!retryDoc.title().isNullOrBlank() && !retryDoc.html().contains("challenge-platform")) {
+                    return parseMainPageContent(retryDoc, request.name)
                 }
+                Log.w("GaypornHDfree", "Retry still returned challenge/empty for $url")
             } catch (e: Exception) {
-                Log.w("GaypornHDfree", "WebViewResolver failed: ${e.message}")
+                Log.w("GaypornHDfree", "Retry failed in getMainPage: ${e.message}")
             }
 
-            // 2) Thử CloudflareKiller (nếu có) để solve challenge
+            // 2) Thử đổi headers (thường giúp khi server lọc UA)
             try {
-                Log.d("GaypornHDfree", "Trying CloudflareKiller fallback for $url")
-                val solvedHtml = CloudflareKiller.solve(url, headers = cfHeaders) // đổi tên nếu API khác
-                val solvedDoc = Jsoup.parse(solvedHtml, url)
-                if (!solvedDoc.title().isNullOrBlank() && !solvedDoc.html().contains("challenge-platform")) {
-                    return parseMainPageContent(solvedDoc, request.name)
-                } else {
-                    Log.w("GaypornHDfree", "CloudflareKiller returned challenge/empty for $url")
+                val altHeaders = cfHeaders + mapOf(
+                    "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+                    "Referer" to mainUrl
+                )
+                val altDoc = app.get(url, headers = altHeaders).document
+                if (!altDoc.title().isNullOrBlank() && !altDoc.html().contains("challenge-platform")) {
+                    return parseMainPageContent(altDoc, request.name)
                 }
+                Log.w("GaypornHDfree", "Alt headers returned challenge/empty for $url")
             } catch (e: Exception) {
-                Log.w("GaypornHDfree", "CloudflareKiller failed: ${e.message}")
+                Log.w("GaypornHDfree", "Alt headers failed in getMainPage: ${e.message}")
             }
 
-            // 3) Cuối cùng: retry nhẹ bằng HTTP client (fallback)
-            try {
-                kotlinx.coroutines.delay(2000)
-                val retryDocument = app.get(url, headers = cfHeaders).document
-                if (retryDocument.title().isNullOrBlank() || retryDocument.html().contains("challenge-platform")) {
-                    Log.w("GaypornHDfree", "Still Cloudflare after fallback - returning empty for $url")
-                    return newHomePageResponse(HomePageList(request.name, listOf()), false)
-                } else {
-                    return parseMainPageContent(retryDocument, request.name)
-                }
-            } catch (e: Exception) {
-                Log.e("GaypornHDfree", "Final retry failed in getMainPage: ${e.message}")
-                return newHomePageResponse(HomePageList(request.name, listOf()), false)
-            }
+            // 3) Nếu vẫn không được, trả về empty list thay vì tham chiếu api không tồn tại
+            Log.e("GaypornHDfree", "Cloudflare/unrenderable page for $url - returning empty main page")
+            return newHomePageResponse(HomePageList(request.name, listOf()), false)
         } else {
             return parseMainPageContent(document, request.name)
         }
@@ -110,6 +99,7 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
         return newHomePageResponse(HomePageList(request.name, listOf()), false)
     }
 }
+
 
 // ---------- SỬA: parseMainPageContent ----------
 private fun parseMainPageContent(document: Document, requestName: String): HomePageResponse {
@@ -250,7 +240,6 @@ override suspend fun search(query: String): List<SearchResponse> {
     return searchResponse
 }
 
-// ---------- SỬA: load(...) và parseLoadResponse(...) ----------
 override suspend fun load(url: String): LoadResponse {
     return try {
         val cfHeaders = standardHeaders + mapOf(
@@ -263,39 +252,32 @@ override suspend fun load(url: String): LoadResponse {
         if (document.title().isNullOrBlank() || document.html().contains("challenge-platform") || document.html().length < 300) {
             Log.w("GaypornHDfree", "Suspect HTML on load for $url. Snippet: ${document.html().take(800)}")
 
-            // Thử WebViewResolver
+            // 1) Retry ngắn
             try {
-                val renderedHtml = WebViewResolver.getHtml(url, headers = cfHeaders)
-                val renderedDoc = Jsoup.parse(renderedHtml, url)
-                if (!renderedDoc.title().isNullOrBlank() && !renderedDoc.html().contains("challenge-platform")) {
-                    return parseLoadResponse(renderedDoc, url)
-                } else {
-                    Log.w("GaypornHDfree", "WebViewResolver returned challenge/empty on load.")
+                kotlinx.coroutines.delay(2000)
+                val retryDoc = app.get(url, headers = cfHeaders).document
+                if (!retryDoc.title().isNullOrBlank() && !retryDoc.html().contains("challenge-platform")) {
+                    return parseLoadResponse(retryDoc, url)
                 }
+                Log.w("GaypornHDfree", "Retry returned challenge/empty on load for $url")
             } catch (e: Exception) {
-                Log.w("GaypornHDfree", "WebViewResolver on load failed: ${e.message}")
+                Log.w("GaypornHDfree", "Retry failed on load: ${e.message}")
             }
 
-            // Thử CloudflareKiller
+            // 2) Thử headers thay thế
             try {
-                val solvedHtml = CloudflareKiller.solve(url, headers = cfHeaders)
-                val solvedDoc = Jsoup.parse(solvedHtml, url)
-                if (!solvedDoc.title().isNullOrBlank() && !solvedDoc.html().contains("challenge-platform")) {
-                    return parseLoadResponse(solvedDoc, url)
-                } else {
-                    Log.w("GaypornHDfree", "CloudflareKiller returned challenge/empty on load.")
+                val altHeaders = cfHeaders + mapOf("Referer" to mainUrl, "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64)")
+                val altDoc = app.get(url, headers = altHeaders).document
+                if (!altDoc.title().isNullOrBlank() && !altDoc.html().contains("challenge-platform")) {
+                    return parseLoadResponse(altDoc, url)
                 }
+                Log.w("GaypornHDfree", "Alt headers returned challenge/empty on load for $url")
             } catch (e: Exception) {
-                Log.w("GaypornHDfree", "CloudflareKiller on load failed: ${e.message}")
+                Log.w("GaypornHDfree", "Alt headers failed on load: ${e.message}")
             }
 
-            // fallback retry
-            kotlinx.coroutines.delay(2000)
-            val retryDoc = app.get(url, headers = cfHeaders).document
-            if (retryDoc.html().contains("challenge-platform") || retryDoc.title().isNullOrBlank()) {
-                throw Exception("Cloudflare protection active")
-            }
-            return parseLoadResponse(retryDoc, url)
+            // 3) Nếu vẫn không được, ném exception hoặc trả về lỗi hợp lý
+            throw Exception("Cloudflare protection active or page unrenderable for $url")
         } else {
             return parseLoadResponse(document, url)
         }
@@ -305,8 +287,8 @@ override suspend fun load(url: String): LoadResponse {
     }
 }
 
+
 private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
-    // Thử nhiều cách để lấy title
     val title = listOf(
         document.selectFirst("meta[property='og:title']")?.attr("content"),
         document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
@@ -314,14 +296,12 @@ private suspend fun parseLoadResponse(document: Document, url: String): LoadResp
         document.selectFirst(".video-title, .entry-title")?.text()
     ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
 
-    // Thử nhiều cách để lấy poster
     val poster = listOf(
         document.selectFirst("meta[property='og:image']")?.attr("content"),
         document.selectFirst("video")?.attr("poster"),
         document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
     ).firstOrNull { !it.isNullOrBlank() } ?: ""
 
-    // Thử nhiều cách để lấy description
     val description = listOf(
         document.selectFirst("meta[property='og:description']")?.attr("content"),
         document.selectFirst("meta[name='description']")?.attr("content"),
@@ -352,6 +332,7 @@ private suspend fun parseLoadResponse(document: Document, url: String): LoadResp
         this.recommendations = recommendations
     }
 }
+
 
     override suspend fun loadLinks(
         data: String,
