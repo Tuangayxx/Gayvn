@@ -40,51 +40,88 @@ class GaypornHDfree : MainAPI() {
         "Upgrade-Insecure-Requests" to "1"
     )
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page > 1) "${request.data}page/$page/" else "${request.data}"
-        
-        try {
-            // Thêm cookies và headers để bypass Cloudflare
-            val cfHeaders = standardHeaders + mapOf(
-                "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
-                "Cache-Control" to "no-cache",
-                "Pragma" to "no-cache"
-            )
-            
-            val document = app.get(url, headers = cfHeaders).document
-            
-            // Nếu gặp Cloudflare challenge, thử với WebViewResolver cơ bản
-            if (document.selectFirst("div.main-wrapper")?.text()?.contains("gaypornhdfree.com cần đánh giá") == true ||
-                document.html().contains("challenge-platform")) {
-                
-                Log.d("GaypornHDfree", "Cloudflare detected, trying alternative approach...")
-                
-                // Thử với delay và retry
-                kotlinx.coroutines.delay(3000)
+    // ---------- SỬA: getMainPage ----------
+override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    val url = if (page > 1) "${request.data}page/$page/" else "${request.data}"
+
+    try {
+        // Thêm cookies và headers để giảm khả năng bị chặn
+        val cfHeaders = standardHeaders + mapOf(
+            "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
+            "Cache-Control" to "no-cache",
+            "Pragma" to "no-cache"
+        )
+
+        var document = app.get(url, headers = cfHeaders).document
+
+        // Nếu HTML nghi ngờ (title rỗng / challenge), log snippet và thử fallback render
+        if (document.title().isNullOrBlank() || document.html().length < 300 || document.html().contains("challenge-platform") ||
+            document.selectFirst("div.main-wrapper")?.text()?.contains("gaypornhdfree.com cần đánh giá") == true) {
+
+            Log.w("GaypornHDfree", "Suspect HTML detected for $url. Snippet: ${document.html().take(800)}")
+
+            // 1) Thử WebViewResolver (render JS => lấy HTML đã render) -- nếu lib có API khác, đổi tương ứng
+            try {
+                Log.d("GaypornHDfree", "Trying WebViewResolver fallback for $url")
+                val renderedHtml = WebViewResolver.getHtml(url, headers = cfHeaders) // đổi tên hàm nếu cần
+                val renderedDoc = Jsoup.parse(renderedHtml, url)
+                if (!renderedDoc.title().isNullOrBlank() && !renderedDoc.html().contains("challenge-platform")) {
+                    return parseMainPageContent(renderedDoc, request.name)
+                } else {
+                    Log.w("GaypornHDfree", "WebViewResolver returned challenge/empty for $url")
+                }
+            } catch (e: Exception) {
+                Log.w("GaypornHDfree", "WebViewResolver failed: ${e.message}")
+            }
+
+            // 2) Thử CloudflareKiller (nếu có) để solve challenge
+            try {
+                Log.d("GaypornHDfree", "Trying CloudflareKiller fallback for $url")
+                val solvedHtml = CloudflareKiller.solve(url, headers = cfHeaders) // đổi tên nếu API khác
+                val solvedDoc = Jsoup.parse(solvedHtml, url)
+                if (!solvedDoc.title().isNullOrBlank() && !solvedDoc.html().contains("challenge-platform")) {
+                    return parseMainPageContent(solvedDoc, request.name)
+                } else {
+                    Log.w("GaypornHDfree", "CloudflareKiller returned challenge/empty for $url")
+                }
+            } catch (e: Exception) {
+                Log.w("GaypornHDfree", "CloudflareKiller failed: ${e.message}")
+            }
+
+            // 3) Cuối cùng: retry nhẹ bằng HTTP client (fallback)
+            try {
+                kotlinx.coroutines.delay(2000)
                 val retryDocument = app.get(url, headers = cfHeaders).document
-                
-                if (retryDocument.html().contains("challenge-platform")) {
-                    Log.w("GaypornHDfree", "Cloudflare still active, returning empty")
+                if (retryDocument.title().isNullOrBlank() || retryDocument.html().contains("challenge-platform")) {
+                    Log.w("GaypornHDfree", "Still Cloudflare after fallback - returning empty for $url")
                     return newHomePageResponse(HomePageList(request.name, listOf()), false)
                 } else {
                     return parseMainPageContent(retryDocument, request.name)
                 }
-            } else {
-                return parseMainPageContent(document, request.name)
+            } catch (e: Exception) {
+                Log.e("GaypornHDfree", "Final retry failed in getMainPage: ${e.message}")
+                return newHomePageResponse(HomePageList(request.name, listOf()), false)
             }
-            
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in getMainPage: ${e.message}")
-            return newHomePageResponse(HomePageList(request.name, listOf()), false)
+        } else {
+            return parseMainPageContent(document, request.name)
         }
+    } catch (e: Exception) {
+        Log.e("GaypornHDfree", "Error in getMainPage: ${e.message}")
+        return newHomePageResponse(HomePageList(request.name, listOf()), false)
+    }
+}
+
+// ---------- SỬA: parseMainPageContent ----------
+private fun parseMainPageContent(document: Document, requestName: String): HomePageResponse {
+    // Debug: Log title + short snippet để dễ debug Cloudflare / empty HTML
+    Log.d("GaypornHDfree", "Page title: ${document.title()}")
+    Log.d("GaypornHDfree", "Page classes: ${document.select("div").take(5).map { it.className() }}")
+    if (document.title().isNullOrBlank() || document.html().length < 300) {
+        Log.w("GaypornHDfree", "Short HTML/snippet: ${document.html().take(800)}")
     }
 
-    private fun parseMainPageContent(document: Document, requestName: String): HomePageResponse {
-        // Debug: Log toàn bộ HTML structure
-        Log.d("GaypornHDfree", "Page title: ${document.title()}")
-        Log.d("GaypornHDfree", "Page classes: ${document.select("div").take(5).map { it.className() }}")
-        
-        val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article, .post").mapNotNull { element ->
+    val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article, .post")
+        .mapNotNull { element ->
             try {
                 Log.d("GaypornHDfree", "Processing element with classes: ${element.className()}")
                 element.toSearchResult()
@@ -94,95 +131,102 @@ class GaypornHDfree : MainAPI() {
             }
         }
 
-        return newHomePageResponse(
-            list = HomePageList(
-                name = requestName,
-                list = home,
-                isHorizontalImages = true
-            ),
-            hasNext = home.isNotEmpty() // Chỉ có next nếu có kết quả
-        )
-    }
+    return newHomePageResponse(
+        list = HomePageList(
+            name = requestName,
+            list = home,
+            isHorizontalImages = true
+        ),
+        hasNext = home.isNotEmpty()
+    )
+}
 
-    private fun Element.toSearchResult(): SearchResponse? {
-        return try {
-            Log.d("GaypornHDfree", "Parsing element HTML: ${this.html()}")
-            
-            // Thử tất cả các selector có thể để tìm title và link
-            val titleElement = this.selectFirst("a[href*='/video/']") 
-                ?: this.selectFirst("a[href*='.html']")
-                ?: this.selectFirst("a[title]")
-                ?: this.selectFirst("h2 a, h3 a, h4 a")
-                ?: this.selectFirst("div.title a")
-                ?: this.selectFirst("div.video-title a")
-                ?: this.selectFirst("div.deno.video-title a")
-                ?: this.selectFirst("a")
-            
-            if (titleElement == null) {
-                Log.e("GaypornHDfree", "No title element found")
-                return null
-            }
-            
-            val title = titleElement.text().trim().ifEmpty { 
-                titleElement.attr("title").trim()
-            }.ifEmpty {
-                titleElement.attr("alt").trim()
-            }
-            
-            if (title.isEmpty()) {
-                Log.e("GaypornHDfree", "No title text found")
-                return null
-            }
-            
-            val href = fixUrl(titleElement.attr("href"))
-            if (href.isEmpty() || href == mainUrl) {
-                Log.e("GaypornHDfree", "Invalid href: $href")
-                return null
-            }
-            
-            // Tìm poster - thử tất cả các khả năng
-            val img = this.selectFirst("img") 
-                ?: this.selectFirst("video")
-                ?: titleElement.selectFirst("img")
-            
-            val poster = img?.let { imgEl ->
-                val attrs = listOf("data-src", "data-lazy-src", "data-original", "src", "poster")
-                attrs.map { attr -> imgEl.attr(attr) }
-                    .firstOrNull { it.isNotEmpty() && !it.contains("placeholder") }
-            } ?: ""
-            
-            Log.d("GaypornHDfree", "Found: title='$title', href='$href', poster='$poster'")
+// ---------- SỬA: Element.toSearchResult() ----------
+private fun Element.toSearchResult(): SearchResponse? {
+    return try {
+        Log.d("GaypornHDfree", "Parsing element HTML: ${this.html()}")
 
-            newMovieSearchResponse(title, href, TvType.NSFW) {
+        // Thử tất cả các selector có thể để tìm title và link
+        val titleElement = this.selectFirst("a[href*='/video/']")
+            ?: this.selectFirst("a[href*='.html']")
+            ?: this.selectFirst("a[title]")
+            ?: this.selectFirst("h2 a, h3 a, h4 a")
+            ?: this.selectFirst("div.title a")
+            ?: this.selectFirst("div.video-title a")
+            ?: this.selectFirst("div.deno.video-title a")
+            ?: this.selectFirst("a")
+
+        if (titleElement == null) {
+            Log.e("GaypornHDfree", "No title element found")
+            return null
+        }
+
+        val title = titleElement.text().trim().ifEmpty {
+            titleElement.attr("title").trim()
+        }.ifEmpty {
+            titleElement.attr("alt").trim()
+        }
+
+        if (title.isEmpty()) {
+            Log.e("GaypornHDfree", "No title text found")
+            return null
+        }
+
+        val href = fixUrl(titleElement.attr("href"))
+        if (href.isEmpty() || href == mainUrl) {
+            Log.e("GaypornHDfree", "Invalid href: $href")
+            return null
+        }
+
+        // Tìm poster - thử tất cả các khả năng
+        val img = this.selectFirst("img")
+            ?: this.selectFirst("video")
+            ?: titleElement.selectFirst("img")
+
+        val poster = img?.let { imgEl ->
+            val attrs = listOf("data-src", "data-lazy-src", "data-original", "src", "poster")
+            attrs.map { attr -> imgEl.attr(attr) }
+                .firstOrNull { it.isNotEmpty() && !it.contains("placeholder") }
+        } ?: ""
+
+        Log.d("GaypornHDfree", "Found: title='$title', href='$href', poster='$poster'")
+
+        // Chỉ gán poster nếu có giá trị hợp lệ
+        val searchResp = newMovieSearchResponse(title, href, TvType.NSFW) {
+            if (poster.isNotBlank()) {
                 this.posterUrl = when {
-                    poster.isEmpty() -> ""
                     poster.startsWith("http") -> poster
                     poster.startsWith("//") -> "https:$poster"
                     poster.startsWith("/") -> "$mainUrl$poster"
                     else -> "$mainUrl/$poster"
                 }
             }
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in toSearchResult: ${e.message}")
-            null
         }
+        searchResp
+    } catch (e: Exception) {
+        Log.e("GaypornHDfree", "Error in toSearchResult: ${e.message}")
+        null
     }
+}
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-        val seenUrls = mutableSetOf<String>()
+// ---------- SỬA: search(...) - sửa lỗi for loop ----------
+override suspend fun search(query: String): List<SearchResponse> {
+    val searchResponse = mutableListOf<SearchResponse>()
+    val seenUrls = mutableSetOf<String>()
 
-        try {
-            for (i in 1..3) { // Giảm từ 5 xuống 3 trang để tránh timeout
-                val encodedQuery = URLEncoder.encode(query, "UTF-8")
-                val searchUrl = "$mainUrl/?s=$encodedQuery&page=$i"
-                
-                val document = app.get(searchUrl, headers = standardHeaders).document
-                
-                // Log để debug
-                Log.d("GaypornHDfree", "Search page classes: ${document.select("div").take(5).map { it.className() }}")
-                
-                val results = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article").mapNotNull { 
+    try {
+        // sửa from "for (i in 1.3)" -> "for (i in 1..3)"
+        for (i in 1..3) {
+            val encodedQuery = URLEncoder.encode(query, "UTF-8")
+            val searchUrl = "$mainUrl/?s=$encodedQuery&page=$i"
+
+            val document = app.get(searchUrl, headers = standardHeaders).document
+
+            // Log để debug
+            Log.d("GaypornHDfree", "Search page classes: ${document.select("div").take(5).map { it.className() }}")
+
+            val results = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article")
+                .mapNotNull {
                     try {
                         it.toSearchResult()
                     } catch (e: Exception) {
@@ -191,95 +235,123 @@ class GaypornHDfree : MainAPI() {
                     }
                 }.filterNot { seenUrls.contains(it.url) }
 
-                if (results.isEmpty()) break
+            if (results.isEmpty()) break
 
-                results.forEach { seenUrls.add(it.url) }
-                searchResponse.addAll(results)
-                
-                // Thêm delay nhỏ để tránh spam requests
-                kotlinx.coroutines.delay(500)
-            }
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in search: ${e.message}")
+            results.forEach { seenUrls.add(it.url) }
+            searchResponse.addAll(results)
+
+            // Thêm delay nhỏ để tránh spam requests
+            kotlinx.coroutines.delay(500)
         }
-
-        return searchResponse
-    }
-       
-    override suspend fun load(url: String): LoadResponse {
-        return try {
-            val cfHeaders = standardHeaders + mapOf(
-                "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
-                "Cache-Control" to "no-cache"
-            )
-            
-            val document = app.get(url, headers = cfHeaders).document
-
-            // Nếu gặp Cloudflare, thử retry
-            if (document.html().contains("challenge-platform")) {
-                Log.d("GaypornHDfree", "Cloudflare detected in load, retrying...")
-                kotlinx.coroutines.delay(3000)
-                val retryDoc = app.get(url, headers = cfHeaders).document
-                
-                if (retryDoc.html().contains("challenge-platform")) {
-                    throw Exception("Cloudflare protection active")
-                }
-                return parseLoadResponse(retryDoc, url)
-            } else {
-                return parseLoadResponse(document, url)
-            }
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in load: ${e.message}")
-            throw e
-        }
+    } catch (e: Exception) {
+        Log.e("GaypornHDfree", "Error in search: ${e.message}")
     }
 
-    private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
-        // Thử nhiều cách để lấy title
-        val title = listOf(
-            document.selectFirst("meta[property='og:title']")?.attr("content"),
-            document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
-            document.selectFirst("h1")?.text(),
-            document.selectFirst(".video-title, .entry-title")?.text()
-        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
+    return searchResponse
+}
 
-        // Thử nhiều cách để lấy poster
-        val poster = listOf(
-            document.selectFirst("meta[property='og:image']")?.attr("content"),
-            document.selectFirst("video")?.attr("poster"),
-            document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
-        ).firstOrNull { !it.isNullOrBlank() } ?: ""
+// ---------- SỬA: load(...) và parseLoadResponse(...) ----------
+override suspend fun load(url: String): LoadResponse {
+    return try {
+        val cfHeaders = standardHeaders + mapOf(
+            "Cookie" to "cf_clearance=1; __cfduid=1; hasVisited=1",
+            "Cache-Control" to "no-cache"
+        )
 
-        // Thử nhiều cách để lấy description
-        val description = listOf(
-            document.selectFirst("meta[property='og:description']")?.attr("content"),
-            document.selectFirst("meta[name='description']")?.attr("content"),
-            document.selectFirst(".video-description, .entry-content p")?.text()
-        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
+        var document = app.get(url, headers = cfHeaders).document
 
-        val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull { 
+        if (document.title().isNullOrBlank() || document.html().contains("challenge-platform") || document.html().length < 300) {
+            Log.w("GaypornHDfree", "Suspect HTML on load for $url. Snippet: ${document.html().take(800)}")
+
+            // Thử WebViewResolver
             try {
-                it.toSearchResult()
+                val renderedHtml = WebViewResolver.getHtml(url, headers = cfHeaders)
+                val renderedDoc = Jsoup.parse(renderedHtml, url)
+                if (!renderedDoc.title().isNullOrBlank() && !renderedDoc.html().contains("challenge-platform")) {
+                    return parseLoadResponse(renderedDoc, url)
+                } else {
+                    Log.w("GaypornHDfree", "WebViewResolver returned challenge/empty on load.")
+                }
             } catch (e: Exception) {
-                Log.e("GaypornHDfree", "Error parsing recommendation: ${e.message}")
-                null
+                Log.w("GaypornHDfree", "WebViewResolver on load failed: ${e.message}")
             }
+
+            // Thử CloudflareKiller
+            try {
+                val solvedHtml = CloudflareKiller.solve(url, headers = cfHeaders)
+                val solvedDoc = Jsoup.parse(solvedHtml, url)
+                if (!solvedDoc.title().isNullOrBlank() && !solvedDoc.html().contains("challenge-platform")) {
+                    return parseLoadResponse(solvedDoc, url)
+                } else {
+                    Log.w("GaypornHDfree", "CloudflareKiller returned challenge/empty on load.")
+                }
+            } catch (e: Exception) {
+                Log.w("GaypornHDfree", "CloudflareKiller on load failed: ${e.message}")
+            }
+
+            // fallback retry
+            kotlinx.coroutines.delay(2000)
+            val retryDoc = app.get(url, headers = cfHeaders).document
+            if (retryDoc.html().contains("challenge-platform") || retryDoc.title().isNullOrBlank()) {
+                throw Exception("Cloudflare protection active")
+            }
+            return parseLoadResponse(retryDoc, url)
+        } else {
+            return parseLoadResponse(document, url)
         }
+    } catch (e: Exception) {
+        Log.e("GaypornHDfree", "Error in load: ${e.message}")
+        throw e
+    }
+}
 
-        Log.d("GaypornHDfree", "Loaded: title='$title', poster='$poster'")
+private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
+    // Thử nhiều cách để lấy title
+    val title = listOf(
+        document.selectFirst("meta[property='og:title']")?.attr("content"),
+        document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
+        document.selectFirst("h1")?.text(),
+        document.selectFirst(".video-title, .entry-title")?.text()
+    ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+    // Thử nhiều cách để lấy poster
+    val poster = listOf(
+        document.selectFirst("meta[property='og:image']")?.attr("content"),
+        document.selectFirst("video")?.attr("poster"),
+        document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
+    ).firstOrNull { !it.isNullOrBlank() } ?: ""
+
+    // Thử nhiều cách để lấy description
+    val description = listOf(
+        document.selectFirst("meta[property='og:description']")?.attr("content"),
+        document.selectFirst("meta[name='description']")?.attr("content"),
+        document.selectFirst(".video-description, .entry-content p")?.text()
+    ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
+
+    val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull {
+        try {
+            it.toSearchResult()
+        } catch (e: Exception) {
+            Log.e("GaypornHDfree", "Error parsing recommendation: ${e.message}")
+            null
+        }
+    }
+
+    Log.d("GaypornHDfree", "Loaded: title='$title', poster='$poster'")
+
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        if (poster.isNotBlank()) {
             this.posterUrl = when {
-                poster.isEmpty() -> ""
                 poster.startsWith("http") -> poster
                 poster.startsWith("//") -> "https:$poster"
                 poster.startsWith("/") -> "$mainUrl$poster"
                 else -> "$mainUrl/$poster"
             }
-            this.plot = description
-            this.recommendations = recommendations
         }
+        this.plot = description
+        this.recommendations = recommendations
     }
+}
 
     override suspend fun loadLinks(
         data: String,

@@ -28,8 +28,13 @@ class Justthegays : MainAPI() {
 
     override val mainPage = mainPageOf(
         "$mainUrl" to "Latest",
+        "$mainUrl/random-82530/" to "Random",
         "$mainUrl/popular-82530/" to "Popular",
         "$mainUrl/trending-82530/" to "Trending",
+        "$mainUrl/categories/anal-082529/" to "Fucking",
+        "$mainUrl/categories/group-082529/" to "Group",
+        "$mainUrl/categories/latin-082529/" to "Latin",
+        "$mainUrl/categories/worship-082529/" to "Workship",
     )
 
     private val cookies = mapOf(Pair("hasVisited", "1"), Pair("accessAgeDisclaimerPH", "1"))
