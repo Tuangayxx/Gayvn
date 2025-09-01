@@ -109,23 +109,34 @@ class HDgay : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit): Boolean {
 
-            val document = app.get(data).document
-            val iframes = document.select("iframe[data-src]")
+    val document = app.get(data).document
+        var found = false
+        val videoUrls = document.select("div#yolo-server-button")
+            .mapNotNull { it.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" } }
+            .toMutableSet()
 
-                if (iframes.isNotEmpty()) {
-                    iframes.forEach {
-            val url = it.attr("data-src")
-                loadExtractor(url, subtitleCallback, callback)
+        // Fallback iframe
+        if (videoUrls.isEmpty()) {
+            val iframeSrc = document.selectFirst("iframe#yolo-main-player")?.attr("src")
+            iframeSrc?.let { videoUrls.add(it) }
         }
-        
-    } else {
-        
-                document.select("iframe[src]").forEach {
-            val url = it.attr("src")
-                loadExtractor(url, subtitleCallback, callback)
-        }
-    }
 
-    return true
+
+        // Thu thập URL từ download button
+            val button = document.select("div.download-buttons a[href]")?.attr("href")
+            button?.let { videoUrls.add(it) }
+        
+
+        // Xử lý tất cả URL đã thu thập
+        videoUrls.toList().amap { url ->
+            val ok = loadExtractor(
+                url,
+                referer = data,
+                subtitleCallback = subtitleCallback
+            ) { link ->  callback(link)
+            }
+                if (ok) found = true
+        }
+        return found
     }
 }

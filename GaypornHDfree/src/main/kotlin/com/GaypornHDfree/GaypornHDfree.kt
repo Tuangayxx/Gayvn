@@ -34,9 +34,11 @@ class GaypornHDfree : MainAPI() {
     // Basic info (use var in case base expects var)
     override var name = "GaypornHDfree"
     override var mainUrl = "https://gaypornhdfree.com"
-    override var lang = "vi"
+    override val hasMainPage = true
+    override var lang = "en"
     override val supportedTypes = setOf(TvType.NSFW)
-    val version = "1.0"
+    override val hasDownloadSupport = true
+    override val vpnStatus = VPNStatus.MightBeNeeded
 
     // Local standard headers
     private val standardHeaders: Map<String, String> = mapOf(
