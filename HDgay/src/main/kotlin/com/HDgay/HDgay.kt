@@ -111,7 +111,7 @@ class HDgay : MainAPI() {
 
     val document = app.get(data).document
         var found = false
-        val videoUrls = document.select("div#yolo-server-button")
+        val videoUrls = document.select("div.yolo-server-list > button.yolo-server-button ")
             .mapNotNull { it.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" } }
             .toMutableSet()
 

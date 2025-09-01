@@ -166,6 +166,14 @@ class dsio : DoodLaExtractor() {
     override var mainUrl = "https://d-s.io"
 }
 
+class doodla : DoodLaExtractor() {
+    override var mainUrl = "https://dood.la"
+}
+
+class doodws : DoodLaExtractor() {
+    override var mainUrl = "https://dood.ws"
+}
+
 
  open class HdgayPlayer : ExtractorApi() {
     override val name = "HdgayPlayer"

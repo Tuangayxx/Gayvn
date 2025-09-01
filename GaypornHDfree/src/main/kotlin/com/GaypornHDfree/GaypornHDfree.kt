@@ -134,55 +134,216 @@ class GaypornHDfree : MainAPI() {
         )
     }
 
-    // ---------- Element -> SearchResult ----------
-    private fun Element.toSearchResult(): SearchResponse? {
-        return try {
-            val titleElement = this.selectFirst("a[href*='/video/']")
-                ?: this.selectFirst("a[href*='.html']")
-                ?: this.selectFirst("a[title]")
-                ?: this.selectFirst("h2 a, h3 a, h4 a")
-                ?: this.selectFirst("div.title a")
-                ?: this.selectFirst("div.video-title a")
-                ?: this.selectFirst("a")
+    // --- Thay thế Element.toSearchResult() ---
+private fun Element.toSearchResult(): SearchResponse? {
+    return try {
+        val titleElement = this.selectFirst("a[href*='/video/']")
+            ?: this.selectFirst("a[href*='.html']")
+            ?: this.selectFirst("a[title]")
+            ?: this.selectFirst("h2 a, h3 a, h4 a")
+            ?: this.selectFirst("div.title a")
+            ?: this.selectFirst("div.video-title a")
+            ?: this.selectFirst("a")
 
-            if (titleElement == null) return null
+        if (titleElement == null) return null
 
-            val title = titleElement.text().trim().ifEmpty {
-                titleElement.attr("title").trim()
-            }.ifEmpty {
-                titleElement.attr("alt").trim()
+        val title = titleElement.text().trim().ifEmpty {
+            titleElement.attr("title").trim()
+        }.ifEmpty {
+            titleElement.attr("alt").trim()
+        }
+        if (title.isEmpty()) return null
+
+        val hrefRaw = titleElement.attr("href")
+        val href = fixUrl(hrefRaw)
+        if (href.isEmpty() || href == mainUrl) return null
+
+        // --- Poster extraction: many fallbacks ---
+        fun resolveAttr(el: Element?, attrs: List<String>): String? {
+            if (el == null) return null
+            for (a in attrs) {
+                val v = el.attr(a).trim()
+                if (v.isNotEmpty() && !v.contains("placeholder")) return v
             }
+            return null
+        }
 
-            if (title.isEmpty()) return null
+        // candidate elements: image inside current element OR in titleElement
+        val imgEl = this.selectFirst("img") ?: titleElement.selectFirst("img") ?: this.selectFirst("video")
+        var posterRaw: String? = null
 
-            val href = fixUrl(titleElement.attr("href"))
-            if (href.isEmpty() || href == mainUrl) return null
+        // 1) common attributes
+        posterRaw = resolveAttr(imgEl, listOf("data-src", "data-lazy-src", "data-original", "data-srcset", "src", "poster", "data-bg"))
 
-            val img = this.selectFirst("img")
-                ?: this.selectFirst("video")
-                ?: titleElement.selectFirst("img")
-
-            val poster = img?.let { imgEl ->
-                val attrs = listOf("data-src", "data-lazy-src", "data-original", "src", "poster")
-                attrs.map { attr -> imgEl.attr(attr) }
-                    .firstOrNull { it.isNotEmpty() && !it.contains("placeholder") }
-            } ?: ""
-
-            return newMovieSearchResponse(title, href, TvType.NSFW) {
-                if (poster.isNotBlank()) {
-                    this.posterUrl = when {
-                        poster.startsWith("http") -> poster
-                        poster.startsWith("//") -> "https:$poster"
-                        poster.startsWith("/") -> "$mainUrl$poster"
-                        else -> "$mainUrl/$poster"
-                    }
-                }
+        // 2) srcset handling (if data-srcset or srcset)
+        if (posterRaw.isNullOrBlank()) {
+            val srcset = imgEl?.attr("srcset") ?: imgEl?.attr("data-srcset")
+            if (!srcset.isNullOrBlank()) {
+                posterRaw = parseSrcsetPickBest(srcset)
             }
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in toSearchResult: ${e.message}")
-            null
+        }
+
+        // 3) style="background-image:url('...')" or data-style
+        if (posterRaw.isNullOrBlank()) {
+            val style = imgEl?.attr("style") ?: this.attr("style")
+            posterRaw = extractStyleImage(style)
+        }
+
+        // 4) fallback: <picture> <source srcset=...>
+        if (posterRaw.isNullOrBlank()) {
+            val sourceEl = this.selectFirst("source[src], source[data-src], source[srcset]")
+            posterRaw = resolveAttr(sourceEl, listOf("src", "data-src", "srcset"))
+            if (!posterRaw.isNullOrBlank() && posterRaw.contains(",")) posterRaw = parseSrcsetPickBest(posterRaw)
+        }
+
+        // 5) fallback meta inside element (rare)
+        if (posterRaw.isNullOrBlank()) {
+            val metaImg = this.selectFirst("meta[property=og:image], meta[name=og:image]")
+            posterRaw = metaImg?.attr("content")
+        }
+
+        // Normalize to absolute
+        val poster = posterRaw?.takeIf { it.isNotBlank() }?.let { raw ->
+            var r = raw.trim().replace("\\/", "/")
+            if (r.startsWith("//")) r = "https:$r"
+            if (r.startsWith("http://") || r.startsWith("https://")) r else fixUrl(r)
+        } ?: ""
+
+        Log.d("GaypornHDfree", "toSearchResult -> title='$title' href='$href' posterRaw='${posterRaw?.take(120)}' poster='$poster'")
+
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            if (poster.isNotBlank()) {
+                this.posterUrl = poster
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("GaypornHDfree", "Error in toSearchResult: ${e.message}")
+        null
+    }
+}
+
+// --- Thay thế parseLoadResponse() poster logic ---
+private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
+    val title = listOf(
+        document.selectFirst("meta[property='og:title']")?.attr("content"),
+        document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
+        document.selectFirst("h1")?.text(),
+        document.selectFirst(".video-title, .entry-title")?.text()
+    ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
+
+    // Poster extraction with many fallbacks
+    var posterRaw = document.selectFirst("meta[property='og:image']")?.attr("content")
+        ?: document.selectFirst("meta[name='image']")?.attr("content")
+
+    if (posterRaw.isNullOrBlank()) {
+        // video poster attribute
+        posterRaw = document.selectFirst("video")?.attr("poster")
+    }
+
+    if (posterRaw.isNullOrBlank()) {
+        // find large image in page (common classes)
+        val candidates = document.select("img")
+        // prefer images with 'thumb','poster','cover','wp-post-image'
+        posterRaw = candidates.mapNotNull { img ->
+            val cl = img.className().lowercase()
+            if (cl.contains("thumb") || cl.contains("poster") || cl.contains("cover") || cl.contains("wp-post-image") || cl.contains("attachment")) {
+                resolveImgAttr(img)
+            } else null
+        }.firstOrNull()
+    }
+
+    if (posterRaw.isNullOrBlank()) {
+        // try hero / og:image inside linked element
+        posterRaw = document.selectFirst(".video-thumb img, .post-thumb img, .entry img")?.let { resolveImgAttr(it) }
+    }
+
+    if (posterRaw.isNullOrBlank()) {
+        // style background on containers
+        val styleCandidates = document.select("[style]").mapNotNull { extractStyleImage(it.attr("style")) }.firstOrNull()
+        posterRaw = styleCandidates ?: posterRaw
+    }
+
+    // final heuristics: parse any srcset found on page for best image
+    if (posterRaw.isNullOrBlank()) {
+        val srcset = document.select("img[srcset], source[srcset]").firstOrNull()?.attr("srcset")
+        if (!srcset.isNullOrBlank()) posterRaw = parseSrcsetPickBest(srcset!!)
+    }
+
+    val poster = posterRaw?.takeIf { it.isNotBlank() }?.let { raw ->
+        var r = raw.trim().replace("\\/", "/")
+        if (r.startsWith("//")) r = "https:$r"
+        if (r.startsWith("http://") || r.startsWith("https://")) r else fixUrl(r)
+    } ?: ""
+
+    val description = listOf(
+        document.selectFirst("meta[property='og:description']")?.attr("content"),
+        document.selectFirst("meta[name='description']")?.attr("content"),
+        document.selectFirst(".video-description, .entry-content p")?.text()
+    ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
+
+    val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull {
+        try { it.toSearchResult() } catch (e: Exception) { null }
+    }
+
+    Log.d("GaypornHDfree", "parseLoadResponse title='$title' posterRaw='${posterRaw?.take(120)}' poster='$poster'")
+
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        if (poster.isNotBlank()) this.posterUrl = poster
+        this.plot = description
+        this.recommendations = recommendations
+    }
+}
+
+// --- Helper: resolve image attributes on an Element ---
+private fun resolveImgAttr(img: Element): String? {
+    val attrs = listOf("data-src", "data-lazy-src", "data-original", "data-srcset", "src", "poster")
+    for (a in attrs) {
+        val v = img.attr(a)
+        if (!v.isNullOrBlank() && !v.contains("placeholder")) {
+            if (a.contains("srcset") && v.contains(",")) return parseSrcsetPickBest(v)
+            return v
         }
     }
+    // fallback style
+    val style = img.attr("style")
+    val fromStyle = extractStyleImage(style)
+    if (!fromStyle.isNullOrBlank()) return fromStyle
+    return null
+}
+
+// --- Helper: pick best URL from srcset (choose largest width if present) ---
+private fun parseSrcsetPickBest(srcset: String): String {
+    // srcset: "url1 200w, url2 400w, url3 800w" OR "url1 1x, url2 2x" OR plain comma list
+    try {
+        val parts = srcset.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        if (parts.isEmpty()) return srcset
+        var bestUrl = parts.first()
+        var bestWidth = -1
+        for (p in parts) {
+            val seg = p.split("\\s+".toRegex()).map { it.trim() }.filter { it.isNotEmpty() }
+            val url = seg[0]
+            val qualifier = if (seg.size > 1) seg[1] else ""
+            val width = qualifier.removeSuffix("w").toIntOrNull() ?: qualifier.removeSuffix("x").toIntOrNull() ?: -1
+            if (width > bestWidth) {
+                bestWidth = width
+                bestUrl = url
+            }
+        }
+        return bestUrl
+    } catch (e: Exception) {
+        return srcset.split(",").firstOrNull()?.trim() ?: srcset
+    }
+}
+
+// --- Helper: extract url(...) from inline style ---
+private fun extractStyleImage(style: String?): String? {
+    if (style.isNullOrBlank()) return null
+    // look for url('...') or url("...") or url(...)
+    val regex = Regex("""url\((['"]?)(.*?)\1\)""", RegexOption.IGNORE_CASE)
+    val m = regex.find(style)
+    return m?.groups?.get(2)?.value
+}
+
 
     // ---------- Main page (uses parseMainPageContent above) ----------
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
