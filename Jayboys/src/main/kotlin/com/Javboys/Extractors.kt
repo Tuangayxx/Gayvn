@@ -32,7 +32,8 @@ open class yi069website : ExtractorApi() {
         if (videoId.isBlank()) return null
 
         // 3. Sửa domain chính xác: 1455o thay vì l455o
-        val finalLink = "https://l455o.com/bkg/$videoId"
+        var domain = "https://domain.com/bkg"
+        val finalLink = "$domain/$videoId"
 
         return listOf(
             newExtractorLink(
@@ -88,43 +89,8 @@ open class VoeExtractor : ExtractorApi() {
 }
 
 
-open class dsio : ExtractorApi() {
-    override val name = "dsio"
-    override val mainUrl = "d-s.io"
-    override val requiresReferer = true
-
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-            val response0 = app.get(url).text
-
-            val passMd5Path = Regex("/pass_md5/[^'\"]+").find(response0)?.value ?: return null
-            val token = passMd5Path.substringAfterLast("/")
-        
-            val md5Url = mainUrl + passMd5Path
-            val res = app.get(md5Url, referer = url) // Sử dụng URL gốc làm referer
-            val videoData = res.text
-
-            val randomStr = (1..10).map { 
-            (('a'..'z') + ('A'..'Z') + ('0'..'9')).random() 
-                }.joinToString("")
-
-            val link = "$videoData$randomStr?token=$token&expiry=${System.currentTimeMillis()}"
-
-            val quality = Regex("(\\d{3,4})[pP]")
-            .find(response0.substringAfter("<title>").substringBefore("</title>"))
-            ?.groupValues?.get(1)
-
-                return listOf(
-                    newExtractorLink(
-                        source = name,
-                        name = name,
-                        url = link,
-                        type = INFER_TYPE
-                                    ) {
-                        this.referer = mainUrl
-                        this.quality = getQualityFromName(quality)
-            }
-        )
-    }
+open class dsio : DoodLaExtractor() {
+    override var mainUrl = "https://d-s.io"
 }
 
 class DoodstreamCom : DoodLaExtractor() {
