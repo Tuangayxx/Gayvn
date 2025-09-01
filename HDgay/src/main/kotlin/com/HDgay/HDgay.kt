@@ -21,7 +21,8 @@ class HDgay : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "/2025/08" to "Latest",
+        "/2025/09" to "Latest",
+        "/2025/08" to "Tháng tám",
         "/2025/07" to "Tháng bảy",
         "/2025/06" to "Tháng sáu",
         "/2025/05" to "Tháng năm",

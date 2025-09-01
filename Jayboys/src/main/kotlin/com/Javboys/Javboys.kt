@@ -31,6 +31,7 @@ class Jayboys : MainAPI() {
         "/category/western-gay-porn-hd/" to "Châu Mỹ Âu",
         "/category/%e3%82%b2%e3%82%a4%e9%9b%91%e8%aa%8c/" to "Tạp chí",
         "/category/hunk-channel/" to "Hunk Channel",
+        "/2025/08/" to "8",
         "/2025/07/" to "7",
         "/2025/06/" to "6",
         "/2025/05/" to "5",
@@ -38,6 +39,10 @@ class Jayboys : MainAPI() {
         "/2025/03/" to "3",
         "/2025/02/" to "2",
         "/2025/01/" to "1",
+        "/tag/pec_pal48/" to "Pec Pal",
+        "/tag/xingfufu/" to "Xing Fu Fu",
+        "/tag/xingfufu/" to "Xing Fu Fu",
+        "/?s=gangbang" to "Gangbang",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
