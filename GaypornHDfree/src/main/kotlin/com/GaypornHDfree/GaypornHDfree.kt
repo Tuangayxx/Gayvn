@@ -2,15 +2,7 @@ package com.GaypornHDfree
 
 import android.util.Log
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.loadExtractor
-import com.lagradost.cloudstream3.utils.newExtractorLink
-import com.lagradost.cloudstream3.utils.ExtractorLinkType
-import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.network.WebViewResolver
-import com.lagradost.cloudstream3.app
-import com.lagradost.cloudstream3.extractors.*
 import kotlinx.coroutines.delay
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -23,34 +15,23 @@ import java.io.ByteArrayInputStream
 import java.util.zip.GZIPInputStream
 import java.net.URLEncoder
 
-/**
- * GaypornHDfree.kt — cleaned & braces-balanced
- * - Helpers first, then parseMainPageContent, then other handlers.
- * - Avoids references to unavailable APIs.
- */
-
 class GaypornHDfree : MainAPI() {
 
-    // Basic info (use var in case base expects var)
     override var name = "GaypornHDfree"
     override var mainUrl = "https://gaypornhdfree.com"
-    override val hasMainPage = true
     override var lang = "en"
     override val supportedTypes = setOf(TvType.NSFW)
-    override val hasDownloadSupport = true
-    override val vpnStatus = VPNStatus.MightBeNeeded
+    override val hasMainPage = true
 
-    // Local standard headers
     private val standardHeaders: Map<String, String> = mapOf(
         "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
         "Accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language" to "en-US,en;q=0.5"
     )
 
-    // OkHttp client for safe fetches
     private val fallbackHttpClient: OkHttpClient by lazy { OkHttpClient.Builder().build() }
 
-    // ---------- Helpers ----------
+    // ---------------- Helpers ----------------
     private fun fetchHtmlSafely(url: String, extraHeaders: Map<String, String> = mapOf()): String {
         try {
             val headersMap = mutableMapOf<String, String>()
@@ -107,25 +88,69 @@ class GaypornHDfree : MainAPI() {
         return "$base/$u"
     }
 
-    // ---------- Parse main page content (placed early) ----------
+    private fun extractStyleImage(style: String?): String? {
+        if (style.isNullOrBlank()) return null
+        val regex = Regex("""url\((['"]?)(.*?)\1\)""", RegexOption.IGNORE_CASE)
+        val m = regex.find(style)
+        return m?.groups?.get(2)?.value
+    }
+
+    private fun parseSrcsetPickBest(srcset: String): String {
+        try {
+            val parts = srcset.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            if (parts.isEmpty()) return srcset
+            var bestUrl = parts.first()
+            var bestWidth = -1
+            for (p in parts) {
+                val seg = p.split("\\s+".toRegex()).map { it.trim() }.filter { it.isNotEmpty() }
+                val url = seg[0]
+                val qualifier = if (seg.size > 1) seg[1] else ""
+                val width = qualifier.removeSuffix("w").toIntOrNull() ?: qualifier.removeSuffix("x").toIntOrNull() ?: -1
+                if (width > bestWidth) {
+                    bestWidth = width
+                    bestUrl = url
+                }
+            }
+            return bestUrl
+        } catch (e: Exception) {
+            return srcset.split(",").firstOrNull()?.trim() ?: srcset
+        }
+    }
+
+    private fun resolveImgAttr(img: Element): String? {
+        val attrs = listOf("data-src", "data-lazy-src", "data-original", "data-srcset", "src", "poster")
+        for (a in attrs) {
+            val v = img.attr(a)
+            if (!v.isNullOrBlank() && !v.contains("placeholder")) {
+                if (a.contains("srcset") && v.contains(",")) return parseSrcsetPickBest(v)
+                return v
+            }
+        }
+        val style = img.attr("style")
+        val fromStyle = extractStyleImage(style)
+        if (!fromStyle.isNullOrBlank()) return fromStyle
+        return null
+    }
+
+    // ---------------- Parse main page content ----------------
     private fun parseMainPageContent(document: Document, requestName: String): HomePageResponse {
         Log.d("GaypornHDfree", "Page title: ${document.title()}")
         if (document.title().isNullOrBlank() || document.html().length < 300) {
-            Log.w("GaypornHDfree", "Short HTML/snippet: ${document.html().take(800)}")
+            Log.w("GaypornHDfree", "Short HTML/snippet: ${document.html().take(400)}")
         }
 
-        val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article, .post")
+        val home = document.select("div.videopost, .video-item, .post-item, .thumb-item, .post, article")
             .mapNotNull { element ->
                 try {
                     element.toSearchResult()
                 } catch (e: Exception) {
-                    Log.e("GaypornHDfree", "Error parsing search result: ${e.message}")
+                    Log.e("GaypornHDfree", "Error parsing element: ${e.message}")
                     null
                 }
             }
 
         return newHomePageResponse(
-            list = HomePageList(
+            HomePageList(
                 name = requestName,
                 list = home,
                 isHorizontalImages = true
@@ -134,360 +159,239 @@ class GaypornHDfree : MainAPI() {
         )
     }
 
-    // --- Thay thế Element.toSearchResult() ---
-private fun Element.toSearchResult(): SearchResponse? {
-    return try {
-        val titleElement = this.selectFirst("a[href*='/video/']")
-            ?: this.selectFirst("a[href*='.html']")
-            ?: this.selectFirst("a[title]")
-            ?: this.selectFirst("h2 a, h3 a, h4 a")
-            ?: this.selectFirst("div.title a")
-            ?: this.selectFirst("div.video-title a")
-            ?: this.selectFirst("a")
+    // ---------------- Element -> SearchResponse ----------------
+    private fun Element.toSearchResult(): SearchResponse? {
+        try {
+            val titleElement = this.selectFirst("a[href*='/video/']")
+                ?: this.selectFirst("a[href*='.html']")
+                ?: this.selectFirst("a[title]")
+                ?: this.selectFirst("h2 a, h3 a, h4 a")
+                ?: this.selectFirst("div.title a")
+                ?: this.selectFirst("div.video-title a")
+                ?: this.selectFirst("a")
 
-        if (titleElement == null) return null
+            if (titleElement == null) return null
 
-        val title = titleElement.text().trim().ifEmpty {
-            titleElement.attr("title").trim()
-        }.ifEmpty {
-            titleElement.attr("alt").trim()
-        }
-        if (title.isEmpty()) return null
-
-        val hrefRaw = titleElement.attr("href")
-        val href = fixUrl(hrefRaw)
-        if (href.isEmpty() || href == mainUrl) return null
-
-        // --- Poster extraction: many fallbacks ---
-        fun resolveAttr(el: Element?, attrs: List<String>): String? {
-            if (el == null) return null
-            for (a in attrs) {
-                val v = el.attr(a).trim()
-                if (v.isNotEmpty() && !v.contains("placeholder")) return v
+            val title = titleElement.text().trim().ifEmpty {
+                titleElement.attr("title").trim()
+            }.ifEmpty {
+                titleElement.attr("alt").trim()
             }
+
+            if (title.isEmpty()) return null
+
+            val href = fixUrl(titleElement.attr("href"))
+            if (href.isEmpty() || href == mainUrl) return null
+
+            val imgEl = this.selectFirst("img") ?: titleElement.selectFirst("img") ?: this.selectFirst("video")
+            var posterRaw: String? = null
+
+            posterRaw = imgEl?.let { resolveImgAttr(it) }
+
+            if (posterRaw.isNullOrBlank()) {
+                val srcset = imgEl?.attr("srcset") ?: imgEl?.attr("data-srcset")
+                if (!srcset.isNullOrBlank()) posterRaw = parseSrcsetPickBest(srcset)
+            }
+
+            if (posterRaw.isNullOrBlank()) {
+                val style = imgEl?.attr("style") ?: this.attr("style")
+                posterRaw = extractStyleImage(style)
+            }
+
+            val poster = posterRaw?.takeIf { it.isNotBlank() }?.let { raw ->
+                var r = raw.trim().replace("\\/", "/")
+                if (r.startsWith("//")) r = "https:$r"
+                if (r.startsWith("http://") || r.startsWith("https://")) r else fixUrl(r)
+            } ?: ""
+
+            Log.d("GaypornHDfree", "toSearchResult -> title='$title' href='$href' posterRaw='${posterRaw?.take(120)}' poster='$poster'")
+
+            return newMovieSearchResponse(title, href, TvType.NSFW) {
+                if (poster.isNotBlank()) {
+                    this.posterUrl = poster
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("GaypornHDfree", "toSearchResult error: ${e.message}")
             return null
         }
-
-        // candidate elements: image inside current element OR in titleElement
-        val imgEl = this.selectFirst("img") ?: titleElement.selectFirst("img") ?: this.selectFirst("video")
-        var posterRaw: String? = null
-
-        // 1) common attributes
-        posterRaw = resolveAttr(imgEl, listOf("data-src", "data-lazy-src", "data-original", "data-srcset", "src", "poster", "data-bg"))
-
-        // 2) srcset handling (if data-srcset or srcset)
-        if (posterRaw.isNullOrBlank()) {
-            val srcset = imgEl?.attr("srcset") ?: imgEl?.attr("data-srcset")
-            if (!srcset.isNullOrBlank()) {
-                posterRaw = parseSrcsetPickBest(srcset)
-            }
-        }
-
-        // 3) style="background-image:url('...')" or data-style
-        if (posterRaw.isNullOrBlank()) {
-            val style = imgEl?.attr("style") ?: this.attr("style")
-            posterRaw = extractStyleImage(style)
-        }
-
-        // 4) fallback: <picture> <source srcset=...>
-        if (posterRaw.isNullOrBlank()) {
-            val sourceEl = this.selectFirst("source[src], source[data-src], source[srcset]")
-            posterRaw = resolveAttr(sourceEl, listOf("src", "data-src", "srcset"))
-            if (!posterRaw.isNullOrBlank() && posterRaw.contains(",")) posterRaw = parseSrcsetPickBest(posterRaw)
-        }
-
-        // 5) fallback meta inside element (rare)
-        if (posterRaw.isNullOrBlank()) {
-            val metaImg = this.selectFirst("meta[property=og:image], meta[name=og:image]")
-            posterRaw = metaImg?.attr("content")
-        }
-
-        // Normalize to absolute
-        val poster = posterRaw?.takeIf { it.isNotBlank() }?.let { raw ->
-            var r = raw.trim().replace("\\/", "/")
-            if (r.startsWith("//")) r = "https:$r"
-            if (r.startsWith("http://") || r.startsWith("https://")) r else fixUrl(r)
-        } ?: ""
-
-        Log.d("GaypornHDfree", "toSearchResult -> title='$title' href='$href' posterRaw='${posterRaw?.take(120)}' poster='$poster'")
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            if (poster.isNotBlank()) {
-                this.posterUrl = poster
-            }
-        }
-    } catch (e: Exception) {
-        Log.e("GaypornHDfree", "Error in toSearchResult: ${e.message}")
-        null
-    }
-}
-
-// --- Thay thế parseLoadResponse() poster logic ---
-private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
-    val title = listOf(
-        document.selectFirst("meta[property='og:title']")?.attr("content"),
-        document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
-        document.selectFirst("h1")?.text(),
-        document.selectFirst(".video-title, .entry-title")?.text()
-    ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
-
-    // Poster extraction with many fallbacks
-    var posterRaw = document.selectFirst("meta[property='og:image']")?.attr("content")
-        ?: document.selectFirst("meta[name='image']")?.attr("content")
-
-    if (posterRaw.isNullOrBlank()) {
-        // video poster attribute
-        posterRaw = document.selectFirst("video")?.attr("poster")
     }
 
-    if (posterRaw.isNullOrBlank()) {
-        // find large image in page (common classes)
-        val candidates = document.select("img")
-        // prefer images with 'thumb','poster','cover','wp-post-image'
-        posterRaw = candidates.mapNotNull { img ->
-            val cl = img.className().lowercase()
-            if (cl.contains("thumb") || cl.contains("poster") || cl.contains("cover") || cl.contains("wp-post-image") || cl.contains("attachment")) {
-                resolveImgAttr(img)
-            } else null
-        }.firstOrNull()
-    }
-
-    if (posterRaw.isNullOrBlank()) {
-        // try hero / og:image inside linked element
-        posterRaw = document.selectFirst(".video-thumb img, .post-thumb img, .entry img")?.let { resolveImgAttr(it) }
-    }
-
-    if (posterRaw.isNullOrBlank()) {
-        // style background on containers
-        val styleCandidates = document.select("[style]").mapNotNull { extractStyleImage(it.attr("style")) }.firstOrNull()
-        posterRaw = styleCandidates ?: posterRaw
-    }
-
-    // final heuristics: parse any srcset found on page for best image
-    if (posterRaw.isNullOrBlank()) {
-        val srcset = document.select("img[srcset], source[srcset]").firstOrNull()?.attr("srcset")
-        if (!srcset.isNullOrBlank()) posterRaw = parseSrcsetPickBest(srcset!!)
-    }
-
-    val poster = posterRaw?.takeIf { it.isNotBlank() }?.let { raw ->
-        var r = raw.trim().replace("\\/", "/")
-        if (r.startsWith("//")) r = "https:$r"
-        if (r.startsWith("http://") || r.startsWith("https://")) r else fixUrl(r)
-    } ?: ""
-
-    val description = listOf(
-        document.selectFirst("meta[property='og:description']")?.attr("content"),
-        document.selectFirst("meta[name='description']")?.attr("content"),
-        document.selectFirst(".video-description, .entry-content p")?.text()
-    ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
-
-    val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull {
-        try { it.toSearchResult() } catch (e: Exception) { null }
-    }
-
-    Log.d("GaypornHDfree", "parseLoadResponse title='$title' posterRaw='${posterRaw?.take(120)}' poster='$poster'")
-
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-        if (poster.isNotBlank()) this.posterUrl = poster
-        this.plot = description
-        this.recommendations = recommendations
-    }
-}
-
-// --- Helper: resolve image attributes on an Element ---
-private fun resolveImgAttr(img: Element): String? {
-    val attrs = listOf("data-src", "data-lazy-src", "data-original", "data-srcset", "src", "poster")
-    for (a in attrs) {
-        val v = img.attr(a)
-        if (!v.isNullOrBlank() && !v.contains("placeholder")) {
-            if (a.contains("srcset") && v.contains(",")) return parseSrcsetPickBest(v)
-            return v
-        }
-    }
-    // fallback style
-    val style = img.attr("style")
-    val fromStyle = extractStyleImage(style)
-    if (!fromStyle.isNullOrBlank()) return fromStyle
-    return null
-}
-
-// --- Helper: pick best URL from srcset (choose largest width if present) ---
-private fun parseSrcsetPickBest(srcset: String): String {
-    // srcset: "url1 200w, url2 400w, url3 800w" OR "url1 1x, url2 2x" OR plain comma list
-    try {
-        val parts = srcset.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        if (parts.isEmpty()) return srcset
-        var bestUrl = parts.first()
-        var bestWidth = -1
-        for (p in parts) {
-            val seg = p.split("\\s+".toRegex()).map { it.trim() }.filter { it.isNotEmpty() }
-            val url = seg[0]
-            val qualifier = if (seg.size > 1) seg[1] else ""
-            val width = qualifier.removeSuffix("w").toIntOrNull() ?: qualifier.removeSuffix("x").toIntOrNull() ?: -1
-            if (width > bestWidth) {
-                bestWidth = width
-                bestUrl = url
-            }
-        }
-        return bestUrl
-    } catch (e: Exception) {
-        return srcset.split(",").firstOrNull()?.trim() ?: srcset
-    }
-}
-
-// --- Helper: extract url(...) from inline style ---
-private fun extractStyleImage(style: String?): String? {
-    if (style.isNullOrBlank()) return null
-    // look for url('...') or url("...") or url(...)
-    val regex = Regex("""url\((['"]?)(.*?)\1\)""", RegexOption.IGNORE_CASE)
-    val m = regex.find(style)
-    return m?.groups?.get(2)?.value
-}
-
-
-    // ---------- Main page (uses parseMainPageContent above) ----------
+    // ----------------- getMainPage -----------------
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val url = if (page > 1) "${request.data}page/$page/" else "${request.data}"
-
+        val url = if (page > 1) "${request.data}page/$page/" else request.data
         try {
-            val document = try {
-                Jsoup.connect(url)
-                    .headers(standardHeaders)
-                    .userAgent(standardHeaders["User-Agent"] ?: "")
-                    .timeout(15_000)
-                    .get()
+            val docTry = try {
+                Jsoup.connect(url).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get()
             } catch (e: Exception) {
-                Log.w("GaypornHDfree", "Jsoup primary fetch failed for $url: ${e.message}")
                 Jsoup.parse("")
             }
 
-            val suspect = document.title().isNullOrBlank() ||
-                    document.html().length < 300 ||
-                    document.html().contains("challenge-platform") ||
-                    document.html().contains("Ray ID")
+            val suspect = docTry.title().isNullOrBlank() || docTry.html().length < 300 ||
+                    docTry.html().contains("challenge-platform") || docTry.html().contains("Ray ID")
 
-            if (suspect) {
-                Log.w("GaypornHDfree", "Suspect HTML detected for $url. Snippet: ${document.html().take(300)}")
+            if (!suspect) return parseMainPageContent(docTry, request.name)
 
-                val safeHtml = fetchHtmlSafely(url, mapOf("Referer" to mainUrl, "Cookie" to "hasVisited=1"))
-                if (safeHtml.isNotBlank() && !safeHtml.contains("challenge-platform") && !safeHtml.contains("Ray ID")) {
-                    val parsed = Jsoup.parse(safeHtml, url)
-                    return parseMainPageContent(parsed, request.name)
-                }
-
-                val altHtml = fetchHtmlSafely(url, mapOf("Referer" to mainUrl, "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64)"))
-                if (altHtml.isNotBlank() && !altHtml.contains("challenge-platform") && !altHtml.contains("Ray ID")) {
-                    val parsedAlt = Jsoup.parse(altHtml, url)
-                    return parseMainPageContent(parsedAlt, request.name)
-                }
-
-                Log.e("GaypornHDfree", "Cloudflare/unrenderable page for $url - returning empty")
-                return newHomePageResponse(HomePageList(request.name, listOf()), false)
-            } else {
-                return parseMainPageContent(document, request.name)
+            val safe = fetchHtmlSafely(url, mapOf("Referer" to mainUrl))
+            if (safe.isNotBlank()) {
+                val parsed = Jsoup.parse(safe, url)
+                return parseMainPageContent(parsed, request.name)
             }
+
+            return newHomePageResponse(HomePageList(request.name, listOf()), false)
         } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in getMainPage: ${e.message}")
+            Log.e("GaypornHDfree", "getMainPage error: ${e.message}")
             return newHomePageResponse(HomePageList(request.name, listOf()), false)
         }
     }
 
-    // ---------- Search ----------
+    // ----------------- search -----------------
     override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-        val seenUrls = mutableSetOf<String>()
-
+        val results = mutableListOf<SearchResponse>()
+        val seen = mutableSetOf<String>()
         try {
             for (i in 1..3) {
-                val encodedQuery = URLEncoder.encode(query, "UTF-8")
-                val searchUrl = "$mainUrl/?s=$encodedQuery&page=$i"
-
-                val document = try {
-                    Jsoup.connect(searchUrl)
-                        .headers(standardHeaders)
-                        .userAgent(standardHeaders["User-Agent"] ?: "")
-                        .timeout(15000)
-                        .get()
+                val q = URLEncoder.encode(query, "UTF-8")
+                val searchUrl = "$mainUrl/?s=$q&page=$i"
+                val doc = try {
+                    Jsoup.connect(searchUrl).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get()
                 } catch (e: Exception) {
-                    Log.w("GaypornHDfree", "Search fetch failed for $searchUrl: ${e.message}")
                     Jsoup.parse("")
                 }
+                val pageResults = doc.select("div.videopost, .video-item, .post-item, .thumb-item, article")
+                    .mapNotNull { it.toSearchResult() }
+                    .filterNot { seen.contains(it.url) }
 
-                val results = document.select("div.videopost, .video-item, .post-item, .thumb-item, div[class*='video'], article")
-                    .mapNotNull {
-                        try {
-                            it.toSearchResult()
-                        } catch (e: Exception) {
-                            Log.e("GaypornHDfree", "Error parsing search result: ${e.message}")
-                            null
-                        }
-                    }.filterNot { seenUrls.contains(it.url) }
-
-                if (results.isEmpty()) break
-
-                results.forEach { seenUrls.add(it.url) }
-                searchResponse.addAll(results)
-
-                delay(500)
+                if (pageResults.isEmpty()) break
+                pageResults.forEach { seen.add(it.url) }
+                results.addAll(pageResults)
+                delay(400)
             }
         } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in search: ${e.message}")
+            Log.e("GaypornHDfree", "search error: ${e.message}")
         }
-
-        return searchResponse
+        return results
     }
 
-    // ---------- Load ----------
+    // ----------------- load -----------------
     override suspend fun load(url: String): LoadResponse {
         try {
-            val document = try {
-                Jsoup.connect(url)
-                    .headers(standardHeaders)
-                    .userAgent(standardHeaders["User-Agent"] ?: "")
-                    .timeout(15_000)
-                    .get()
+            val doc = try {
+                Jsoup.connect(url).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get()
             } catch (e: Exception) {
-                Log.w("GaypornHDfree", "Jsoup load failed for $url: ${e.message}")
                 Jsoup.parse("")
             }
 
-            if (document.title().isNullOrBlank() || document.html().contains("challenge-platform") || document.html().length < 300) {
-                Log.w("GaypornHDfree", "Suspect HTML on load for $url. Snippet: ${document.html().take(800)}")
-
-                try {
-                    delay(2000)
-                    val retryDoc = Jsoup.connect(url).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get()
-                    if (!retryDoc.title().isNullOrBlank() && !retryDoc.html().contains("challenge-platform")) {
-                        return parseLoadResponse(retryDoc, url)
-                    }
-                    Log.w("GaypornHDfree", "Retry returned challenge/empty on load for $url")
-                } catch (e: Exception) {
-                    Log.w("GaypornHDfree", "Retry failed on load: ${e.message}")
+            if (doc.title().isNullOrBlank() || doc.html().length < 300 || doc.html().contains("challenge-platform")) {
+                val safe = fetchHtmlSafely(url, mapOf("Referer" to mainUrl))
+                if (safe.isNotBlank()) {
+                    val parsed = Jsoup.parse(safe, url)
+                    return parseLoadResponse(parsed, url)
                 }
-
-                val safeHtml = fetchHtmlSafely(url, mapOf("Referer" to mainUrl))
-                if (safeHtml.isNotBlank() && !safeHtml.contains("challenge-platform") && !safeHtml.contains("Ray ID")) {
-                    val doc = Jsoup.parse(safeHtml, url)
-                    return parseLoadResponse(doc, url)
-                }
-
-                val altHtml = fetchHtmlSafely(url, mapOf("User-Agent" to "Mozilla/5.0 (X11; Linux x86_64)"))
-                if (altHtml.isNotBlank() && !altHtml.contains("challenge-platform") && !altHtml.contains("Ray ID")) {
-                    val docAlt = Jsoup.parse(altHtml, url)
-                    return parseLoadResponse(docAlt, url)
-                }
-
-                throw Exception("Cloudflare protection active or page unrenderable for $url")
-            } else {
-                return parseLoadResponse(document, url)
+                throw Exception("Page unrenderable or protected")
             }
+
+            return parseLoadResponse(doc, url)
         } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in load: ${e.message}")
+            Log.e("GaypornHDfree", "load error: ${e.message}")
             throw e
         }
     }
 
-    // ---------- parseLoadResponse ----------
+    // --------- loadLinks (calls loadExtractor for each found url) ----------
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        return try {
+            val html = fetchHtmlSafely(data, mapOf("Referer" to mainUrl)).ifEmpty {
+                try {
+                    Jsoup.connect(data).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get().html()
+                } catch (e: Exception) { "" }
+            }
+            if (html.isBlank()) {
+                Log.w("GaypornHDfree", "loadLinks: empty html for $data")
+                return false
+            }
+
+            val doc = Jsoup.parse(html, data)
+            val videoUrls = mutableSetOf<String>()
+
+            // common selectors
+            listOf("video source[src]", "video[src]", "iframe[src]", "[data-src]", "embed[src]",
+                "a[href$=.mp4]", "a[href$=.m3u8]").forEach { sel ->
+                doc.select(sel).forEach { el ->
+                    val found = listOf("src", "data-src", "href").map { k -> el.attr(k) }.firstOrNull { it.isNotBlank() }
+                    found?.let { videoUrls.add(it) }
+                }
+            }
+
+            // meta and scripts
+            doc.select("meta[property=og:video], meta[property=og:video:secure_url], meta[name=og:video]").forEach {
+                val c = it.attr("content")
+                if (c.isNotBlank()) videoUrls.add(c)
+            }
+            val scriptsCombined = doc.select("script").map { it.data() + it.html() }.joinToString("\n")
+            val fileRegex = Regex("""(?i)(?:file|src|url)\s*[:=]\s*['"]((?:https?:)?\/\/[^'"\s]+)['"]""")
+            fileRegex.findAll(scriptsCombined).forEach { m ->
+                val u = m.groups[1]?.value ?: ""
+                if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
+            }
+            val genericRegex = Regex("""https?:\/\/[^\s'"]+?\.(mp4|m3u8|webm|mpd)(\?[^\s'"]*)?""", RegexOption.IGNORE_CASE)
+            genericRegex.findAll(html).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
+
+            // attempt iframe pages too
+            val iframeCandidates = videoUrls.filter { it.contains("/e/") || it.contains("embed") || it.contains("player") }
+            for (ifr in iframeCandidates) {
+                try {
+                    val ifHtml = fetchHtmlSafely(ifr, mapOf("Referer" to data)).ifEmpty {
+                        try { Jsoup.connect(ifr).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(8000).get().html() }
+                        catch (_: Exception) { "" }
+                    }
+                    if (ifHtml.isNotBlank()) {
+                        genericRegex.findAll(ifHtml).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
+                        fileRegex.findAll(ifHtml).forEach { m ->
+                            val u = m.groups[1]?.value ?: ""
+                            if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+
+            var called = false
+            videoUrls.map { it.trim() }.filter { it.isNotBlank() }.distinct().forEach { raw ->
+                try {
+                    val fixedUrl = when {
+                        raw.startsWith("http://") || raw.startsWith("https://") -> raw
+                        raw.startsWith("//") -> "https:$raw"
+                        raw.startsWith("/") -> "$mainUrl${raw}"
+                        else -> if (raw.startsWith("http")) raw else "$mainUrl/${raw.removePrefix("/")}"
+                    }.replace("\\/", "/")
+
+                    Log.d("GaypornHDfree", "Calling loadExtractor for: $fixedUrl")
+                    // prefer calling framework loadExtractor (must exist at runtime)
+                    try {
+                        loadExtractor(fixedUrl, subtitleCallback, callback)
+                        called = true
+                    } catch (e: Throwable) {
+                        // if loadExtractor not available or fails, we skip (we avoid building ExtractorLink here)
+                        Log.w("GaypornHDfree", "loadExtractor invocation failed for $fixedUrl : ${e.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.w("GaypornHDfree", "Error processing raw url $raw : ${e.message}")
+                }
+            }
+
+            called
+        } catch (e: Exception) {
+            Log.e("GaypornHDfree", "Error in loadLinks: ${e.message}")
+            false
+        }
+    }
+
+    // ----------------- parseLoadResponse (single definitive version) -----------------
     private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
         val title = listOf(
             document.selectFirst("meta[property='og:title']")?.attr("content"),
@@ -496,11 +400,42 @@ private fun extractStyleImage(style: String?): String? {
             document.selectFirst(".video-title, .entry-title")?.text()
         ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
 
-        val poster = listOf(
-            document.selectFirst("meta[property='og:image']")?.attr("content"),
-            document.selectFirst("video")?.attr("poster"),
-            document.selectFirst(".video-thumb img, .wp-post-image")?.attr("src")
-        ).firstOrNull { !it.isNullOrBlank() } ?: ""
+        var posterRaw = document.selectFirst("meta[property='og:image']")?.attr("content")
+            ?: document.selectFirst("meta[name='image']")?.attr("content")
+
+        if (posterRaw.isNullOrBlank()) {
+            posterRaw = document.selectFirst("video")?.attr("poster")
+        }
+
+        if (posterRaw.isNullOrBlank()) {
+            val candidates = document.select("img")
+            posterRaw = candidates.mapNotNull { img ->
+                val cl = img.className().lowercase()
+                if (cl.contains("thumb") || cl.contains("poster") || cl.contains("cover") || cl.contains("wp-post-image") || cl.contains("attachment")) {
+                    resolveImgAttr(img)
+                } else null
+            }.firstOrNull()
+        }
+
+        if (posterRaw.isNullOrBlank()) {
+            posterRaw = document.selectFirst(".video-thumb img, .post-thumb img, .entry img")?.let { resolveImgAttr(it) }
+        }
+
+        if (posterRaw.isNullOrBlank()) {
+            val styleCandidates = document.select("[style]").mapNotNull { extractStyleImage(it.attr("style")) }.firstOrNull()
+            posterRaw = styleCandidates ?: posterRaw
+        }
+
+        if (posterRaw.isNullOrBlank()) {
+            val srcset = document.select("img[srcset], source[srcset]").firstOrNull()?.attr("srcset")
+            if (!srcset.isNullOrBlank()) posterRaw = parseSrcsetPickBest(srcset!!)
+        }
+
+        val poster = posterRaw?.takeIf { it.isNotBlank() }?.let { raw ->
+            var r = raw.trim().replace("\\/", "/")
+            if (r.startsWith("//")) r = "https:$r"
+            if (r.startsWith("http://") || r.startsWith("https://")) r else fixUrl(r)
+        } ?: ""
 
         val description = listOf(
             document.selectFirst("meta[property='og:description']")?.attr("content"),
@@ -509,25 +444,13 @@ private fun extractStyleImage(style: String?): String? {
         ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
 
         val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull {
-            try {
-                it.toSearchResult()
-            } catch (e: Exception) {
-                Log.e("GaypornHDfree", "Error parsing recommendation: ${e.message}")
-                null
-            }
+            try { it.toSearchResult() } catch (e: Exception) { null }
         }
 
-        Log.d("GaypornHDfree", "Loaded: title='$title', poster='$poster'")
+        Log.d("GaypornHDfree", "parseLoadResponse title='$title' posterRaw='${posterRaw?.take(120)}' poster='$poster'")
 
         return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            if (poster.isNotBlank()) {
-                this.posterUrl = when {
-                    poster.startsWith("http") -> poster
-                    poster.startsWith("//") -> "https:$poster"
-                    poster.startsWith("/") -> "$mainUrl$poster"
-                    else -> "$mainUrl/$poster"
-                }
-            }
+            if (poster.isNotBlank()) this.posterUrl = poster
             this.plot = description
             this.recommendations = recommendations
         }
