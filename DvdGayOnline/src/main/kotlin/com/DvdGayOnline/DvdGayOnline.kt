@@ -48,17 +48,17 @@ class DvdGayOnline : MainAPI() {
             list = home,
             isHorizontalImages = false
         ),
-        hasNext = document.select("a.next.page-numbers").isNotEmpty()
-    )
+        hasNext = true
+  )
 }
-
+    
 private fun Element.toSearchResult(): SearchResponse {
-    val href = fixUrl(this.selectFirst("a").attr("href"))
-    val title = this.selectFirst("div.data h3").text()
-    val posterUrl = fixUrlNull(this.selectFirst("img").attr("src"))
+    val href = fixUrl(this.select("a").attr("href"))
+    val title = this.select("div.data h3").text()
+    val posterUrl = fixUrlNull(this.select("img").attr("src"))
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
-        this.posterUrl = posterUrl // Giờ đây đã là String thay vì String?
+        this.posterUrl = posterUrl
     }
 }
 
