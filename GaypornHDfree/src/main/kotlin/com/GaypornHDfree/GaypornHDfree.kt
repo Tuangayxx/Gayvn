@@ -298,7 +298,54 @@ class GaypornHDfree : MainAPI() {
         }
     }
 
-    // --------- loadLinks (calls loadExtractor for each found url) ----------
+    // --------- helper: try call runtime loadExtractor (reflection) or fallback to callback ----------
+    private fun callLoadExtractorOrCallback(
+        fixedUrl: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        // Try reflection: find any method named loadExtractor and attempt to invoke it.
+        try {
+            val methods = this::class.java.methods.filter { it.name == "loadExtractor" }
+            for (m in methods) {
+                try {
+                    // common signatures: (String, (SubtitleFile)->Unit, (ExtractorLink)->Unit) or (String, (ExtractorLink)->Unit)
+                    if (m.parameterCount == 3) {
+                        m.invoke(this, fixedUrl, subtitleCallback, callback)
+                        return true
+                    } else if (m.parameterCount == 2) {
+                        m.invoke(this, fixedUrl, callback)
+                        return true
+                    }
+                    // ignore other signatures
+                } catch (t: Throwable) {
+                    // try next method
+                    Log.w("GaypornHDfree", "reflection loadExtractor invoke failed: ${t.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("GaypornHDfree", "Reflection search for loadExtractor failed: ${e.message}")
+        }
+
+        // Fallback: create ExtractorLink and call callback so player still has links
+        return try {
+            val quality = when {
+                fixedUrl.contains("1080") -> "1080p"
+                fixedUrl.contains("720") -> "720p"
+                fixedUrl.contains("480") -> "480p"
+                fixedUrl.contains(".m3u8") -> "hls"
+                else -> "auto"
+            }
+            val name = fixedUrl.substringAfterLast("/").takeIf { it.isNotBlank() } ?: fixedUrl
+            callback(ExtractorLink(fixedUrl, name, quality))
+            true
+        } catch (e: Exception) {
+            Log.w("GaypornHDfree", "Fallback callback failed: ${e.message}")
+            false
+        }
+    }
+
+    // ----------------- loadLinks (single definitive implementation) -----------------
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -360,6 +407,8 @@ class GaypornHDfree : MainAPI() {
                 } catch (_: Exception) {}
             }
 
+            Log.d("GaypornHDfree", "Found ${videoUrls.size} candidate video URLs for $data")
+
             var called = false
             videoUrls.map { it.trim() }.filter { it.isNotBlank() }.distinct().forEach { raw ->
                 try {
@@ -370,15 +419,9 @@ class GaypornHDfree : MainAPI() {
                         else -> if (raw.startsWith("http")) raw else "$mainUrl/${raw.removePrefix("/")}"
                     }.replace("\\/", "/")
 
-                    Log.d("GaypornHDfree", "Calling loadExtractor for: $fixedUrl")
-                    // prefer calling framework loadExtractor (must exist at runtime)
-                    try {
-                        loadExtractor(fixedUrl, subtitleCallback, callback)
-                        called = true
-                    } catch (e: Throwable) {
-                        // if loadExtractor not available or fails, we skip (we avoid building ExtractorLink here)
-                        Log.w("GaypornHDfree", "loadExtractor invocation failed for $fixedUrl : ${e.message}")
-                    }
+                    Log.d("GaypornHDfree", "Processing candidate: $fixedUrl")
+                    val ok = callLoadExtractorOrCallback(fixedUrl, subtitleCallback, callback)
+                    if (ok) called = true
                 } catch (e: Exception) {
                     Log.w("GaypornHDfree", "Error processing raw url $raw : ${e.message}")
                 }
