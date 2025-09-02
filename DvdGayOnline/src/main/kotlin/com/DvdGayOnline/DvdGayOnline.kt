@@ -1,4 +1,4 @@
-package com.GayStream
+package com.DvdGayOnline
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -9,9 +9,9 @@ import java.io.IOException
 import com.lagradost.api.Log
 
 
-class GayStream : MainAPI() {
-    override var mainUrl = "https://gaystream.pw"
-    override var name = "GayStream"
+class DvdGayOnline : MainAPI() {
+    override var mainUrl = "https://DvdGayOnline.com"
+    override var name = "DvdGayOnline"
     override val hasMainPage = true
     override var lang = "en"
     override val hasQuickSearch = false
@@ -23,9 +23,9 @@ class GayStream : MainAPI() {
 
     override val mainPage = mainPageOf(
         ""                                      to "Latest",
-        "/video/category/4k"                    to "Most Viewed",
-        "/video/category/anal"                                to "Asian",
-        "/video/category/asian"                             to "Group Sex",
+        "/genre/new-release/"                    to "Most Viewed",
+        "/genre/new/"                                to "Asian",
+        "/tendencia/"                             to "Group Sex",
         "/video/category/dp"                                 to "Bisexual",
         "/video/category/group"                                  to "Group",
         "/video/category/homemade"                                 to "Homemade",
@@ -40,7 +40,7 @@ class GayStream : MainAPI() {
         "$mainUrl{request.data}/page/$page$" // ✅ Sửa pagination
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.grid-item").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.owl-wrapper-outer").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -54,8 +54,8 @@ class GayStream : MainAPI() {
 
 private fun Element.toSearchResult(): SearchResponse {
     val title = this.select("h3.item-title").text() // ✅ Sửa lấy text
-    val href = fixUrl(this.select("a.item-wrap").attr("href"))
-    val posterUrl = fixUrlNull(this.select("img.item-img").attr("src"))
+    val href = fixUrl(this.select("a").attr("href"))
+    val posterUrl = fixUrlNull(this.select("img").attr("src"))
     
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
@@ -68,7 +68,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     for (i in 1..7) {
         // ✅ Sửa URL search: thêm `&page=i`
         val document = app.get("$mainUrl/?s=$query&page=$i").document
-        val results = document.select("div.grid-item").mapNotNull { it.toSearchResult() }
+        val results = document.select("div.owl-wrapper-outer").mapNotNull { it.toSearchResult() }
 
         if (results.isEmpty()) break
         searchResponse.addAll(results)
@@ -104,13 +104,14 @@ override suspend fun search(query: String): List<SearchResponse> {
     // Lấy URL từ các button trong tabs-wrap
     val videoUrls = document.select("div.tabs-wrap button[onclick]")
         .mapNotNull { it.attr("onclick").takeIf { u -> u.isNotBlank() && u != "#" } }
-        .mapNotNull { onclick ->
-            // Tách URL từ onclick="document.getElementById('ifr').src='URL'"
-            Regex("src=(?:&quot;|\"|')(.*?)(?:&quot;|\"|')").find(onclick)?.groupValues?.get(1)
+        .map { onclick ->
+            // Lấy link bên trong onclick="document.getElementById('ifr').src='URL'"
+            Regex("src=&quot;(.*?)&quot;").find(onclick)?.groupValues?.get(1)
         }
+        .filterNotNull()
         .toMutableSet()
 
-    // Fallback iframe (trường hợp không có button)
+    // Fallback iframe
     if (videoUrls.isEmpty()) {
         val iframeSrc = document.selectFirst("iframe#ifr")?.attr("src")
         iframeSrc?.let { videoUrls.add(it) }
@@ -129,9 +130,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         ) { link -> callback(link) }
         if (ok) found = true
     }
-
     return found
 }
-
 
 }
