@@ -53,7 +53,7 @@ class DvdGayOnline : MainAPI() {
 }
 
 private fun Element.toSearchResult(): SearchResponse {
-    val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
+    val href = fixUrl(this.selectFirst("a")?.attr("href"))
     val title = this.selectFirst("div.data h3")?.text()?.trim() ?: ""
     val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
 
