@@ -12,7 +12,9 @@ import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
 import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.network.*
 import com.lagradost.cloudstream3.*
+import com.lagradost.api.Log
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jsoup.nodes.Element
 import org.json.JSONArray
@@ -142,10 +144,6 @@ class tapepops : StreamTape() {
     override var name = "tapepops"
 }
 
-class FileMoon : FilemoonV2() {
-    override var mainUrl = "https://filemoon.to"
-    override var name = "FileMoon"
-}
 
 class Bgwp : Bigwarp() {
     override var mainUrl = "https://bgwp.cc"
