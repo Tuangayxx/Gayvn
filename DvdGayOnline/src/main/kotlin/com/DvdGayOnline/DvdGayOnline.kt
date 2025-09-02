@@ -52,12 +52,12 @@ class DvdGayOnline : MainAPI() {
   )
 }
     
-private fun Element.toSearchResult(): SearchResponse {
-    // Select the correct anchor from the title, not just any anchor
+private fun Element.toSearchResult(): SearchResponse? {
     val titleAnchor = this.select("div.data h3 a").first()
-    val href = fixUrl(titleAnchor.attr("href"))
+    val href = titleAnchor?.attr("href")?.let { fixUrl(it) } ?: return null
     val title = titleAnchor.text()
-    val posterUrl = fixUrlNull(this.select("img").attr("src"))
+    val posterElement = this.select("img").first()
+    val posterUrl = posterElement?.attr("src")?.let { fixUrlNull(it) }
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
