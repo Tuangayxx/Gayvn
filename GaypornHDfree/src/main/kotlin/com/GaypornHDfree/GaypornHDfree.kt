@@ -273,30 +273,24 @@ class GaypornHDfree : MainAPI() {
         return results
     }
 
-    // ----------------- load -----------------
-    override suspend fun load(url: String): LoadResponse {
-        try {
-            val doc = try {
-                Jsoup.connect(url).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get()
-            } catch (e: Exception) {
-                Jsoup.parse("")
-            }
+    override suspend fun load(url: String): LoadResponse? {
+    val doc = app.get(url).document
+    val title = doc.selectFirst("h1")?.text() ?: "No title"
+    val poster = doc.selectFirst("meta[property=og:image]")?.attr("content")
+    val description = doc.selectFirst("meta[name=description]")?.attr("content")
 
-            if (doc.title().isNullOrBlank() || doc.html().length < 300 || doc.html().contains("challenge-platform")) {
-                val safe = fetchHtmlSafely(url, mapOf("Referer" to mainUrl))
-                if (safe.isNotBlank()) {
-                    val parsed = Jsoup.parse(safe, url)
-                    return parseLoadResponse(parsed, url)
-                }
-                throw Exception("Page unrenderable or protected")
-            }
+    return MovieLoadResponse(
+        name = title,
+        url = url,
+        apiName = this.name,
+        type = TvType.Movie,
+        dataUrl = url,
+        posterUrl = poster,
+        year = null,
+        plot = description
+    )
+}
 
-            return parseLoadResponse(doc, url)
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "load error: ${e.message}")
-            throw e
-        }
-    }
 
     // --------- helper: try call runtime loadExtractor (reflection) or fallback to callback ----------
     private fun callLoadExtractorOrCallback(
