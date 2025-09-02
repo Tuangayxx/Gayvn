@@ -53,8 +53,10 @@ class DvdGayOnline : MainAPI() {
 }
     
 private fun Element.toSearchResult(): SearchResponse {
-    val href = fixUrl(this.select("a").attr("href"))
-    val title = this.select("div.data h3").text()
+    // Select the correct anchor from the title, not just any anchor
+    val titleAnchor = this.select("div.data h3 a").first()
+    val href = fixUrl(titleAnchor.attr("href"))
+    val title = titleAnchor.text()
     val posterUrl = fixUrlNull(this.select("img").attr("src"))
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
@@ -67,13 +69,15 @@ override suspend fun search(query: String): List<SearchResponse> {
 
     for (i in 1..7) {
         val document = app.get("$mainUrl/page/$i/?s=$query").document
-        val results = document.select("div.item").mapNotNull { it.toSearchResult() }
+        // Select articles with class 'item', not divs
+        val results = document.select("article.item").mapNotNull { it.toSearchResult() }
         if (results.isEmpty()) break
         searchResponse.addAll(results)
     }
 
     return searchResponse
 }
+
    
 
     override suspend fun load(url: String): LoadResponse {
