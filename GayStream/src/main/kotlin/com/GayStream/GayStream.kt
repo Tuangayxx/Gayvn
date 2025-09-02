@@ -40,7 +40,7 @@ class GayStream : MainAPI() {
         "$mainUrl{request.data}/page/$page$" // ✅ Sửa pagination
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.flex > div.grid-item").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.grid-item").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -53,9 +53,9 @@ class GayStream : MainAPI() {
 }
 
 private fun Element.toSearchResult(): SearchResponse {
-    val title = this.select("a.item-wrap").text() // ✅ Sửa lấy text
-    val href = fixUrl(this.select("a").attr("href"))
-    val posterUrl = fixUrlNull(this.select("img").attr("src"))
+    val title = this.select("h3.item-title").text() // ✅ Sửa lấy text
+    val href = fixUrl(this.select("a.item-wrap").attr("href"))
+    val posterUrl = fixUrlNull(this.select("img.item-img").attr("src"))
     
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
@@ -68,7 +68,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     for (i in 1..7) {
         // ✅ Sửa URL search: thêm `&page=i`
         val document = app.get("$mainUrl/?s=$query&page=$i").document
-        val results = document.select("div.flex > div.grid-item").mapNotNull { it.toSearchResult() }
+        val results = document.select("div.grid-item").mapNotNull { it.toSearchResult() }
 
         if (results.isEmpty()) break
         searchResponse.addAll(results)
