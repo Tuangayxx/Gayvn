@@ -10,7 +10,7 @@ import com.lagradost.api.Log
 
 
 class GayStream : MainAPI() {
-    override var mainUrl = "https://GayStream.pw"
+    override var mainUrl = "https://gaystream.pw"
     override var name = "GayStream"
     override val hasMainPage = true
     override var lang = "en"
@@ -22,7 +22,7 @@ class GayStream : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        "/?filter=latest"                         to "Latest",
+        ""                                      to "Latest",
         "/video/category/4k"                    to "Most Viewed",
         "/video/category/anal"                                to "Asian",
         "/video/category/asian"                             to "Group Sex",
