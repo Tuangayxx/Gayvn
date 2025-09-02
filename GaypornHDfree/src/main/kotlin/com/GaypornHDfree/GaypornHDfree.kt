@@ -345,117 +345,40 @@ class GaypornHDfree : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    return try {
-        // 1) Lấy HTML an toàn (OkHttp fallback)
-        val html = fetchHtmlSafely(data, mapOf("Referer" to mainUrl)).ifEmpty {
-            try {
-                Jsoup.connect(data)
-                    .headers(standardHeaders)
-                    .userAgent(standardHeaders["User-Agent"] ?: "")
-                    .timeout(15000)
-                    .get()
-                    .html()
-            } catch (e: Exception) { "" }
+
+    val document = app.get(data).document
+    var found = false
+
+    // Lấy URL từ các button trong tabs-wrap
+    val videoUrls = document.select("div.tabs-wrap button[onclick]")
+        .mapNotNull { it.attr("onclick").takeIf { u -> u.isNotBlank() && u != "#" } }
+        .map { onclick ->
+            // Lấy link bên trong onclick="document.getElementById('ifr').src='URL'"
+            Regex("src=&quot;(.*?)&quot;").find(onclick)?.groupValues?.get(1)
         }
+        .filterNotNull()
+        .toMutableSet()
 
-        if (html.isBlank()) {
-            Log.w("GaypornHDfree", "loadLinks: empty html for $data")
-            return false
-        }
-
-        val doc = Jsoup.parse(html, data)
-        val videoUrls = mutableSetOf<String>()
-
-        // 2) Thu thập các nguồn phổ biến
-        listOf(
-            "video source[src]", "video[src]", "iframe[src]", "[data-src]", "embed[src]",
-            "a[href$=.mp4]", "a[href$=.m3u8]", "a[href*='.mp4']", "a[href*='.m3u8']"
-        ).forEach { sel ->
-            doc.select(sel).forEach { el ->
-                val found = listOf("src", "data-src", "href").map { k -> el.attr(k) }.firstOrNull { it.isNotBlank() }
-                found?.let { videoUrls.add(it) }
-            }
-        }
-
-        // meta og:video
-        doc.select("meta[property=og:video], meta[property=og:video:secure_url], meta[name=og:video]").forEach {
-            val c = it.attr("content")
-            if (c.isNotBlank()) videoUrls.add(c)
-        }
-
-        // tìm trong script các pattern file/url
-        val scriptsCombined = doc.select("script").map { it.data() + it.html() }.joinToString("\n")
-        val fileRegex = Regex("""(?i)(?:file|src|url)\s*[:=]\s*['"]((?:https?:)?\/\/[^'"\s]+)['"]""")
-        fileRegex.findAll(scriptsCombined).forEach { m ->
-            val u = m.groups[1]?.value ?: ""
-            if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
-        }
-
-        // fallback: direct links by extensions
-        val genericRegex = Regex("""https?:\/\/[^\s'"]+?\.(mp4|m3u8|webm|mpd)(\?[^\s'"]*)?""", RegexOption.IGNORE_CASE)
-        genericRegex.findAll(html).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
-
-        // 3) Nếu có iframe/embed pointing to other page thì try fetch để lấy thêm links
-        val iframeCandidates = videoUrls.filter { it.contains("/e/") || it.contains("embed") || it.contains("player") }.toList()
-        for (ifr in iframeCandidates) {
-            try {
-                val ifHtml = fetchHtmlSafely(ifr, mapOf("Referer" to data)).ifEmpty {
-                    try {
-                        Jsoup.connect(ifr).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(8000).get().html()
-                    } catch (_: Exception) { "" }
-                }
-                if (ifHtml.isNotBlank()) {
-                    genericRegex.findAll(ifHtml).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
-                    fileRegex.findAll(ifHtml).forEach { m ->
-                        val u = m.groups[1]?.value ?: ""
-                        if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
-                    }
-                }
-            } catch (_: Exception) { /* ignore iframe failures */ }
-        }
-
-        // 4) Chuẩn hoá và gọi loadExtractor trực tiếp cho từng URL
-        var called = false
-        videoUrls.map { it.trim() }.filter { it.isNotBlank() }.distinct().forEach { raw ->
-            try {
-                val fixedUrl = when {
-                    raw.startsWith("http://") || raw.startsWith("https://") -> raw
-                    raw.startsWith("//") -> "https:$raw"
-                    raw.startsWith("/") -> "$mainUrl$raw"
-                    else -> if (raw.startsWith("http")) raw else "$mainUrl/${raw.removePrefix("/")}"
-                }.replace("\\/", "/")
-
-                Log.d("GaypornHDfree", "Calling loadExtractor for: $fixedUrl")
-
-                // Gọi loadExtractor trực tiếp (hai signature phổ biến được thử)
-                try {
-                    // Thử signature phổ biến: loadExtractor(url, subtitleCallback, callback)
-                    this::class.java.getMethod("loadExtractor", String::class.java, kotlin.jvm.functions.Function1::class.java, kotlin.jvm.functions.Function1::class.java)
-                        .invoke(this, fixedUrl, subtitleCallback, callback)
-                    called = true
-                } catch (noSuch: NoSuchMethodException) {
-                    try {
-                        // Thử signature: loadExtractor(url, callback)
-                        this::class.java.getMethod("loadExtractor", String::class.java, kotlin.jvm.functions.Function1::class.java)
-                            .invoke(this, fixedUrl, callback)
-                        called = true
-                    } catch (noSuch2: NoSuchMethodException) {
-                        // Nếu Extractor.kt thực sự định nghĩa loadExtractor nhưng với signature khác,
-                        // bạn cần thay 2 dòng trên cho khớp signature — hoặc giữ code này và đảm bảo Extractor.kt có 1 trong 2 signature.
-                        Log.w("GaypornHDfree", "loadExtractor method not found with expected signatures for $fixedUrl")
-                    }
-                }
-
-            } catch (e: Exception) {
-                Log.w("GaypornHDfree", "Error calling loadExtractor for $raw : ${e.message}")
-            }
-        }
-
-        called
-    } catch (e: Exception) {
-        Log.e("GaypornHDfree", "Error in loadLinks: ${e.message}")
-        false
+    // Fallback iframe
+    if (videoUrls.isEmpty()) {
+        val iframeSrc = document.selectFirst("iframe#ifr")?.attr("src")
+        iframeSrc?.let { videoUrls.add(it) }
     }
+
+    // Thu thập URL từ nút download
+    val button = document.selectFirst("a.video-download[href]")?.attr("href")
+    button?.let { videoUrls.add(it) }
+
+    // Xử lý tất cả URL đã thu thập
+    videoUrls.toList().amap { url ->
+        val ok = loadExtractor(
+            url,
+            referer = data,
+            subtitleCallback = subtitleCallback
+        ) { link -> callback(link) }
+        if (ok) found = true
+    }
+    return found
 }
 
 } 
