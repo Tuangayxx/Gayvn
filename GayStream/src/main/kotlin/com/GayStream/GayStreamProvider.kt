@@ -17,5 +17,6 @@ class GayStreamProvider: Plugin() {
         registerExtractorAPI(DoodstreamCom())
         registerExtractorAPI(vide0())
         registerExtractorAPI(ListMirror())
+        registerExtractorAPI(FilemoonV2())
     }
 }
