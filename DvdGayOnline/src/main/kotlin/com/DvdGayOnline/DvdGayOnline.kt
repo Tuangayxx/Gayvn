@@ -34,13 +34,13 @@ class DvdGayOnline : MainAPI() {
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val pageUrl = if (page == 1) 
-        "$mainUrl${request.data}" 
-    else 
-        "$mainUrl{request.data}/page/$page$" // ✅ Sửa pagination
+    val pageUrl = if (page == 1)
+        "$mainUrl${request.data}"
+    else
+        "$mainUrl${request.data}/page/$page"
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.items.normal").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.item").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -48,15 +48,15 @@ class DvdGayOnline : MainAPI() {
             list = home,
             isHorizontalImages = false
         ),
-        hasNext = true
+        hasNext = document.select("a.next.page-numbers").isNotEmpty()
     )
 }
 
 private fun Element.toSearchResult(): SearchResponse {
-    val title = this.select("h3.item-title").text() // ✅ Sửa lấy text
-    val href = fixUrl(this.select("a").attr("href"))
-    val posterUrl = fixUrlNull(this.select("img").attr("src"))
-    
+    val href = fixUrl(this.selectFirst("a")?.attr("href") ?: return null)
+    val title = this.selectFirst("div.data h3")?.text()?.trim() ?: ""
+    val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
     }
@@ -66,10 +66,8 @@ override suspend fun search(query: String): List<SearchResponse> {
     val searchResponse = mutableListOf<SearchResponse>()
 
     for (i in 1..7) {
-        // ✅ Sửa URL search: thêm `&page=i`
-        val document = app.get("$mainUrl/?s=$query&page=$i").document
-        val results = document.select("div.items normal").mapNotNull { it.toSearchResult() }
-
+        val document = app.get("$mainUrl/page/$i/?s=$query").document
+        val results = document.select("div.item").mapNotNull { it.toSearchResult() }
         if (results.isEmpty()) break
         searchResponse.addAll(results)
     }
@@ -101,24 +99,14 @@ override suspend fun search(query: String): List<SearchResponse> {
     val document = app.get(data).document
     var found = false
 
-    // Lấy URL từ các button trong tabs-wrap
-    val videoUrls = document.select("div.tabs-wrap button[onclick]")
-        .mapNotNull { it.attr("onclick").takeIf { u -> u.isNotBlank() && u != "#" } }
-        .map { onclick ->
-            // Lấy link bên trong onclick="document.getElementById('ifr').src='URL'"
-            Regex("src=&quot;(.*?)&quot;").find(onclick)?.groupValues?.get(1)
-        }
-        .filterNotNull()
-        .toMutableSet()
+    val videoUrls = mutableSetOf<String>()
 
-    // Fallback iframe
-    if (videoUrls.isEmpty()) {
-        val iframeSrc = document.selectFirst("iframe#ifr")?.attr("src")
-        iframeSrc?.let { videoUrls.add(it) }
-    }
+    // Lấy URL từ iframe player chính
+    val iframeSrc = document.selectFirst("iframe.metaframe")?.attr("src")
+    iframeSrc?.let { videoUrls.add(it) }
 
-    // Thu thập URL từ nút download
-    val button = document.selectFirst("a.video-download[href]")?.attr("href")
+    // Nếu trang có thêm link download
+    val button = document.selectFirst("a.download[href]")?.attr("href")
     button?.let { videoUrls.add(it) }
 
     // Xử lý tất cả URL đã thu thập
@@ -130,6 +118,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         ) { link -> callback(link) }
         if (ok) found = true
     }
+
     return found
 }
 
