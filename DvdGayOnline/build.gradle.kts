@@ -14,5 +14,5 @@ cloudstream {
     **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://nurgay.to/wp-content/uploads/2023/10/logo.png"
+    iconUrl = "https://dvdgayonline.com/wp-content/uploads/2024/07/logo.png"
 }

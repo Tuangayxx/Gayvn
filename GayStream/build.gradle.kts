@@ -3,7 +3,7 @@ version = 2
 cloudstream {
     authors     = listOf("Gayvn")
     language    = "en"
-    description = "Nurgay is the best free full movies porn video site."
+    description = "GayStream is the best video porn video site."
 
     /**
      * Status int as the following:
@@ -14,5 +14,5 @@ cloudstream {
     **/
     status  = 1 // will be 3 if unspecified
     tvTypes = listOf("NSFW")
-    iconUrl = "https://nurgay.to/wp-content/uploads/2023/10/logo.png"
+    iconUrl = "https://gaystream.pw/wp-content/themes/gaystream2/img/logo.png"
 }

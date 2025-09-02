@@ -25,7 +25,7 @@ class DvdGayOnline : MainAPI() {
         ""                                      to "Latest",
         "/genre/new-release/"                    to "Most Viewed",
         "/genre/new/"                                to "Asian",
-        "/tendencia/"                             to "Group Sex",
+        "/video/category/asian"                             to "Group Sex",
         "/video/category/dp"                                 to "Bisexual",
         "/video/category/group"                                  to "Group",
         "/video/category/homemade"                                 to "Homemade",
@@ -40,7 +40,7 @@ class DvdGayOnline : MainAPI() {
         "$mainUrl{request.data}/page/$page$" // ✅ Sửa pagination
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.owl-wrapper-outer").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.items normal").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -68,7 +68,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     for (i in 1..7) {
         // ✅ Sửa URL search: thêm `&page=i`
         val document = app.get("$mainUrl/?s=$query&page=$i").document
-        val results = document.select("div.owl-wrapper-outer").mapNotNull { it.toSearchResult() }
+        val results = document.select("div.items normal").mapNotNull { it.toSearchResult() }
 
         if (results.isEmpty()) break
         searchResponse.addAll(results)

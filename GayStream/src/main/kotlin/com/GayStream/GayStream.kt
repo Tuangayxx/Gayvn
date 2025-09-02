@@ -46,7 +46,7 @@ class GayStream : MainAPI() {
         list = HomePageList(
             name = request.name,
             list = home,
-            isHorizontalImages = false
+            isHorizontalImages = true
         ),
         hasNext = true
     )
