@@ -23,14 +23,16 @@ class GayStream : MainAPI() {
 
     override val mainPage = mainPageOf(
         ""                                      to "Latest",
-        "/video/category/4k"                    to "Most Viewed",
-        "/video/category/anal"                                to "Asian",
-        "/video/category/asian"                             to "Group Sex",
-        "/video/category/dp"                                 to "Bisexual",
-        "/video/category/group"                                  to "Group",
-        "/video/category/homemade"                                 to "Homemade",
-        "/video/category/hunk"                                to "Hunk",
-        "/video/category/latino"                               to "Latino",
+        "/video/category/4k"                    to "4K",
+        "/video/category/anal"                  to "Anal",
+        "/video/category/asian"                 to "Asian",
+        "/video/category/dp"                    to "DP",
+        "/video/category/group"                 to "Group",
+        "/video/category/homemade"              to "Homemade",
+        "/video/category/hunk"                  to "Hunk",
+        "/video/category/latino"                to "Latino",
+        "/video/channel/betabetapi"             to "Beta Beta Pi",
+        "/video/channel/caninolatino"           to "Canino Latino",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {

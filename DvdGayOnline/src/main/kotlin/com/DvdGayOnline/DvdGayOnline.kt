@@ -22,15 +22,15 @@ class DvdGayOnline : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        ""                                      to "Latest",
-        "/genre/new-release/"                    to "Most Viewed",
-        "/genre/new/"                                to "Asian",
-        "/video/category/asian"                             to "Group Sex",
-        "/video/category/dp"                                 to "Bisexual",
-        "/video/category/group"                                  to "Group",
-        "/video/category/homemade"                                 to "Homemade",
-        "/video/category/hunk"                                to "Hunk",
-        "/video/category/latino"                               to "Latino",
+        "/genre/new/"                            to "Latest",
+        "/genre/new-release/"                    to "New release",
+        "/tendencia/"                            to "Trending",
+        "/genre/asian/"                          to "Asian",
+        "/genre/fratboys/"                       to "Fratboys",
+        "/genre/group-sex/"                      to "Group",
+        "/genre/gangbang/"                       to "Gangbang",
+        "/genre/parody/"                         to "Parody",
+        "/genre/latino/"                         to "Latino",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -40,7 +40,7 @@ class DvdGayOnline : MainAPI() {
         "$mainUrl{request.data}/page/$page$" // ✅ Sửa pagination
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.items normal").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.items.normal").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
