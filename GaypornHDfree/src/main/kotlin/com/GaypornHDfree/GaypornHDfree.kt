@@ -298,7 +298,7 @@ class GaypornHDfree : MainAPI() {
         }
     }
 
-    // --------- reflection helper + fallback ----------
+    // --------- helper: try call runtime loadExtractor (reflection) or fallback to callback ----------
     private fun callLoadExtractorOrCallback(
         fixedUrl: String,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -309,6 +309,7 @@ class GaypornHDfree : MainAPI() {
             val methods = this::class.java.methods.filter { it.name == "loadExtractor" }
             for (m in methods) {
                 try {
+                    // common signatures: (String, (SubtitleFile)->Unit, (ExtractorLink)->Unit) or (String, (ExtractorLink)->Unit)
                     if (m.parameterCount == 3) {
                         m.invoke(this, fixedUrl, subtitleCallback, callback)
                         return true
@@ -316,7 +317,9 @@ class GaypornHDfree : MainAPI() {
                         m.invoke(this, fixedUrl, callback)
                         return true
                     }
+                    // ignore other signatures
                 } catch (t: Throwable) {
+                    // try next method
                     Log.w("GaypornHDfree", "reflection loadExtractor invoke failed: ${t.message}")
                 }
             }
@@ -324,7 +327,7 @@ class GaypornHDfree : MainAPI() {
             Log.w("GaypornHDfree", "Reflection search for loadExtractor failed: ${e.message}")
         }
 
-        // Fallback: create ExtractorLink (deprecated constructor; kept for compatibility)
+        // Fallback: create ExtractorLink and call callback so player still has links
         return try {
             val quality = when {
                 fixedUrl.contains("1080") -> "1080p"
@@ -334,7 +337,7 @@ class GaypornHDfree : MainAPI() {
                 else -> "auto"
             }
             val name = fixedUrl.substringAfterLast("/").takeIf { it.isNotBlank() } ?: fixedUrl
-            callback(ExtractorLink(fixedUrl, name, fixedUrl))
+            callback(ExtractorLink(fixedUrl, name, quality))
             true
         } catch (e: Exception) {
             Log.w("GaypornHDfree", "Fallback callback failed: ${e.message}")
@@ -342,158 +345,123 @@ class GaypornHDfree : MainAPI() {
         }
     }
 
-    // ----------------- loadLinks (single definitive implementation) -----------------
     override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        return try {
-            val html = fetchHtmlSafely(data, mapOf("Referer" to mainUrl)).ifEmpty {
-                try {
-                    Jsoup.connect(data).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(15000).get().html()
-                } catch (e: Exception) { "" }
-            }
-            if (html.isBlank()) {
-                Log.w("GaypornHDfree", "loadLinks: empty html for $data")
-                return false
-            }
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    return try {
+        // 1) Lấy HTML an toàn (OkHttp fallback)
+        val html = fetchHtmlSafely(data, mapOf("Referer" to mainUrl)).ifEmpty {
+            try {
+                Jsoup.connect(data)
+                    .headers(standardHeaders)
+                    .userAgent(standardHeaders["User-Agent"] ?: "")
+                    .timeout(15000)
+                    .get()
+                    .html()
+            } catch (e: Exception) { "" }
+        }
 
-            val doc = Jsoup.parse(html, data)
-            val videoUrls = mutableSetOf<String>()
+        if (html.isBlank()) {
+            Log.w("GaypornHDfree", "loadLinks: empty html for $data")
+            return false
+        }
 
-            // selectors
-            listOf("video source[src]", "video[src]", "iframe[src]", "[data-src]", "embed[src]",
-                "a[href$=.mp4]", "a[href$=.m3u8]").forEach { sel ->
-                doc.select(sel).forEach { el ->
-                    val found = listOf("src", "data-src", "href").map { k -> el.attr(k) }.firstOrNull { it.isNotBlank() }
-                    found?.let { videoUrls.add(it) }
+        val doc = Jsoup.parse(html, data)
+        val videoUrls = mutableSetOf<String>()
+
+        // 2) Thu thập các nguồn phổ biến
+        listOf(
+            "video source[src]", "video[src]", "iframe[src]", "[data-src]", "embed[src]",
+            "a[href$=.mp4]", "a[href$=.m3u8]", "a[href*='.mp4']", "a[href*='.m3u8']"
+        ).forEach { sel ->
+            doc.select(sel).forEach { el ->
+                val found = listOf("src", "data-src", "href").map { k -> el.attr(k) }.firstOrNull { it.isNotBlank() }
+                found?.let { videoUrls.add(it) }
+            }
+        }
+
+        // meta og:video
+        doc.select("meta[property=og:video], meta[property=og:video:secure_url], meta[name=og:video]").forEach {
+            val c = it.attr("content")
+            if (c.isNotBlank()) videoUrls.add(c)
+        }
+
+        // tìm trong script các pattern file/url
+        val scriptsCombined = doc.select("script").map { it.data() + it.html() }.joinToString("\n")
+        val fileRegex = Regex("""(?i)(?:file|src|url)\s*[:=]\s*['"]((?:https?:)?\/\/[^'"\s]+)['"]""")
+        fileRegex.findAll(scriptsCombined).forEach { m ->
+            val u = m.groups[1]?.value ?: ""
+            if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
+        }
+
+        // fallback: direct links by extensions
+        val genericRegex = Regex("""https?:\/\/[^\s'"]+?\.(mp4|m3u8|webm|mpd)(\?[^\s'"]*)?""", RegexOption.IGNORE_CASE)
+        genericRegex.findAll(html).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
+
+        // 3) Nếu có iframe/embed pointing to other page thì try fetch để lấy thêm links
+        val iframeCandidates = videoUrls.filter { it.contains("/e/") || it.contains("embed") || it.contains("player") }.toList()
+        for (ifr in iframeCandidates) {
+            try {
+                val ifHtml = fetchHtmlSafely(ifr, mapOf("Referer" to data)).ifEmpty {
+                    try {
+                        Jsoup.connect(ifr).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(8000).get().html()
+                    } catch (_: Exception) { "" }
                 }
-            }
-
-            // meta and scripts
-            doc.select("meta[property=og:video], meta[property=og:video:secure_url], meta[name=og:video]").forEach {
-                val c = it.attr("content")
-                if (c.isNotBlank()) videoUrls.add(c)
-            }
-            val scriptsCombined = doc.select("script").map { it.data() + it.html() }.joinToString("\n")
-            val fileRegex = Regex("""(?i)(?:file|src|url)\s*[:=]\s*['"]((?:https?:)?\/\/[^'"\s]+)['"]""")
-            fileRegex.findAll(scriptsCombined).forEach { m ->
-                val u = m.groups[1]?.value ?: ""
-                if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
-            }
-            val genericRegex = Regex("""https?:\/\/[^\s'"]+?\.(mp4|m3u8|webm|mpd)(\?[^\s'"]*)?""", RegexOption.IGNORE_CASE)
-            genericRegex.findAll(html).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
-
-            // attempt iframe pages too
-            val iframeCandidates = videoUrls.filter { it.contains("/e/") || it.contains("embed") || it.contains("player") }
-            for (ifr in iframeCandidates) {
-                try {
-                    val ifHtml = fetchHtmlSafely(ifr, mapOf("Referer" to data)).ifEmpty {
-                        try { Jsoup.connect(ifr).headers(standardHeaders).userAgent(standardHeaders["User-Agent"] ?: "").timeout(8000).get().html() }
-                        catch (_: Exception) { "" }
+                if (ifHtml.isNotBlank()) {
+                    genericRegex.findAll(ifHtml).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
+                    fileRegex.findAll(ifHtml).forEach { m ->
+                        val u = m.groups[1]?.value ?: ""
+                        if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
                     }
-                    if (ifHtml.isNotBlank()) {
-                        genericRegex.findAll(ifHtml).forEach { m -> videoUrls.add(m.value.replace("\\/", "/")) }
-                        fileRegex.findAll(ifHtml).forEach { m ->
-                            val u = m.groups[1]?.value ?: ""
-                            if (u.isNotBlank()) videoUrls.add(u.replace("\\/", "/"))
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
-
-            Log.d("GaypornHDfree", "Found ${videoUrls.size} candidate video URLs for $data")
-
-            var called = false
-            videoUrls.map { it.trim() }.filter { it.isNotBlank() }.distinct().forEach { raw ->
-                try {
-                    val fixedUrl = when {
-                        raw.startsWith("http://") || raw.startsWith("https://") -> raw
-                        raw.startsWith("//") -> "https:$raw"
-                        raw.startsWith("/") -> "$mainUrl${raw}"
-                        else -> if (raw.startsWith("http")) raw else "$mainUrl/${raw.removePrefix("/")}"
-                    }.replace("\\/", "/")
-
-                    Log.d("GaypornHDfree", "Processing candidate: $fixedUrl")
-                    val ok = callLoadExtractorOrCallback(fixedUrl, subtitleCallback, callback)
-                    if (ok) called = true
-                } catch (e: Exception) {
-                    Log.w("GaypornHDfree", "Error processing raw url $raw : ${e.message}")
                 }
+            } catch (_: Exception) { /* ignore iframe failures */ }
+        }
+
+        // 4) Chuẩn hoá và gọi loadExtractor trực tiếp cho từng URL
+        var called = false
+        videoUrls.map { it.trim() }.filter { it.isNotBlank() }.distinct().forEach { raw ->
+            try {
+                val fixedUrl = when {
+                    raw.startsWith("http://") || raw.startsWith("https://") -> raw
+                    raw.startsWith("//") -> "https:$raw"
+                    raw.startsWith("/") -> "$mainUrl$raw"
+                    else -> if (raw.startsWith("http")) raw else "$mainUrl/${raw.removePrefix("/")}"
+                }.replace("\\/", "/")
+
+                Log.d("GaypornHDfree", "Calling loadExtractor for: $fixedUrl")
+
+                // Gọi loadExtractor trực tiếp (hai signature phổ biến được thử)
+                try {
+                    // Thử signature phổ biến: loadExtractor(url, subtitleCallback, callback)
+                    this::class.java.getMethod("loadExtractor", String::class.java, kotlin.jvm.functions.Function1::class.java, kotlin.jvm.functions.Function1::class.java)
+                        .invoke(this, fixedUrl, subtitleCallback, callback)
+                    called = true
+                } catch (noSuch: NoSuchMethodException) {
+                    try {
+                        // Thử signature: loadExtractor(url, callback)
+                        this::class.java.getMethod("loadExtractor", String::class.java, kotlin.jvm.functions.Function1::class.java)
+                            .invoke(this, fixedUrl, callback)
+                        called = true
+                    } catch (noSuch2: NoSuchMethodException) {
+                        // Nếu Extractor.kt thực sự định nghĩa loadExtractor nhưng với signature khác,
+                        // bạn cần thay 2 dòng trên cho khớp signature — hoặc giữ code này và đảm bảo Extractor.kt có 1 trong 2 signature.
+                        Log.w("GaypornHDfree", "loadExtractor method not found with expected signatures for $fixedUrl")
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.w("GaypornHDfree", "Error calling loadExtractor for $raw : ${e.message}")
             }
-
-            called
-        } catch (e: Exception) {
-            Log.e("GaypornHDfree", "Error in loadLinks: ${e.message}")
-            false
         }
+
+        called
+    } catch (e: Exception) {
+        Log.e("GaypornHDfree", "Error in loadLinks: ${e.message}")
+        false
     }
+}
 
-    // ----------------- parseLoadResponse -----------------
-    private suspend fun parseLoadResponse(document: Document, url: String): LoadResponse {
-        val title = listOf(
-            document.selectFirst("meta[property='og:title']")?.attr("content"),
-            document.selectFirst("title")?.text()?.replace(" - GayPornHDfree", ""),
-            document.selectFirst("h1")?.text(),
-            document.selectFirst(".video-title, .entry-title")?.text()
-        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: "Unknown Title"
-
-        var posterRaw = document.selectFirst("meta[property='og:image']")?.attr("content")
-            ?: document.selectFirst("meta[name='image']")?.attr("content")
-
-        if (posterRaw.isNullOrBlank()) {
-            posterRaw = document.selectFirst("video")?.attr("poster")
-        }
-
-        if (posterRaw.isNullOrBlank()) {
-            val candidates = document.select("img")
-            posterRaw = candidates.mapNotNull { img ->
-                val cl = img.className().lowercase()
-                if (cl.contains("thumb") || cl.contains("poster") || cl.contains("cover") || cl.contains("wp-post-image") || cl.contains("attachment")) {
-                    resolveImgAttr(img)
-                } else null
-            }.firstOrNull()
-        }
-
-        if (posterRaw.isNullOrBlank()) {
-            posterRaw = document.selectFirst(".video-thumb img, .post-thumb img, .entry img")?.let { resolveImgAttr(it) }
-        }
-
-        if (posterRaw.isNullOrBlank()) {
-            val styleCandidates = document.select("[style]").mapNotNull { extractStyleImage(it.attr("style")) }.firstOrNull()
-            posterRaw = styleCandidates ?: posterRaw
-        }
-
-        if (posterRaw.isNullOrBlank()) {
-            val srcset = document.select("img[srcset], source[srcset]").firstOrNull()?.attr("srcset")
-            if (!srcset.isNullOrBlank()) posterRaw = parseSrcsetPickBest(srcset!!)
-        }
-
-        val poster = posterRaw?.takeIf { it.isNotBlank() }?.let { raw ->
-            var r = raw.trim().replace("\\/", "/")
-            if (r.startsWith("//")) r = "https:$r"
-            if (r.startsWith("http://") || r.startsWith("https://")) r else fixUrl(r)
-        } ?: ""
-
-        val description = listOf(
-            document.selectFirst("meta[property='og:description']")?.attr("content"),
-            document.selectFirst("meta[name='description']")?.attr("content"),
-            document.selectFirst(".video-description, .entry-content p")?.text()
-        ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: ""
-
-        val recommendations = document.select("div.videopost, .related-video, .video-item, .post").take(10).mapNotNull {
-            try { it.toSearchResult() } catch (e: Exception) { null }
-        }
-
-        Log.d("GaypornHDfree", "parseLoadResponse title='$title' posterRaw='${posterRaw?.take(120)}' poster='$poster'")
-
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            if (poster.isNotBlank()) this.posterUrl = poster
-            this.plot = description
-            this.recommendations = recommendations
-        }
-    }
-
-} // end class
+} 
