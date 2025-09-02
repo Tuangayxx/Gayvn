@@ -53,9 +53,9 @@ class DvdGayOnline : MainAPI() {
 }
 
 private fun Element.toSearchResult(): SearchResponse {
-    val href = fixUrl(this.selectFirst("a")?.attr("href"))
-    val title = this.selectFirst("div.data h3")?.text()?.trim() ?: ""
-    val posterUrl = fixUrlNull(this.selectFirst("img")?.attr("src"))
+    val href = fixUrl(this.selectFirst("a").attr("href"))
+    val title = this.selectFirst("div.data h3").text()
+    val posterUrl = fixUrlNull(this.selectFirst("img").attr("src"))
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl // Giờ đây đã là String thay vì String?
