@@ -152,6 +152,9 @@ class Jayboys : MainAPI() {
     // Thu thập URL từ download button
         val button = document.select("div.download-button-wrapper a[href]")?.attr("href")
         button?.let { videoUrls.add(it) }
+
+        val base64Src = document.selectFirst("video[src^=data:video/mp4;base64]")?.attr("src")
+            base64Src?.let { videoUrls.add(it) }
     
 
     // Xử lý tất cả URL đã thu thập

@@ -89,7 +89,7 @@ open class VoeExtractor : ExtractorApi() {
 }
 
 
-open class dsio : DoodLaExtractor() {
+class dsio : DoodLaExtractor() {
     override var mainUrl = "https://d-s.io"
 }
 
@@ -101,6 +101,10 @@ class vide0 : DoodLaExtractor() {
     override var mainUrl = "https://vide0.net"
 }
 
+class doodli : DoodLaExtractor() {
+    override var mainUrl = "https://dood.li"
+}
+
 class tapepops : StreamTape() {
     override var mainUrl = "https://tapepops.com"
     override var name = "tapepops"
@@ -109,4 +113,49 @@ class tapepops : StreamTape() {
 class FileMoon : FilemoonV2() {
     override var mainUrl = "https://filemoon.to"
     override var name = "FileMoon"
+}
+
+open class Base64Extractor : ExtractorApi() {
+    override val name = "Base64"
+    override val mainUrl = "base64"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        // Trường hợp url chính là data:video/mp4;base64,...
+        if (url.startsWith("data:video/mp4;base64,")) {
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = url,          // Trả về nguyên data-uri
+                    type = INFER_TYPE
+                ) {
+                    this.referer = mainUrl
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+
+        // Trường hợp url là trang HTML (như bạn gửi), thì parse để lấy video
+        val response = app.get(url).text
+        val base64Src = Regex("""src\s*=\s*["']data:video/mp4;base64,([^"']+)["']""")
+            .find(response)?.groupValues?.get(0) ?: return null
+
+        return listOf(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = base64Src,      // Trả về nguyên data-uri
+                type = INFER_TYPE
+            ) {
+                this.referer = mainUrl
+                this.quality = Qualities.Unknown.value
+            }
+        )
+    }
+}
+
+class JP : Base64Extractor() {
+    override var mainUrl = "https://1069jp.com"
+    override var name = "JP"
 }
