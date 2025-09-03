@@ -121,13 +121,13 @@ open class Base64Extractor : ExtractorApi() {
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        // Trường hợp url chính là data:video/mp4;base64,...
+        // Nếu chính là link base64
         if (url.startsWith("data:video/mp4;base64,")) {
             return listOf(
                 newExtractorLink(
                     source = name,
                     name = name,
-                    url = url,          // Trả về nguyên data-uri
+                    url = url,
                     type = INFER_TYPE
                 ) {
                     this.referer = mainUrl
@@ -136,16 +136,16 @@ open class Base64Extractor : ExtractorApi() {
             )
         }
 
-        // Trường hợp url là trang HTML (như bạn gửi), thì parse để lấy video
-        val response = app.get(url).text
-        val base64Src = Regex("""src\s*=\s*["']data:video/mp4;base64,([^"']+)["']""")
-            .find(response)?.groupValues?.get(0) ?: return null
+        // Nếu là trang HTML thì parse bằng Jsoup
+        val document = app.get(url).document
+        val base64Src = document.selectFirst("video[src^=data:video/mp4;base64]")?.attr("src")
+            ?: return null
 
         return listOf(
             newExtractorLink(
                 source = name,
                 name = name,
-                url = base64Src,      // Trả về nguyên data-uri
+                url = base64Src,
                 type = INFER_TYPE
             ) {
                 this.referer = mainUrl
@@ -154,6 +154,7 @@ open class Base64Extractor : ExtractorApi() {
         )
     }
 }
+
 
 class JP : Base64Extractor() {
     override var mainUrl = "https://1069jp.com"

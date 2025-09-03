@@ -40,7 +40,7 @@ class DvdGayOnline : MainAPI() {
         "$mainUrl${request.data}/page/$page"
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.item").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.items").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -70,7 +70,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     for (i in 1..7) {
         val document = app.get("$mainUrl/page/$i/?s=$query").document
         // Select articles with class 'item', not divs
-        val results = document.select("article.item").mapNotNull { it.toSearchResult() }
+        val results = document.select("article.items").mapNotNull { it.toSearchResult() }
         if (results.isEmpty()) break
         searchResponse.addAll(results)
     }
