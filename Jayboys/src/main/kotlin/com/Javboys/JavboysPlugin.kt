@@ -23,5 +23,6 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(tapepops())
         registerExtractorAPI(FileMoon())
         registerExtractorAPI(FilemoonV2())
+        registerExtractorAPI(Base64Extractor())
     }
 }
