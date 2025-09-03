@@ -2,10 +2,15 @@ package com.DvdGayOnline
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.extractors.*
 import org.jsoup.nodes.Element
+import java.io.IOException
+import com.lagradost.api.Log
+
 
 class DvdGayOnline : MainAPI() {
-    override var mainUrl = "https://dvdgayonline.com"
+    override var mainUrl = "https://DvdGayOnline.com"
     override var name = "DvdGayOnline"
     override val hasMainPage = true
     override var lang = "en"
@@ -15,67 +20,65 @@ class DvdGayOnline : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
+
     override val mainPage = mainPageOf(
-        "/genre/new/" to "Latest",
-        "/genre/new-release/" to "New release",
-        "/tendencia/" to "Trending",
-        "/genre/asian/" to "Asian",
-        "/genre/fratboys/" to "Fratboys",
-        "/genre/group-sex/" to "Group",
-        "/genre/gangbang/" to "Gangbang",
-        "/genre/parody/" to "Parody",
-        "/genre/latino/" to "Latino",
-    )
+        "/genre/new/"                            to "Latest",
+        "/genre/new-release/"                    to "New release",
+        "/tendencia/"                            to "Trending",
+        "/genre/asian/"                          to "Asian",
+        "/genre/fratboys/"                       to "Fratboys",
+        "/genre/group-sex/"                      to "Group",
+        "/genre/gangbang/"                       to "Gangbang",
+        "/genre/parody/"                         to "Parody",
+        "/genre/latino/"                         to "Latino",
+    )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val pageUrl = if (page == 1)
-            "$mainUrl${request.data}"
-        else
-            "$mainUrl${request.data}/page/$page"
+    val pageUrl = if (page == 1)
+        "$mainUrl${request.data}"
+    else
+        "$mainUrl${request.data}/page/$page"
 
-        val document = app.get(pageUrl).document
-        // Changed from div.item to article.item.movies
-        val home = document.select("article.item.movies").mapNotNull { it.toSearchResult() }
+    val document = app.get(pageUrl).document
+    val home = document.select("div.item").mapNotNull { it.toSearchResult() }
 
-        return newHomePageResponse(
-            list = HomePageList(
-                name = request.name,
-                list = home,
-                isHorizontalImages = false
-            ),
-            hasNext = true
-        )
-    }
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = false
+        ),
+        hasNext = true
+  )
+}
+    
+private fun Element.toSearchResult(): SearchResponse? {
+    val titleAnchor = this.select("div.data h3 a").first()
+    val href = titleAnchor?.attr("href")?.let { fixUrl(it) } ?: return null
+    val title = titleAnchor.text()
+    val posterElement = this.select("img").first()
+    val posterUrl = posterElement?.attr("src")?.let { fixUrlNull(it) }
 
-    private fun Element.toSearchResult(): SearchResponse? {
-        // Select the title link specifically
-        val titleAnchor = this.select("div.data h3 a").first()
-        val href = titleAnchor?.attr("href")?.let { fixUrl(it) } ?: return null
-        val title = titleAnchor.text()
-        
-        // Select the poster image
-        val posterElement = this.select("div.poster img").first()
-        val posterUrl = posterElement?.attr("src")?.let { fixUrlNull(it) }
-
-        return newMovieSearchResponse(title, href, TvType.NSFW) {
-            this.posterUrl = posterUrl
-        }
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchResponse = mutableListOf<SearchResponse>()
-
-        for (i in 1..7) {
-            val document = app.get("$mainUrl/page/$i/?s=$query").document
-            // Changed from div.item to article.item.movies
-            val results = document.select("article.item.movies").mapNotNull { it.toSearchResult() }
-            if (results.isEmpty()) break
-            searchResponse.addAll(results)
-        }
-
-        return searchResponse
+    return newMovieSearchResponse(title, href, TvType.NSFW) {
+        this.posterUrl = posterUrl
     }
 }
+
+override suspend fun search(query: String): List<SearchResponse> {
+    val searchResponse = mutableListOf<SearchResponse>()
+
+    for (i in 1..7) {
+        val document = app.get("$mainUrl/page/$i/?s=$query").document
+        // Select articles with class 'item', not divs
+        val results = document.select("article.item").mapNotNull { it.toSearchResult() }
+        if (results.isEmpty()) break
+        searchResponse.addAll(results)
+    }
+
+    return searchResponse
+}
+
+   
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
