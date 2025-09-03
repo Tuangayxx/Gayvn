@@ -136,37 +136,75 @@ class Jayboys : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
+    val response = app.get(data)
+    val document = response.document
+    val pageText = response.text
+
     var found = false
+
+    // giữ nguyên cách thu thập cũ (data-src trong div#player, div.video-player)
     val videoUrls = document.select("div#player, div.video-player")
         .mapNotNull { it.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" } }
         .toMutableSet()
 
-    // Fallback iframe
+    // Fallback iframe (giữ nguyên)
     if (videoUrls.isEmpty()) {
         val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
         iframeSrc?.let { videoUrls.add(it) }
     }
 
+    // Thu thập URL từ download button (giữ nguyên)
+    val button = document.select("div.download-button-wrapper a[href]")?.attr("href")
+    button?.let { videoUrls.add(it) }
 
-    // Thu thập URL từ download button
-        val button = document.select("div.download-button-wrapper a[href]")?.attr("href")
-        button?.let { videoUrls.add(it) }
+    // -------------------
+    // PHẦN BỔ SUNG: không xóa gì phía trên, chỉ thêm các cách thu thập khác
+    // 1) Thu thập tất cả thẻ có data-src (nhiều site dùng data-src khác chỗ)
+    document.select("[data-src]").forEach { el ->
+        val v = el.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" }
+        v?.let { videoUrls.add(it) }
+    }
 
-        val base64Src = document.selectFirst("video[src^=data:video/mp4;base64]")?.attr("src")
-            base64Src?.let { videoUrls.add(it) }
-    
+    // 2) Thu thập tất cả thẻ có src (video, source, div, img có thể chứa link)
+    document.select("[src]").forEach { el ->
+        val v = el.attr("src").takeIf { u -> u.isNotBlank() }
+        v?.let { if (it != "#") videoUrls.add(it) }
+    }
 
-    // Xử lý tất cả URL đã thu thập
+    // 3) Thu thập thẻ <source> trong <video> nếu có
+    document.select("video source[src], source[src]").forEach {
+        val v = it.attr("src").takeIf { u -> u.isNotBlank() }
+        v?.let { videoUrls.add(it) }
+    }
+
+    // 4) Tìm data-uri base64 trong toàn bộ HTML / JS (ví dụ video được chèn qua innerHTML bên trong script)
+    val dataVideoRegex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
+    dataVideoRegex.findAll(pageText).forEach { match ->
+        videoUrls.add(match.value)
+    }
+
+    // 5) Nếu có element có attr src bắt đầu bằng data:, cũng thêm (ví dụ div[src^=data:])
+    document.select("video[src^=data:], source[src^=data:], div[src^=data:], iframe[src^=data:]").forEach {
+        val v = it.attr("src").takeIf { u -> u.isNotBlank() }
+        v?.let { videoUrls.add(it) }
+    }
+
+    // (Tùy chọn) Debug log — bật nếu cần kiểm tra
+    // Log.d("Base64Debug", "Collected videoUrls: $videoUrls")
+    // Log.d("Base64Debug", "Found base64 matches: ${dataVideoRegex.findAll(pageText).count()}")
+
+    // Xử lý tất cả URL đã thu thập (giữ nguyên cách xử lý: gọi loadExtractor)
     videoUrls.toList().amap { url ->
         val ok = loadExtractor(
             url,
             referer = data,
             subtitleCallback = subtitleCallback
-        ) { link ->  callback(link)
+        ) { link ->
+            callback(link)
         }
-            if (ok) found = true
+        if (ok) found = true
     }
+
     return found
 }
 }
