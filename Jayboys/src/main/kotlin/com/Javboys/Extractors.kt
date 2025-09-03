@@ -53,6 +53,10 @@ class Voe : Voe() {
     override var mainUrl = "https://voe.sx"
 }
 
+class hypeboy : Voe() {
+    override var mainUrl = "https://hypeboy.link"
+}
+
 open class VoeExtractor : ExtractorApi() {
     override val name = "Voe"
     override val mainUrl = "https://jilliandescribecompany.com"
@@ -103,6 +107,10 @@ class vide0 : DoodLaExtractor() {
 
 class doodli : DoodLaExtractor() {
     override var mainUrl = "https://dood.li"
+}
+
+class do7go : DoodLaExtractor() {
+    override var mainUrl = "https://do7go.com"
 }
 
 class tapepops : StreamTape() {
@@ -160,4 +168,14 @@ open class Base64Extractor : ExtractorApi() {
 class JP : Base64Extractor() {
     override var mainUrl = "https://1069jp.com"
     override var name = "JP"
+}
+
+class hqq : Base64Extractor() {
+    override var mainUrl = "https://hqq.tv"
+    override var name = "hqq"
+}
+
+class jaygo : Base64Extractor() {
+    override var mainUrl = "https://jaygo.link"
+    override var name = "hqq"
 }

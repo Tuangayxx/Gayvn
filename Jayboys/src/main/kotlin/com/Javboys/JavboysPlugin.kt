@@ -25,5 +25,8 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(FilemoonV2())
         registerExtractorAPI(Base64Extractor())
         registerExtractorAPI(JP())
+        registerExtractorAPI(jaygo())
+        registerExtractorAPI(hypeboy())
+        registerExtractorAPI(do7go())
     }
 }
