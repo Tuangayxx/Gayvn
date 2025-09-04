@@ -126,7 +126,7 @@ private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
 
         val apiUrl = "$mainUrl/wp-json/dooplayer/v2/?id=$post&nume=$nume"
         try {
-            val respText = app.get(apiUrl).text()
+            val respText = app.get(apiUrl).text
 
             // Nếu trả JSON-like -> tìm "file":"..."
             if (respText.trimStart().startsWith("{")) {
