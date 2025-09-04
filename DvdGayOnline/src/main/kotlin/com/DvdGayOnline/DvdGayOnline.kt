@@ -39,10 +39,9 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
     val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}page/$page/"
     val document = app.get(pageUrl).document
 
-    // Chọn trực tiếp các item (article.item) nằm trong div.items (có thể có class normal hoặc không)
+    // Lấy các <article class="item"> bên trong div.items (có thể có class normal)
     val elements = document.select("div.items.normal article.item, div.items article.item")
 
-    // dùng lambda rõ ràng để tránh lỗi suy kiểu
     val home = elements.mapNotNull { element: Element ->
         element.toSearchResult()
     }
@@ -60,19 +59,19 @@ override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageR
     )
 }
 
-// ---------------- toSearchResult ----------------
+// ---------- toSearchResult ----------
 private fun Element.toSearchResult(): SearchResponse? {
-    // lấy title: ưu tiên div.data h3 a
+    // Lấy title (ưu tiên div.data h3 a)
     val titleElement = this.selectFirst("div.data h3 a")
     val title = titleElement?.text()?.trim().orEmpty()
 
-    // lấy href: ưu tiên poster a, fallback về data h3 a
+    // Lấy href: ưu tiên poster a, fallback về data h3 a
     val posterAnchorHref = this.selectFirst("div.poster a")?.attr("href")?.takeIf { it.isNotBlank() }
     val dataHref = titleElement?.attr("href")?.takeIf { it.isNotBlank() }
     val hrefAttr = posterAnchorHref ?: dataHref ?: return null
     val href = fixUrl(hrefAttr)
 
-    // lấy poster: thử nhiều attribute lazy / src
+    // Lấy poster (xử lý lazy attrs)
     val imgEl = this.selectFirst("div.poster img") ?: this.selectFirst("img")
     val posterRaw = imgEl?.attr("data-src")?.takeIf { it.isNotBlank() }
         ?: imgEl?.attr("data-lazy")?.takeIf { it.isNotBlank() }
@@ -85,7 +84,7 @@ private fun Element.toSearchResult(): SearchResponse? {
     }
 }
 
-// ---------------- load (metadata) ----------------
+// ---------- load (metadata) ----------
 override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
@@ -107,17 +106,17 @@ override suspend fun load(url: String): LoadResponse {
     }
 }
 
-// ---------------- fetchPlayerUrls helper ----------------
+// ---------- fetchPlayerUrls helper ----------
 private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
     val urls = mutableSetOf<String>()
     val doc = app.get(pageUrl).document
 
-    // li.dooplay_player_option[data-post][data-nume]
+    // chọn li.dooplay_player_option có data-post và data-nume
     val options = doc.select("li.dooplay_player_option[data-post][data-nume]")
     if (options.isEmpty()) {
-        // fallback: có thể có div.dooplay_player hoặc .dooplay_player_option trong nơi khác
-        val fallbackOptions = doc.select("li.dooplay_player_option")
-        if (fallbackOptions.isEmpty()) return urls.toList()
+        // fallback: nếu không có attributes, vẫn kiểm tra presence
+        val fallback = doc.select("li.dooplay_player_option")
+        if (fallback.isEmpty()) return urls.toList()
     }
 
     for (option in options) {
@@ -126,20 +125,17 @@ private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
         if (post.isBlank() || nume.isBlank()) continue
 
         val apiUrl = "$mainUrl/wp-json/dooplayer/v2/?id=$post&nume=$nume"
-
         try {
             val respText = app.get(apiUrl).text()
 
-            // Nếu JSON-like
+            // Nếu trả JSON-like -> tìm "file":"..."
             if (respText.trimStart().startsWith("{")) {
-                // tìm "file":"...". Chuỗi JSON có escape \/ — thay về /
                 val fileRegex = Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
                 fileRegex.findAll(respText).forEach { m ->
                     val raw = m.groupValues[1].replace("\\/", "/")
                     urls.add(fixUrl(raw))
                 }
-
-                // fallback: tìm tất cả URL mp4/m3u8 trong chuỗi JSON response
+                // fallback: tìm mp4/m3u8
                 val urlRegex = Regex("(https?:\\\\?/\\\\?/[^\"\\\\\\s]+\\.(?:m3u8|mp4))")
                 urlRegex.findAll(respText).forEach { m ->
                     val raw = m.groupValues[1].replace("\\/", "/")
@@ -149,13 +145,13 @@ private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
                 // parse HTML fragment
                 val playerDoc = Jsoup.parse(respText)
 
-                playerDoc.select("iframe[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
+                playerDoc.select("iframe[src]").mapNotNull { e -> e.attr("src").takeIf { s -> s.isNotBlank() } }
                     .forEach { urls.add(fixUrl(it)) }
 
-                playerDoc.select("video source[src], source[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
+                playerDoc.select("video source[src], source[src]").mapNotNull { e -> e.attr("src").takeIf { s -> s.isNotBlank() } }
                     .forEach { urls.add(fixUrl(it)) }
 
-                // inline script chứa file: "..."
+                // inline script "file":"..."
                 val scriptFileRegex = Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
                 scriptFileRegex.findAll(respText).forEach { m ->
                     val raw = m.groupValues[1].replace("\\/", "/")
@@ -163,7 +159,7 @@ private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
                 }
             }
         } catch (e: Exception) {
-            // optional: log or print error
+            // optional: log lỗi để debug, nhưng không throw
             // println("fetchPlayerUrls error for $apiUrl: ${e.message}")
         }
     }
@@ -171,7 +167,6 @@ private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
     return urls.filter { it.isNotBlank() }
 }
 
-// ---------------- loadLinks (ví dụ tích hợp helper) ----------------
 override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
@@ -181,27 +176,27 @@ override suspend fun loadLinks(
     // data là URL trang phim
     val videoUrls = fetchPlayerUrls(data).toMutableList()
 
-    // fallback: nếu không có link từ API, kiểm tra iframe trực tiếp trên trang
+    // fallback lấy iframe trực tiếp từ trang nếu fetchPlayerUrls không trả về gì
     if (videoUrls.isEmpty()) {
         val doc = app.get(data).document
-        doc.select("iframe[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
+        doc.select("iframe[src]").mapNotNull { e -> e.attr("src").takeIf { s -> s.isNotBlank() } }
             .forEach { videoUrls.add(fixUrl(it)) }
     }
 
     if (videoUrls.isEmpty()) return false
 
-    for ((index, videoUrl) in videoUrls.withIndex()) {
-        val srcName = "Source ${index + 1}"
-
-        // CÁCH A: DÙNG constructor cũ (deprecated) nếu bạn chưa có newExtractorLink:
-        // callback(ExtractorLink("dvd", srcName, videoUrl, data))
-
-        // CÁCH B: nếu project có helper newExtractorLink(...) (kết quả tốt hơn)
-        // Ví dụ giả (thay bằng signature thật nếu khác):
-        // callback(newExtractorLink(srcName, videoUrl, referer = data))
-
-        // Tạm dùng constructor cũ để chắc chắn compile (chỉ cảnh báo deprecated)
-        callback(ExtractorLink("dvd", srcName, videoUrl, data))
+    for (videoUrl in videoUrls) {
+        try {
+            // Gọi loadExtractor có sẵn trong project để xử lý từng mirror/embed
+            // signature theo ví dụ trong Extractors.kt: loadExtractor(url, referer, subtitleCallback) { link -> ... }
+            loadExtractor(videoUrl, data, subtitleCallback) { extractorLink ->
+                // forward ExtractorLink về callback của plugin
+                callback(extractorLink)
+            }
+        } catch (e: Exception) {
+            // optional: log để debug, nhưng không dừng vòng lặp
+            // println("loadExtractor failed for $videoUrl: ${e.message}")
+        }
     }
 
     return true
