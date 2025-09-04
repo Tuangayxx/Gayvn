@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.*
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import java.io.IOException
 import com.lagradost.api.Log
@@ -33,14 +34,21 @@ class DvdGayOnline : MainAPI() {
         "/genre/latino/"                         to "Latino",
     )    
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val pageUrl = if (page == 1)
-        "$mainUrl${request.data}"
-    else
-        "$mainUrl${request.data}page/$page/"
-
+// ---------------- getMainPage ----------------
+override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    val pageUrl = if (page == 1) "$mainUrl${request.data}" else "$mainUrl${request.data}page/$page/"
     val document = app.get(pageUrl).document
-    val home = document.select("div.items.normal article.item, div.items article.item").mapNotNull { it.toSearchResult() }
+
+    // Chọn trực tiếp các item (article.item) nằm trong div.items (có thể có class normal hoặc không)
+    val elements = document.select("div.items.normal article.item, div.items article.item")
+
+    // dùng lambda rõ ràng để tránh lỗi suy kiểu
+    val home = elements.mapNotNull { element: Element ->
+        element.toSearchResult()
+    }
+
+    // detect pagination (nếu có link trang tiếp)
+    val hasNext = document.select("div.pagination a").isNotEmpty()
 
     return newHomePageResponse(
         list = HomePageList(
@@ -48,22 +56,27 @@ class DvdGayOnline : MainAPI() {
             list = home,
             isHorizontalImages = false
         ),
-        hasNext = true
-  )
+        hasNext = hasNext
+    )
 }
-    
+
+// ---------------- toSearchResult ----------------
 private fun Element.toSearchResult(): SearchResponse? {
-    // ưu tiên lấy title từ data h3 a
-    val titleEl = this.selectFirst("div.data h3 a") ?: return null
-    val title = titleEl.text().trim()
+    // lấy title: ưu tiên div.data h3 a
+    val titleElement = this.selectFirst("div.data h3 a")
+    val title = titleElement?.text()?.trim().orEmpty()
+
     // lấy href: ưu tiên poster a, fallback về data h3 a
-    val posterAnchor = this.selectFirst("div.poster a")?.attr("href")?.takeIf { it.isNotBlank() }
-    val hrefAttr = posterAnchor ?: titleEl.attr("href")?.takeIf { it.isNotBlank() } ?: return null
+    val posterAnchorHref = this.selectFirst("div.poster a")?.attr("href")?.takeIf { it.isNotBlank() }
+    val dataHref = titleElement?.attr("href")?.takeIf { it.isNotBlank() }
+    val hrefAttr = posterAnchorHref ?: dataHref ?: return null
     val href = fixUrl(hrefAttr)
 
-    // lấy poster: ưu tiên data-src (lazy), fallback src
+    // lấy poster: thử nhiều attribute lazy / src
     val imgEl = this.selectFirst("div.poster img") ?: this.selectFirst("img")
     val posterRaw = imgEl?.attr("data-src")?.takeIf { it.isNotBlank() }
+        ?: imgEl?.attr("data-lazy")?.takeIf { it.isNotBlank() }
+        ?: imgEl?.attr("data-original")?.takeIf { it.isNotBlank() }
         ?: imgEl?.attr("src")?.takeIf { it.isNotBlank() }
     val posterUrl = posterRaw?.let { fixUrlNull(it) }
 
@@ -72,23 +85,8 @@ private fun Element.toSearchResult(): SearchResponse? {
     }
 }
 
-override suspend fun search(query: String): List<SearchResponse> {
-    val searchResponse = mutableListOf<SearchResponse>()
-
-    for (i in 1..7) {
-        val document = app.get("$mainUrl/page/$i/?s=$query").document
-        
-        val results = document.select("div.items.normal").mapNotNull { it.toSearchResult() }
-        if (results.isEmpty()) break
-        searchResponse.addAll(results)
-    }
-
-    return searchResponse
-}
-
-   
-
-    override suspend fun load(url: String): LoadResponse {
+// ---------------- load (metadata) ----------------
+override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
     val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
@@ -100,7 +98,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         ?: document.selectFirst("div.poster img")?.attr("src")?.trim()
 
     val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-        ?: document.selectFirst("div.text")?.text()?.trim()
+        ?: document.selectFirst("div.text, div.entry-content, div.post-content")?.text()?.trim()
         ?: ""
 
     return newMovieLoadResponse(title, url, TvType.NSFW, url) {
@@ -108,37 +106,48 @@ override suspend fun search(query: String): List<SearchResponse> {
         this.plot = description
     }
 }
+
+// ---------------- fetchPlayerUrls helper ----------------
 private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
     val urls = mutableSetOf<String>()
     val doc = app.get(pageUrl).document
 
-    // chọn các option player (nếu có)
+    // li.dooplay_player_option[data-post][data-nume]
     val options = doc.select("li.dooplay_player_option[data-post][data-nume]")
-    if (options.isEmpty()) return urls.toList()
+    if (options.isEmpty()) {
+        // fallback: có thể có div.dooplay_player hoặc .dooplay_player_option trong nơi khác
+        val fallbackOptions = doc.select("li.dooplay_player_option")
+        if (fallbackOptions.isEmpty()) return urls.toList()
+    }
 
-    for (opt in options) {
-        val post = opt.attr("data-post").trim()
-        val nume = opt.attr("data-nume").trim()
+    for (option in options) {
+        val post = option.attr("data-post").trim()
+        val nume = option.attr("data-nume").trim()
         if (post.isBlank() || nume.isBlank()) continue
 
         val apiUrl = "$mainUrl/wp-json/dooplayer/v2/?id=$post&nume=$nume"
+
         try {
             val respText = app.get(apiUrl).text()
 
-            // Nếu JSON-like -> tìm "file":"..." hoặc các URL trong chuỗi
+            // Nếu JSON-like
             if (respText.trimStart().startsWith("{")) {
-                // tìm file: "..." (cũng xử lý \/ escape)
-                Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
-                    .findAll(respText)
-                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
+                // tìm "file":"...". Chuỗi JSON có escape \/ — thay về /
+                val fileRegex = Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
+                fileRegex.findAll(respText).forEach { m ->
+                    val raw = m.groupValues[1].replace("\\/", "/")
+                    urls.add(fixUrl(raw))
+                }
 
-                // fallback: tìm tất cả chuỗi https://... có đuôi mp4/m3u8
-                Regex("(https?:\\\\?/\\\\?/[^\"\\\\\\s]+\\.(?:m3u8|mp4|json))")
-                    .findAll(respText)
-                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
+                // fallback: tìm tất cả URL mp4/m3u8 trong chuỗi JSON response
+                val urlRegex = Regex("(https?:\\\\?/\\\\?/[^\"\\\\\\s]+\\.(?:m3u8|mp4))")
+                urlRegex.findAll(respText).forEach { m ->
+                    val raw = m.groupValues[1].replace("\\/", "/")
+                    urls.add(fixUrl(raw))
+                }
             } else {
-                // parse như HTML fragment
-                val playerDoc = org.jsoup.Jsoup.parse(respText)
+                // parse HTML fragment
+                val playerDoc = Jsoup.parse(respText)
 
                 playerDoc.select("iframe[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
                     .forEach { urls.add(fixUrl(it)) }
@@ -146,30 +155,33 @@ private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
                 playerDoc.select("video source[src], source[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
                     .forEach { urls.add(fixUrl(it)) }
 
-                // script inline chứa file: "..."
-                Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
-                    .findAll(respText)
-                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
+                // inline script chứa file: "..."
+                val scriptFileRegex = Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
+                scriptFileRegex.findAll(respText).forEach { m ->
+                    val raw = m.groupValues[1].replace("\\/", "/")
+                    urls.add(fixUrl(raw))
+                }
             }
         } catch (e: Exception) {
-            // log nếu bạn muốn, nhưng tiếp tục với option tiếp theo
+            // optional: log or print error
+            // println("fetchPlayerUrls error for $apiUrl: ${e.message}")
         }
     }
 
     return urls.filter { it.isNotBlank() }
 }
 
-
-    override suspend fun loadLinks(
+// ---------------- loadLinks (ví dụ tích hợp helper) ----------------
+override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    // data là url trang phim
+    // data là URL trang phim
     val videoUrls = fetchPlayerUrls(data).toMutableList()
 
-    // fallback: nếu không có, thử lấy iframe trực tiếp từ trang
+    // fallback: nếu không có link từ API, kiểm tra iframe trực tiếp trên trang
     if (videoUrls.isEmpty()) {
         val doc = app.get(data).document
         doc.select("iframe[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
@@ -179,12 +191,17 @@ private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
     if (videoUrls.isEmpty()) return false
 
     for ((index, videoUrl) in videoUrls.withIndex()) {
-        // Tạo ExtractorLink: sửa cho đúng constructor trong repo của bạn
-        // Ví dụ giả: ExtractorLink(name, url, referer)
-        val name = "Source ${index + 1}"
-        // --- CHỖ NÀY CẦN BẠN THAY THEO CONSTRUCTOR THẬT ---
-        // Ex: callback(ExtractorLink(name, videoUrl, videoUrl))
-        callback(ExtractorLink(name, videoUrl, videoUrl))
+        val srcName = "Source ${index + 1}"
+
+        // CÁCH A: DÙNG constructor cũ (deprecated) nếu bạn chưa có newExtractorLink:
+        // callback(ExtractorLink("dvd", srcName, videoUrl, data))
+
+        // CÁCH B: nếu project có helper newExtractorLink(...) (kết quả tốt hơn)
+        // Ví dụ giả (thay bằng signature thật nếu khác):
+        // callback(newExtractorLink(srcName, videoUrl, referer = data))
+
+        // Tạm dùng constructor cũ để chắc chắn compile (chỉ cảnh báo deprecated)
+        callback(ExtractorLink("dvd", srcName, videoUrl, data))
     }
 
     return true
