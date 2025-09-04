@@ -40,7 +40,7 @@ class DvdGayOnline : MainAPI() {
         "$mainUrl${request.data}page/$page/"
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.items.normal").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.items.normal article.item, div.items article.item").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -52,10 +52,46 @@ class DvdGayOnline : MainAPI() {
   )
 }
     
+override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
+    val pageUrl = if (page == 1)
+        "$mainUrl${request.data}"
+    else
+        "$mainUrl${request.data}page/$page/"
+
+    val document = app.get(pageUrl).document
+
+    // Chọn trực tiếp các article.item bên trong div.items (kể cả khi class "normal" có/không)
+    val home = document
+        .select("div.items.normal article.item, div.items article.item")
+        .mapNotNull { it.toSearchResult() }
+
+    // Detect pagination: nếu có link <div class="pagination"> chứa <a> thì có trang tiếp
+    val hasNext = document.select("div.pagination a").isNotEmpty()
+
+    return newHomePageResponse(
+        list = HomePageList(
+            name = request.name,
+            list = home,
+            isHorizontalImages = false
+        ),
+        hasNext = hasNext
+    )
+}
+
 private fun Element.toSearchResult(): SearchResponse? {
-    val title = this.select("div.data h3 a").text()
-    val href = fixUrl(this.select("div.poster a").attr("href"))
-    val posterUrl = fixUrlNull(this.select("div.poster img").attr("src"))
+    // ưu tiên lấy title từ data h3 a
+    val titleEl = this.selectFirst("div.data h3 a") ?: return null
+    val title = titleEl.text().trim()
+    // lấy href: ưu tiên poster a, fallback về data h3 a
+    val posterAnchor = this.selectFirst("div.poster a")?.attr("href")?.takeIf { it.isNotBlank() }
+    val hrefAttr = posterAnchor ?: titleEl.attr("href")?.takeIf { it.isNotBlank() } ?: return null
+    val href = fixUrl(hrefAttr)
+
+    // lấy poster: ưu tiên data-src (lazy), fallback src
+    val imgEl = this.selectFirst("div.poster img") ?: this.selectFirst("img")
+    val posterRaw = imgEl?.attr("data-src")?.takeIf { it.isNotBlank() }
+        ?: imgEl?.attr("src")?.takeIf { it.isNotBlank() }
+    val posterUrl = posterRaw?.let { fixUrlNull(it) }
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
