@@ -109,58 +109,6 @@ override suspend fun search(query: String): List<SearchResponse> {
     }
 }
 
-private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
-    val urls = mutableSetOf<String>()
-    val doc = app.get(pageUrl).document
-
-    // chọn các option player (nếu có)
-    val options = doc.select("li.dooplay_player_option[data-post][data-nume]")
-    if (options.isEmpty()) return urls.toList()
-
-    for (opt in options) {
-        val post = opt.attr("data-post").trim()
-        val nume = opt.attr("data-nume").trim()
-        if (post.isBlank() || nume.isBlank()) continue
-
-        val apiUrl = "$mainUrl/wp-json/dooplayer/v2/?id=$post&nume=$nume"
-        try {
-            val respText = app.get(apiUrl).text()
-
-            // Nếu JSON-like -> tìm "file":"..." hoặc các URL trong chuỗi
-            if (respText.trimStart().startsWith("{")) {
-                // tìm file: "..." (cũng xử lý \/ escape)
-                Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
-                    .findAll(respText)
-                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
-
-                // fallback: tìm tất cả chuỗi https://... có đuôi mp4/m3u8
-                Regex("(https?:\\\\?/\\\\?/[^\"\\\\\\s]+\\.(?:m3u8|mp4|json))")
-                    .findAll(respText)
-                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
-            } else {
-                // parse như HTML fragment
-                val playerDoc = org.jsoup.Jsoup.parse(respText)
-
-                playerDoc.select("iframe[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
-                    .forEach { urls.add(fixUrl(it)) }
-
-                playerDoc.select("video source[src], source[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
-                    .forEach { urls.add(fixUrl(it)) }
-
-                // script inline chứa file: "..."
-                Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
-                    .findAll(respText)
-                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
-            }
-        } catch (e: Exception) {
-            // log nếu bạn muốn, nhưng tiếp tục với option tiếp theo
-        }
-    }
-
-    return urls.filter { it.isNotBlank() }
-}
-
-
     override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
