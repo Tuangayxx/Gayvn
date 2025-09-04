@@ -106,99 +106,111 @@ override suspend fun load(url: String): LoadResponse {
     }
 }
 
-// tìm player_api trong JS (nếu có) hoặc fallback về mainUrl/wp-json/dooplayer/v2/
-private fun detectPlayerApi(documentHtml: String): String {
-    val apiFromJs = Regex("\"player_api\"\\s*:\\s*\"([^\"]+)\"").find(documentHtml)?.groups?.get(1)?.value
-    if (!apiFromJs.isNullOrBlank()) return apiFromJs
-    // fallback
-    return "$mainUrl/wp-json/dooplayer/v2/"
-}
-
 private fun extractUrlsFromText(text: String): List<String> {
     val found = mutableSetOf<String>()
-    // unwrap escaped \/ -> /
     val clean = text.replace("\\/", "/")
 
-    // common file urls
-    val urlRegex = Regex("(https?://[^\"'\\s<>]+\\.(?:m3u8|mp4))", RegexOption.IGNORE_CASE)
-    urlRegex.findAll(clean).forEach { found.add(it.groupValues[1]) }
+    // mp4 / m3u8
+    Regex("(https?://[^\"'\\s<>]+\\.(?:m3u8|mp4))", RegexOption.IGNORE_CASE).findAll(clean).forEach {
+        found.add(it.groupValues[1])
+    }
 
-    // iframe src occurrences
-    val iframeRegex = Regex("<iframe[^>]+src=['\"]([^'\"]+)['\"]", RegexOption.IGNORE_CASE)
-    iframeRegex.findAll(clean).forEach { found.add(it.groupValues[1]) }
+    // iframe src
+    Regex("<iframe[^>]+src=['\"]([^'\"]+)['\"]", RegexOption.IGNORE_CASE).findAll(clean).forEach {
+        found.add(it.groupValues[1])
+    }
 
     // general src="..."
-    val srcRegex = Regex("src=['\"](https?://[^'\"]+)['\"]", RegexOption.IGNORE_CASE)
-    srcRegex.findAll(clean).forEach { found.add(it.groupValues[1]) }
+    Regex("src=['\"](https?://[^'\"]+)['\"]", RegexOption.IGNORE_CASE).findAll(clean).forEach {
+        found.add(it.groupValues[1])
+    }
 
     // file: "..."
-    val fileRegex = Regex("\"file\"\\s*[:=]\\s*['\"](https?://[^'\"]+)['\"]", RegexOption.IGNORE_CASE)
-    fileRegex.findAll(clean).forEach { found.add(it.groupValues[1]) }
+    Regex("\"file\"\\s*[:=]\\s*['\"](https?://[^'\"]+)['\"]", RegexOption.IGNORE_CASE).findAll(clean).forEach {
+        found.add(it.groupValues[1])
+    }
 
     return found.filter { it.isNotBlank() }
 }
 
-private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
-    val urls = linkedSetOf<String>() // preserve order + unique
+/**
+ * Trả về list Pair(url, referer) — referer có thể null (nếu không rõ).
+ * Hàm robust: dò li.dooplay_player_option, các data-post/data-nume, onclick, scan toàn trang, parse API responses.
+ */
+private suspend fun fetchPlayerUrls(pageUrl: String): List<Pair<String, String?>> {
+    val results = linkedSetOf<Pair<String, String?>>()
     val pageDoc = app.get(pageUrl).document
     val pageHtml = pageDoc.html()
 
-    // 1) detect player_api base
-    val playerApiBase = detectPlayerApi(pageHtml)
+    // detect player_api (dtAjax.player_api) nếu có
+    val playerApi = Regex("\"player_api\"\\s*:\\s*\"([^\"]+)\"").find(pageHtml)?.groupValues?.get(1)
+        ?: "$mainUrl/wp-json/dooplayer/v2/"
 
-    // 2) try standard li.dooplay_player_option[data-post][data-nume]
+    // 1) chuẩn: li.dooplay_player_option[data-post][data-nume]
     val options = pageDoc.select("li.dooplay_player_option[data-post][data-nume]")
     if (options.isNotEmpty()) {
         for (opt in options) {
             val post = opt.attr("data-post").trim()
             val nume = opt.attr("data-nume").trim()
             if (post.isBlank() || nume.isBlank()) continue
-            val apiUrl = if (playerApiBase.contains("?")) "$playerApiBase&id=$post&nume=$nume" else "$playerApiBase?id=$post&nume=$nume"
+            val apiUrl = if (playerApi.contains("?")) "$playerApi&id=$post&nume=$nume" else "$playerApi?id=$post&nume=$nume"
             try {
-                // Nếu cần, thêm headers (Referer) — uncomment / adapt nếu API chặn
-                // val resp = app.get(apiUrl).header("Referer", pageUrl).text
-                val resp = app.get(apiUrl).text
-                extractUrlsFromText(resp).forEach { urls.add(fixUrl(it)) }
-            } catch (_: Exception) { /* ignore per-mirror errors */ }
+                // thêm referer + X-Requested-With để giống trình duyệt (nếu app.get hỗ trợ headers/ referer)
+                val respText = try {
+                    // nếu app.get có tham số referer/headers (một số project hỗ trợ), dùng nó:
+                    app.get(apiUrl, referer = pageUrl, headers = mapOf(
+                        "X-Requested-With" to "XMLHttpRequest",
+                        "Accept" to "application/json, text/javascript, text/html, */*"
+                    )).text
+                } catch (e: Exception) {
+                    // fallback: simple get
+                    app.get(apiUrl).text
+                }
+
+                // parse response text ra url
+                extractUrlsFromText(respText).forEach { u -> results.add(Pair(fixUrl(u), pageUrl)) }
+
+                // nếu tìm thấy thì tiếp (không break, có thể có nhiều mirror)
+            } catch (e: Exception) {
+                // ignore per-mirror errors
+            }
         }
-        if (urls.isNotEmpty()) return urls.toList()
     }
 
-    // 3) try finding data-post / data-nume pairs anywhere in the page HTML (some themes put them on buttons)
+    // 2) tìm mọi cặp data-post/data-nume trên trang (nhiều theme khác nhau)
     val postNumeRegex = Regex("data-post=['\"]?(\\d+)['\"]?[^>]*data-nume=['\"]?(\\d+)['\"]?", RegexOption.IGNORE_CASE)
     postNumeRegex.findAll(pageHtml).forEach { m ->
         val post = m.groupValues[1]; val nume = m.groupValues[2]
-        val apiUrl = if (playerApiBase.contains("?")) "$playerApiBase&id=$post&nume=$nume" else "$playerApiBase?id=$post&nume=$nume"
+        val apiUrl = if (playerApi.contains("?")) "$playerApi&id=$post&nume=$nume" else "$playerApi?id=$post&nume=$nume"
         try {
-            val resp = app.get(apiUrl).text
-            extractUrlsFromText(resp).forEach { urls.add(fixUrl(it)) }
+            val respText = app.get(apiUrl, referer = pageUrl).text
+            extractUrlsFromText(respText).forEach { u -> results.add(Pair(fixUrl(u), pageUrl)) }
         } catch (_: Exception) {}
     }
-    if (urls.isNotEmpty()) return urls.toList()
 
-    // 4) try onclick/button patterns (onclick="player_load( '123','1' )" or similar)
-    val onclickRegex = Regex("onclick\\s*=\\s*['\"][^'\"<>]*?(\\d{3,})[^'\"<>]*(\\d{1,2})[^'\"<>]*['\"]", RegexOption.IGNORE_CASE)
+    // 3) onclick/button patterns (player_load('id','nume') ...)
+    val onclickRegex = Regex("player_?load\\([^\\)]*?(\\d{3,})[^\\d]*(\\d{1,2})[^\\)]*\\)", RegexOption.IGNORE_CASE)
     onclickRegex.findAll(pageHtml).forEach { m ->
         val post = m.groupValues[1]; val nume = m.groupValues[2]
-        val apiUrl = if (playerApiBase.contains("?")) "$playerApiBase&id=$post&nume=$nume" else "$playerApiBase?id=$post&nume=$nume"
+        val apiUrl = if (playerApi.contains("?")) "$playerApi&id=$post&nume=$nume" else "$playerApi?id=$post&nume=$nume"
         try {
-            val resp = app.get(apiUrl).text
-            extractUrlsFromText(resp).forEach { urls.add(fixUrl(it)) }
+            val respText = app.get(apiUrl, referer = pageUrl).text
+            extractUrlsFromText(respText).forEach { u -> results.add(Pair(fixUrl(u), pageUrl)) }
         } catch (_: Exception) {}
     }
-    if (urls.isNotEmpty()) return urls.toList()
 
-    // 5) fallback: scan the whole page HTML for direct mp4/m3u8 or iframes
-    extractUrlsFromText(pageHtml).forEach { urls.add(fixUrl(it)) }
-    if (urls.isNotEmpty()) return urls.toList()
-
-    // 6) last resort: check inline scripts (some players build sources via JS variables)
-    pageDoc.select("script").forEach { scriptEl ->
-        val scriptText = scriptEl.data()
-        extractUrlsFromText(scriptText).forEach { urls.add(fixUrl(it)) }
+    // 4) scan trực tiếp page HTML, script tags để tìm m3u8/mp4/iframe
+    extractUrlsFromText(pageHtml).forEach { u -> results.add(Pair(fixUrl(u), pageUrl)) }
+    pageDoc.select("script").forEach { s ->
+        val data = s.data()
+        extractUrlsFromText(data).forEach { u -> results.add(Pair(fixUrl(u), pageUrl)) }
     }
 
-    return urls.toList()
+    // 5) nếu có iframe embed (ví dụ 5flix), thêm iframe src với referer = pageUrl (để extractor xử lý embed)
+    pageDoc.select("iframe[src]").mapNotNull { el -> el.attr("src").takeIf { it.isNotBlank() } }
+        .forEach { src -> results.add(Pair(fixUrl(src), pageUrl)) }
+
+    return results.toList()
 }
 
 override suspend fun loadLinks(
@@ -207,30 +219,33 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val videoUrls = fetchPlayerUrls(data).toMutableList()
+    // data = trang phim gốc (referer gợi ý)
+    val sources = fetchPlayerUrls(data).toMutableList()
 
-    // nếu vẫn rỗng, thử tìm iframe trên trang
-    if (videoUrls.isEmpty()) {
+    // fallback: nếu vẫn rỗng, dò iframe trực tiếp
+    if (sources.isEmpty()) {
         val doc = app.get(data).document
-        doc.select("iframe[src]").mapNotNull { e -> e.attr("src").takeIf { s -> s.isNotBlank() } }
-            .forEach { videoUrls.add(fixUrl(it)) }
+        doc.select("iframe[src]").mapNotNull { el: Element -> el.attr("src").takeIf { s -> s.isNotBlank() } }
+            .forEach { sources.add(Pair(fixUrl(it), data)) }
     }
 
-    if (videoUrls.isEmpty()) {
-        // debug help: log small sample of page HTML to understand structure
-        // println("DvdGayOnline: no video urls found for $data")
-        return false
-    }
+    if (sources.isEmpty()) return false
 
-    // ưu tiên HLS
-    videoUrls.sortByDescending { it.contains(".m3u8") }
+    // ưu tiên m3u8 trước
+    sources.sortWith(compareByDescending<Pair<String,String?>> { it.first.contains(".m3u8") }.thenBy { it.first })
 
-    for (videoUrl in videoUrls) {
+    for ((url, referer) in sources) {
         try {
-            // chuyển tiếp cho hệ thống extractor hiện có
-            loadExtractor(videoUrl, data, subtitleCallback) { extractorLink -> callback(extractorLink) }
+            // nếu url là trực tiếp m3u8, truyền referer (page gốc) để server không block
+            val usedReferer = referer ?: data
+
+            // sử dụng loadExtractor (tận dụng extractors đã có trong repo)
+            loadExtractor(url, usedReferer, subtitleCallback) { link ->
+                callback(link)
+            }
         } catch (e: Exception) {
-            // optional: println("loadExtractor failed for $videoUrl: ${e.message}")
+            // nếu extractor fail, thử tạo newExtractorLink tạm (nếu muốn)
+            // optional: callback(newExtractorLink(...))
         }
     }
 
