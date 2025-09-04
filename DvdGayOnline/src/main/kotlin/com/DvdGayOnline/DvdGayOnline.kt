@@ -10,11 +10,11 @@ import com.lagradost.api.Log
 
 
 class DvdGayOnline : MainAPI() {
-    override var mainUrl = "https://DvdGayOnline.com"
+    override var mainUrl = "https://dvdgayonline.com"
     override var name = "DvdGayOnline"
     override val hasMainPage = true
     override var lang = "en"
-    override val hasQuickSearch = false
+    override val hasQuickSearch = false 
     override val hasChromecastSupport = true
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.NSFW)
@@ -37,10 +37,10 @@ class DvdGayOnline : MainAPI() {
     val pageUrl = if (page == 1)
         "$mainUrl${request.data}"
     else
-        "$mainUrl${request.data}/page/$page"
+        "$mainUrl${request.data}page/$page/"
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.items").mapNotNull { it.toSearchResult() }
+    val home = document.select("div.items.normal").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -53,11 +53,9 @@ class DvdGayOnline : MainAPI() {
 }
     
 private fun Element.toSearchResult(): SearchResponse? {
-    val titleAnchor = this.select("div.data h3 a").first()
-    val href = titleAnchor?.attr("href")?.let { fixUrl(it) } ?: return null
-    val title = titleAnchor.text()
-    val posterElement = this.select("img").first()
-    val posterUrl = posterElement?.attr("src")?.let { fixUrlNull(it) }
+    val title = this.select("div.data h3 a").text()
+    val href = fixUrl(this.select("div.poster a").attr("href"))
+    val posterUrl = fixUrlNull(this.select("div.poster img").attr("src"))
 
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
@@ -69,8 +67,8 @@ override suspend fun search(query: String): List<SearchResponse> {
 
     for (i in 1..7) {
         val document = app.get("$mainUrl/page/$i/?s=$query").document
-        // Select articles with class 'item', not divs
-        val results = document.select("article.items").mapNotNull { it.toSearchResult() }
+        
+        val results = document.select("div.items.normal").mapNotNull { it.toSearchResult() }
         if (results.isEmpty()) break
         searchResponse.addAll(results)
     }
