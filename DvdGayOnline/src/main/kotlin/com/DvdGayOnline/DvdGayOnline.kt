@@ -89,17 +89,77 @@ override suspend fun search(query: String): List<SearchResponse> {
    
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+    val document = app.get(url).document
 
-        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
-        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
-        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
+        ?: document.selectFirst("h1")?.text()?.trim()
+        ?: ""
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = description
+    val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
+        ?: document.selectFirst("div.poster img")?.attr("data-src")?.takeIf { it.isNotBlank() }
+        ?: document.selectFirst("div.poster img")?.attr("src")?.trim()
+
+    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        ?: document.selectFirst("div.text")?.text()?.trim()
+        ?: ""
+
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        this.posterUrl = poster
+        this.plot = description
+    }
+}
+
+private suspend fun fetchPlayerUrls(pageUrl: String): List<String> {
+    val urls = mutableSetOf<String>()
+    val doc = app.get(pageUrl).document
+
+    // chọn các option player (nếu có)
+    val options = doc.select("li.dooplay_player_option[data-post][data-nume]")
+    if (options.isEmpty()) return urls.toList()
+
+    for (opt in options) {
+        val post = opt.attr("data-post").trim()
+        val nume = opt.attr("data-nume").trim()
+        if (post.isBlank() || nume.isBlank()) continue
+
+        val apiUrl = "$mainUrl/wp-json/dooplayer/v2/?id=$post&nume=$nume"
+        try {
+            val respText = app.get(apiUrl).text()
+
+            // Nếu JSON-like -> tìm "file":"..." hoặc các URL trong chuỗi
+            if (respText.trimStart().startsWith("{")) {
+                // tìm file: "..." (cũng xử lý \/ escape)
+                Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
+                    .findAll(respText)
+                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
+
+                // fallback: tìm tất cả chuỗi https://... có đuôi mp4/m3u8
+                Regex("(https?:\\\\?/\\\\?/[^\"\\\\\\s]+\\.(?:m3u8|mp4|json))")
+                    .findAll(respText)
+                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
+            } else {
+                // parse như HTML fragment
+                val playerDoc = org.jsoup.Jsoup.parse(respText)
+
+                playerDoc.select("iframe[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
+                    .forEach { urls.add(fixUrl(it)) }
+
+                playerDoc.select("video source[src], source[src]").mapNotNull { it.attr("src").takeIf { s -> s.isNotBlank() } }
+                    .forEach { urls.add(fixUrl(it)) }
+
+                // script inline chứa file: "..."
+                Regex("\"file\"\\s*:\\s*\"(https?:\\\\?/\\\\?/[^\"\\\\]+)\"")
+                    .findAll(respText)
+                    .forEach { m -> urls.add(fixUrl(m.groupValues[1].replace("\\/", "/"))) }
+            }
+        } catch (e: Exception) {
+            // log nếu bạn muốn, nhưng tiếp tục với option tiếp theo
         }
     }
+
+    return urls.filter { it.isNotBlank() }
+}
+
 
     override suspend fun loadLinks(
     data: String,
