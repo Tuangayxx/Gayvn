@@ -52,32 +52,6 @@ class DvdGayOnline : MainAPI() {
   )
 }
     
-override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-    val pageUrl = if (page == 1)
-        "$mainUrl${request.data}"
-    else
-        "$mainUrl${request.data}page/$page/"
-
-    val document = app.get(pageUrl).document
-
-    // Chọn trực tiếp các article.item bên trong div.items (kể cả khi class "normal" có/không)
-    val home = document
-        .select("div.items.normal article.item, div.items article.item")
-        .mapNotNull { it.toSearchResult() }
-
-    // Detect pagination: nếu có link <div class="pagination"> chứa <a> thì có trang tiếp
-    val hasNext = document.select("div.pagination a").isNotEmpty()
-
-    return newHomePageResponse(
-        list = HomePageList(
-            name = request.name,
-            list = home,
-            isHorizontalImages = false
-        ),
-        hasNext = hasNext
-    )
-}
-
 private fun Element.toSearchResult(): SearchResponse? {
     // ưu tiên lấy title từ data h3 a
     val titleEl = this.selectFirst("div.data h3 a") ?: return null
