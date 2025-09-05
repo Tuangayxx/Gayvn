@@ -16,5 +16,7 @@ class HDgayProvider: Plugin() {
         registerExtractorAPI(dsio())
         registerExtractorAPI(Doply())
         registerExtractorAPI(Voe())
+        registerExtractorAPI(HDgay())
+        registerExtractorAPI(Base64Extractor())
     }
 }

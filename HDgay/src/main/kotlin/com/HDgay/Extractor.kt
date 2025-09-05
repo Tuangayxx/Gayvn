@@ -274,3 +274,50 @@ class doodws : DoodLaExtractor() {
             .replace(Regex("""(\w+)\s*:\s*("[^"]*")"""), "$1:$2")
     }
 }
+
+open class Base64Extractor : ExtractorApi() {
+    override val name = "Base64"
+    override val mainUrl = "base64"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        // Nếu chính là data-uri thì trả luôn
+        if (url.startsWith("data:video/")) {
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = url,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = referer ?: mainUrl
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+
+        // Nếu là trang HTML -> lấy response text và tìm data-uri bằng regex
+        val responseText = app.get(url).text
+        val regex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
+        val match = regex.find(responseText) ?: return null
+        val dataUri = match.value // chính là "data:video/..;base64,AAAA..."
+
+        return listOf(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = dataUri,
+                type = INFER_TYPE
+            ) {
+                this.referer = referer ?: mainUrl
+                this.quality = Qualities.Unknown.value
+            }
+        )
+    }
+}
+
+
+class HDgay : Base64Extractor() {
+    override var mainUrl = "https://player.hdgay.net"
+    override var name = "JP"
+}

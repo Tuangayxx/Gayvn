@@ -30,7 +30,13 @@ class GayStream : MainAPI() {
         "/video/category/group"                 to "Group",
         "/video/category/homemade"              to "Homemade",
         "/video/category/hunk"                  to "Hunk",
+        "/video/category/interracial"           to "Interracial",
         "/video/category/latino"                to "Latino",
+        "/video/category/mature"                to "Mature",
+        "/video/category/muscle"                to "Muscle",
+        "/video/category/promotion"             to "Promotion",
+        "/video/category/threesome"             to "Threesome",
+        "/video/category/uniforms"              to "Uniforms",
         "/video/channel/betabetapi"             to "Beta Beta Pi",
         "/video/channel/caninolatino"           to "Canino Latino",
     )    
