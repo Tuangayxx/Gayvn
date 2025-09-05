@@ -317,7 +317,7 @@ open class Base64Extractor : ExtractorApi() {
 }
 
 
-class HDgay : Base64Extractor() {
+class HDgaybase : Base64Extractor() {
     override var mainUrl = "https://player.hdgay.net"
     override var name = "JP"
 }
