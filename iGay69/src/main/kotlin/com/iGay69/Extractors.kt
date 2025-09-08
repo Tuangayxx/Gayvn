@@ -16,40 +16,56 @@ import com.lagradost.cloudstream3.*
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jsoup.nodes.Element
 import org.json.JSONArray
+import java.util.Base64
+import android.util.Log
+import android.annotation.SuppressLint
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.NativeJSON
+import org.mozilla.javascript.NativeObject
+import org.mozilla.javascript.Scriptable
 
-class ListMirror : ExtractorApi() {
-    override val name = "ListMirror"
-    override val mainUrl = "https://listmirror.com"
-    override val requiresReferer = false
+class MxDrop : MixDrop(){
+    override var mainUrl = "https://mxdrop.to"
+}
 
-    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
-        val links = mutableListOf<ExtractorLink>()
-        val doc = app.get(url).document
+open class LuluStream : ExtractorApi() {
+    override var name = "LuluStream"
+    override var mainUrl = "https://luluvid.com"
+    override val requiresReferer = true
 
-        // Lấy script có chứa "sources = [ ... ];"
-        val script = doc.select("script").mapNotNull { it.data() }
-            .firstOrNull { it.contains("sources") }
-
-        if (script != null) {
-            val regex = Regex("""sources\s*=\s*(\[.*?]);""", RegexOption.DOT_MATCHES_ALL)
-            val match = regex.find(script)
-            val json = match?.groupValues?.get(1)
-
-            if (json != null) {
-                val arr = JSONArray(json)
-                for (i in 0 until arr.length()) {
-                    val obj = arr.getJSONObject(i)
-                    val mirrorUrl = obj.optString("url")
-                    if (mirrorUrl.isNotBlank()) {
-                        loadExtractor(mirrorUrl, referer, { /* subs */ }) { link ->
-                            links.add(link)
+    override suspend fun getUrl(
+        url: String,
+        referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ) {
+        val filecode = url.substringAfterLast("/")
+        val postUrl = "$mainUrl/d"
+        val post = app.post(
+            postUrl,
+            data = mapOf(
+                "op" to "embed",
+                "file_code" to filecode,
+                "auto" to "1",
+                "referer" to (referer ?: "")
+            )
+        ).document
+        post.selectFirst("script:containsData(vplayer)")?.data()
+            ?.let { script ->
+                Regex("file:\"(.*)\"").find(script)?.groupValues?.get(1)?.let { link ->
+                    callback.invoke(
+                        newExtractorLink(
+                            name,
+                            name,
+                            url = link,
+                            INFER_TYPE
+                        ) {
+                            this.referer = mainUrl
+                            this.quality = Qualities.P1080.value
                         }
-                    }
+                    )
                 }
             }
-        }
-
-        return links
     }
 }
 
