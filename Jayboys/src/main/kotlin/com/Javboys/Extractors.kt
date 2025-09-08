@@ -123,9 +123,6 @@ class FileMoon : FilemoonV2() {
     override var name = "FileMoon"
 }
 
- * Tìm và tái tạo data-uri kiểu "data:video/...;base64,..." trong văn bản HTML/JS.
- * Có bỏ qua các dấu nháy và dấu + khi base64 bị tách bằng JS string concatenation.
-
 fun reconstructDataUris(text: String, maxCollect: Int = 300_000): List<String> {
     val out = mutableListOf<String>()
     var idx = text.indexOf("data:video/")
