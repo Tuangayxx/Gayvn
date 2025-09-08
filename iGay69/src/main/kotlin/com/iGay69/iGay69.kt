@@ -35,7 +35,7 @@ class iGay69 : MainAPI() {
         "$mainUrl/${request.data}/page/$page"
 
     val document = app.get(pageUrl).document
-    val home = document.select("div.blog-entries").mapNotNull { it.toSearchResult() }
+    val home = document.select("article.blog-entrys").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -63,7 +63,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     for (i in 1..7) {
         // ✅ Sửa URL search: thêm `&page=i`
         val document = app.get("$mainUrl/?s=$query&page=$i").document
-        val results = document.select("article.loop-video").mapNotNull { it.toSearchResult() }
+        val results = document.select("article.blog-entrys").mapNotNull { it.toSearchResult() }
 
         if (results.isEmpty()) break
         searchResponse.addAll(results)
