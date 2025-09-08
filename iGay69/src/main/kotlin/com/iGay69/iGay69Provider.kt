@@ -17,6 +17,7 @@ class iGay69Provider: Plugin() {
         registerExtractorAPI(DoodstreamCom())
         registerExtractorAPI(vide0())
         registerExtractorAPI(LuluStream())
+        registerExtractorAPI(StreamTape())
         registerExtractorAPI(MxDrop())
         registerExtractorAPI(FileMoon())
         registerExtractorAPI(FilemoonV2())
