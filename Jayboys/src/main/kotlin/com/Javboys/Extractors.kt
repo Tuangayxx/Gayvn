@@ -165,15 +165,14 @@ fun reconstructDataUris(text: String, maxCollect: Int = 300_000): List<String> {
     return out
 }
 
-// --- Thay thế Base64Extractor bằng phiên bản sau ---
 open class Base64Extractor : ExtractorApi() {
     override val name = "Base64"
     override val mainUrl = "base64"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        // Nếu chính là data-uri video -> trả luôn (không gọi app.get)
-        if (url.startsWith("data:video/")) {
+        // 1) Nếu truyền vào đã là data-uri thì trả luôn (không gọi app.get trên data:)
+        if (url.startsWith("data:")) {
             return listOf(
                 newExtractorLink(
                     source = name,
@@ -187,50 +186,34 @@ open class Base64Extractor : ExtractorApi() {
             )
         }
 
-        // Nếu không phải HTTP/HTTPS (ví dụ 'data:...') thì bỏ
-        if (!url.startsWith("http://") && !url.startsWith("https://")) return null
-
-        // Lấy HTML trang và tìm data-uri chuẩn
-        val responseText = app.get(url).text
-
-        // 1) tìm match liền mạch trước
-        val directRegex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
-        val directMatch = directRegex.find(responseText)
-        if (directMatch != null) {
-            val dataUri = directMatch.value
-            return listOf(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = dataUri,
-                    type = INFER_TYPE
-                ) {
-                    this.referer = referer ?: url
-                    this.quality = Qualities.Unknown.value
-                }
-            )
+        // 2) Nếu là URL http/https -> tải nội dung và tìm data-uri bên trong HTML
+        val responseText = try {
+            app.get(url).text
+        } catch (e: Exception) {
+            // Log để debug (không để crash)
+            e.printStackTrace()
+            return null
         }
 
-        // 2) fallback: reconstruct các data-uri bị tách trong JS
-        val reconstructed = reconstructDataUris(responseText).firstOrNull()
-        if (reconstructed != null) {
-            return listOf(
-                newExtractorLink(
-                    source = name,
-                    name = name,
-                    url = reconstructed,
-                    type = INFER_TYPE
-                ) {
-                    this.referer = referer ?: url
-                    this.quality = Qualities.Unknown.value
-                }
-            )
-        }
+        // Regex tìm data-uri video base64 (có thể match mp4/webm/...)
+        val regex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
+        val match = regex.find(responseText) ?: return null
+        val dataUri = match.value // "data:video/xxx;base64,AAAA..."
 
-        // nếu không tìm được thì trả null
-        return null
+        return listOf(
+            newExtractorLink(
+                source = name,
+                name = name,
+                url = dataUri,
+                type = INFER_TYPE
+            ) {
+                this.referer = referer ?: mainUrl
+                this.quality = Qualities.Unknown.value
+            }
+        )
     }
 }
+
 
 
 
