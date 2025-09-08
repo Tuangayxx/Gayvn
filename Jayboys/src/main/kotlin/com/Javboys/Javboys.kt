@@ -136,125 +136,81 @@ class Jayboys : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+    // Lấy response 1 lần (tránh gọi app.get nhiều lần)
     val response = app.get(data)
     val document = response.document
     val pageText = response.text
-
     var found = false
+
+    // Tập hợp các URL thô thu thập được
     val videoUrls = mutableSetOf<String>()
 
-    // --- giữ nguyên cách thu thập cũ ---
-    document.select("div#player, div.video-player")
-        .mapNotNull { it.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" } }
-        .forEach { videoUrls.add(it) }
-
-    if (videoUrls.isEmpty()) {
-        val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
-        iframeSrc?.let { videoUrls.add(it) }
+    // --- các cách thu thập hiện có (giữ nguyên) ---
+    // data-src từ player
+    document.select("div#player, div.video-player").forEach {
+        it.attr("data-src").takeIf { u -> !u.isNullOrBlank() && u != "#" }?.let { videoUrls.add(it) }
     }
 
-    val button = document.select("div.download-button-wrapper a[href]")?.attr("href")
-    button?.let { videoUrls.add(it) }
+    // fallback iframe
+    val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
+    iframeSrc?.let { videoUrls.add(it) }
 
-    // --- bổ sung thêm các nguồn (không xóa gì cũ) ---
+    // download button (giữ nguyên)
+    document.selectFirst("div.download-button-wrapper a[href]")?.attr("href")?.let { videoUrls.add(it) }
+
+    // --- PHẦN BỔ SUNG: nhiều cách khác để thu thập URL ---
+    // 1) tất cả attribute data-src (nhiều site chèn link ở chỗ khác)
     document.select("[data-src]").forEach { el ->
-        val v = el.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" }
-        v?.let { videoUrls.add(it) }
+        el.attr("data-src").takeIf { u -> !u.isNullOrBlank() && u != "#" }?.let { videoUrls.add(it) }
     }
 
+    // 2) tất cả attribute src (video, source, script, img, div có src)
     document.select("[src]").forEach { el ->
-        val v = el.attr("src").takeIf { u -> u.isNotBlank() }
-        v?.let { if (it != "#") videoUrls.add(it) }
+        el.attr("src").takeIf { u -> !u.isNullOrBlank() }?.let { if (it != "#") videoUrls.add(it) }
     }
 
+    // 3) thẻ <source> trong <video>
     document.select("video source[src], source[src]").forEach {
-        val v = it.attr("src").takeIf { u -> u.isNotBlank() }
-        v?.let { videoUrls.add(it) }
+        it.attr("src").takeIf { u -> !u.isNullOrBlank() }?.let { videoUrls.add(it) }
     }
 
+    // 4) tìm data-uri base64 trong toàn bộ HTML/JS (những video được chèn trong script)
     val dataVideoRegex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
-    dataVideoRegex.findAll(pageText).forEach { m -> videoUrls.add(m.value) }
-
-    document.select("video[src^=data:], source[src^=data:], div[src^=data:], iframe[src^=data:]").forEach {
-        val v = it.attr("src").takeIf { u -> u.isNotBlank() }
-        v?.let { videoUrls.add(it) }
+    dataVideoRegex.findAll(pageText).forEach { match ->
+        videoUrls.add(match.value)
     }
 
-    // reconstruct các data-uri bị tách trong JS (nếu bạn đã cài reconstructDataUris ở Extractors.kt)
-    reconstructDataUris(pageText).forEach { videoUrls.add(it) }
+    // 5) nếu element có attr src bắt đầu bằng data:, thêm nhưng chỉ khi là data:video/...
+    document.select("video[src^=data:], source[src^=data:], div[src^=data:], iframe[src^=data:]").forEach {
+        it.attr("src").takeIf { u -> !u.isNullOrBlank() }?.let { videoUrls.add(it) }
+    }
 
-    // --- SANITIZE: loại bỏ rỗng, "#", và trim ---
-    val sanitized = videoUrls
+    // Debug (tuỳ bạn bật/tắt)
+    // Log.d("Base64Debug", "Collected raw videoUrls: $videoUrls")
+
+    // --- LỌC: loại bỏ mọi data: URI không phải video (vì gọi app.get trên data:* sẽ lỗi) ---
+    val filteredUrls = videoUrls
         .map { it.trim() }
-        .filter { it.isNotBlank() && it != "#" }
-        .toMutableSet()
+        .filter { !(it.startsWith("data:", ignoreCase = true) && !it.startsWith("data:video/", ignoreCase = true)) }
+        .toList()
 
-    // Debug: in log để kiểm tra
-    Log.d("Base64Debug", "Sanitized videoUrls size=${sanitized.size}")
-    Log.d("Base64Debug", "Sanitized sample=${sanitized.take(12)}")
-
-    // --- XỬ LÝ: data:video/* trực tiếp, bỏ data: khác, resolve relative, gọi loadExtractor an toàn ---
-    for (raw in sanitized) {
+    // Gọi loadExtractor cho mỗi URL (giữ nguyên cơ chế cũ)
+    filteredUrls.amap { url ->
         try {
-            // Nếu là data-uri video -> trả trực tiếp, không gọi loadExtractor
-            if (raw.startsWith("data:video/")) {
-                val link = newExtractorLink(
-                    source = "Base64",
-                    name = "Base64",
-                    url = raw,
-                    type = INFER_TYPE
-                ) {
-                    this.referer = data
-                    this.quality = Qualities.Unknown.value
-                }
+            val ok = loadExtractor(
+                url,
+                referer = data,
+                subtitleCallback = subtitleCallback
+            ) { link ->
                 callback(link)
-                found = true
-                continue
             }
-
-            // Bỏ qua các data: không phải video (vd: data:text/javascript,...)
-            if (raw.startsWith("data:")) {
-                Log.d("Base64Debug", "Skipping non-video data URI: $raw")
-                continue
-            }
-
-            // Nếu là relative URL -> resolve với page url
-            val resolvedUrl = try {
-                if (raw.startsWith("http://") || raw.startsWith("https://")) {
-                    raw
-                } else {
-                    // dùng java.net.URL để resolve relative -> absolute
-                    try {
-                        val base = java.net.URL(data)
-                        java.net.URL(base, raw).toString()
-                    } catch (e: Exception) {
-                        // fallback: nếu không thể resolve thì giữ raw
-                        raw
-                    }
-                }
-            } catch (e: Exception) {
-                raw
-            }
-
-            // Gọi loadExtractor trong try/catch để tránh NPE khi không tìm extractor
-            try {
-                val ok = loadExtractor(
-                    resolvedUrl,
-                    referer = data,
-                    subtitleCallback = subtitleCallback
-                ) { link ->
-                    callback(link)
-                }
-                if (ok) found = true
-            } catch (e: Exception) {
-                // Log và tiếp tục, không để crash
-                Log.w("Base64Debug", "loadExtractor failed for $resolvedUrl : ${e.message}")
-            }
+            if (ok) found = true
         } catch (e: Exception) {
-            Log.w("Base64Debug", "Error processing url '$raw' : ${e.message}")
+            // Bắt lỗi để tránh crash khi extractor nào đó ném ngoại lệ
+            // Log.e("Javboys", "Error loading extractor for $url : ${e.message}")
         }
     }
 
     return found
-    }
+}
 }
