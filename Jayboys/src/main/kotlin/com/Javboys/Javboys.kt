@@ -141,59 +141,104 @@ class Jayboys : MainAPI() {
     val pageText = response.text
 
     var found = false
+    val videoUrls = mutableSetOf<String>()
 
-    // giữ nguyên cách thu thập cũ (data-src trong div#player, div.video-player)
-    val videoUrls = document.select("div#player, div.video-player")
+    // --- giữ nguyên cách thu thập cũ ---
+    document.select("div#player, div.video-player")
         .mapNotNull { it.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" } }
-        .toMutableSet()
+        .forEach { videoUrls.add(it) }
 
-    // Fallback iframe (giữ nguyên)
     if (videoUrls.isEmpty()) {
         val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
         iframeSrc?.let { videoUrls.add(it) }
     }
 
-    // Thu thập URL từ download button (giữ nguyên)
     val button = document.select("div.download-button-wrapper a[href]")?.attr("href")
     button?.let { videoUrls.add(it) }
 
-    // -------------------
-    // PHẦN BỔ SUNG: không xóa gì phía trên, chỉ thêm các cách thu thập khác
-    // 1) Thu thập tất cả thẻ có data-src (nhiều site dùng data-src khác chỗ)
+    // --- bổ sung thêm các nguồn ---
+    // 1) tất cả data-src
     document.select("[data-src]").forEach { el ->
         val v = el.attr("data-src").takeIf { u -> u.isNotBlank() && u != "#" }
         v?.let { videoUrls.add(it) }
     }
 
-    // 2) Thu thập tất cả thẻ có src (video, source, div, img có thể chứa link)
+    // 2) tất cả src attrs (video, source, div, img, iframe...)
     document.select("[src]").forEach { el ->
         val v = el.attr("src").takeIf { u -> u.isNotBlank() }
         v?.let { if (it != "#") videoUrls.add(it) }
     }
 
-    // 3) Thu thập thẻ <source> trong <video> nếu có
+    // 3) <video><source>
     document.select("video source[src], source[src]").forEach {
         val v = it.attr("src").takeIf { u -> u.isNotBlank() }
         v?.let { videoUrls.add(it) }
     }
 
-    // 4) Tìm data-uri base64 trong toàn bộ HTML / JS (ví dụ video được chèn qua innerHTML bên trong script)
+    // 4) regex tìm data-uri liền mạch trong toàn bộ HTML/JS
     val dataVideoRegex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
-    dataVideoRegex.findAll(pageText).forEach { match ->
-        videoUrls.add(match.value)
-    }
+    dataVideoRegex.findAll(pageText).forEach { m -> videoUrls.add(m.value) }
 
-    // 5) Nếu có element có attr src bắt đầu bằng data:, cũng thêm (ví dụ div[src^=data:])
+    // 5) nếu có element có src bắt đầu bằng data:
     document.select("video[src^=data:], source[src^=data:], div[src^=data:], iframe[src^=data:]").forEach {
         val v = it.attr("src").takeIf { u -> u.isNotBlank() }
         v?.let { videoUrls.add(it) }
     }
 
-    // (Tùy chọn) Debug log — bật nếu cần kiểm tra
-    // Log.d("Base64Debug", "Collected videoUrls: $videoUrls")
-    // Log.d("Base64Debug", "Found base64 matches: ${dataVideoRegex.findAll(pageText).count()}")
+    // 6) **FALLBACK mạnh**: nếu base64 bị tách trong JS (ví dụ '...base64,AAA' + 'BBB...'),
+    //    thì tìm vị trí "data:video/" rồi thu thập từng ký tự base64, bỏ qua dấu nháy và dấu cộng.
+    fun tryReconstructDataUris(text: String): List<String> {
+        val out = mutableListOf<String>()
+        var idx = text.indexOf("data:video/")
+        while (idx >= 0) {
+            val baseStart = text.indexOf("base64,", idx)
+            if (baseStart < 0) break
+            val prefix = text.substring(idx, baseStart + 7) // includes "base64,"
 
-    // Xử lý tất cả URL đã thu thập (giữ nguyên cách xử lý: gọi loadExtractor)
+            // từ sau "base64," bắt đầu collect các ký tự base64, có thể bị ngắt bởi ', " hoặc + hoặc whitespace
+            val sb = StringBuilder()
+            var i = baseStart + 7
+            var collected = 0
+            val maxCollect = 300_000 // prevent runaway
+            while (i < text.length && collected < maxCollect) {
+                val c = text[i]
+                // nếu là base64 char thì append
+                if (c in 'A'..'Z' || c in 'a'..'z' || c in '0'..'9' || c == '+' || c == '/' || c == '=') {
+                    sb.append(c)
+                    collected++
+                    i++
+                    continue
+                }
+                // nếu gặp quote or plus or whitespace, skip and continue collecting next base64 chunks
+                if (c == '\'' || c == '\"' || c == '+' || c.isWhitespace()) {
+                    i++
+                    continue
+                }
+                // nếu gặp < or > or /script or other markup and already collected some base64 -> break
+                if ((c == '<' || c == '>') && collected > 8) break
+                // if punctuation not allowed and we already have enough -> break
+                if (!c.isLetterOrDigit() && collected > 8) break
+                i++
+            }
+
+            if (sb.isNotEmpty()) {
+                val clean = prefix + sb.toString()
+                out.add(clean)
+            }
+
+            // tìm next
+            idx = text.indexOf("data:video/", i)
+        }
+        return out
+    }
+
+    tryReconstructDataUris(pageText).forEach { videoUrls.add(it) }
+
+    // --- Debug logging để kiểm tra runtime (bật khi cần) ---
+    Log.d("Base64Debug", "Collected videoUrls size=${videoUrls.size}")
+    Log.d("Base64Debug", "Collected videoUrls sample=${videoUrls.take(10)}")
+
+    // Xử lý tất cả URL đã thu thập
     videoUrls.toList().amap { url ->
         val ok = loadExtractor(
             url,
