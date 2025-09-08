@@ -75,8 +75,9 @@ override suspend fun search(query: String): List<SearchResponse> {
     override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    val title = document.selectFirst("h1.single-post-title")?.text()?.trim() ?: ""
-    val poster = document.selectFirst("figure.wp-block-image img")?.attr("src")
+    val title = document.selectFirst("h1.single-post-title")?.text()?.trim() ?: url
+    val poster = document.selectFirst("figure.wp-block-image img")
+        ?.let { it.attr("src").ifBlank { it.attr("data-src") } }
     val description = document.selectFirst("div.single-blog-content")?.text()?.trim()
 
     return newMovieLoadResponse(title, url, TvType.NSFW, url) {
@@ -94,16 +95,16 @@ override suspend fun loadLinks(
     val document = app.get(data).document
     var found = false
 
-    // Tabs links (lulustream, etc.)
-    val mirrors = document.select("div.responsive-tabs__panel a[href]")
-        .mapNotNull { it.attr("href").takeIf { u -> u.isNotBlank() } }
-        .toMutableSet()
+    val mirrors = mutableSetOf<String>()
+
+    // Tabs links (lulustream, stream, ...)
+    document.select("div.responsive-tabs__panel a[href]").forEach { a ->
+        a.attr("href")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
+    }
 
     // Fallback: iframe embeds
-    if (mirrors.isEmpty()) {
-        document.select("iframe[src]").forEach {
-            mirrors.add(it.attr("src"))
-        }
+    document.select("iframe[src]").forEach { iframe ->
+        iframe.attr("src")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
     }
 
     mirrors.toList().amap { url ->
@@ -119,5 +120,4 @@ override suspend fun loadLinks(
 
     return found
 }
-
 }
