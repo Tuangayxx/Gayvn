@@ -171,8 +171,8 @@ open class Base64Extractor : ExtractorApi() {
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        // 1) Nếu truyền vào đã là data-uri thì trả luôn (không gọi app.get trên data:)
-        if (url.startsWith("data:")) {
+        // Nếu truyền vào chính là data-uri (mọi dạng data:) -> trả luôn, không gọi app.get
+        if (url.startsWith("data:", ignoreCase = true)) {
             return listOf(
                 newExtractorLink(
                     source = name,
@@ -186,36 +186,54 @@ open class Base64Extractor : ExtractorApi() {
             )
         }
 
-        // 2) Nếu là URL http/https -> tải nội dung và tìm data-uri bên trong HTML
+        // Nếu URL http/https -> tải nội dung và tìm data-uri video base64 bên trong HTML/JS
         val responseText = try {
             app.get(url).text
         } catch (e: Exception) {
-            // Log để debug (không để crash)
+            // Không crash, chỉ log và trả null
             e.printStackTrace()
             return null
         }
 
-        // Regex tìm data-uri video base64 (có thể match mp4/webm/...)
-        val regex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
-        val match = regex.find(responseText) ?: return null
-        val dataUri = match.value // "data:video/xxx;base64,AAAA..."
+        // Regex mạnh hơn: bắt mọi data:video/<mime>;base64,...
+        val dataVideoRegex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""", RegexOption.IGNORE_CASE)
+        val firstMatch = dataVideoRegex.find(responseText)
+        if (firstMatch != null) {
+            val dataUri = firstMatch.value
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = dataUri,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = referer ?: mainUrl
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
 
-        return listOf(
-            newExtractorLink(
-                source = name,
-                name = name,
-                url = dataUri,
-                type = INFER_TYPE
-            ) {
-                this.referer = referer ?: mainUrl
-                this.quality = Qualities.Unknown.value
-            }
-        )
+        // Một số trang chèn src="data:video..." với quotes; thử tìm dạng src="..."
+        val srcMatch = Regex("""src\s*=\s*["'](data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+)["']""", RegexOption.IGNORE_CASE)
+            .find(responseText)?.groupValues?.get(1)
+        if (srcMatch != null) {
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = srcMatch,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = referer ?: mainUrl
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+
+        // Không tìm được data-uri video
+        return null
     }
 }
-
-
-
 
 class JP : Base64Extractor() {
     override var mainUrl = "https://1069jp.com"
