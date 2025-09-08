@@ -73,17 +73,17 @@ override suspend fun search(query: String): List<SearchResponse> {
    
 
     override suspend fun load(url: String): LoadResponse {
-        val document = app.get(url).document
+    val document = app.get(url).document
 
-        val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim() ?: ""
-        val poster = document.selectFirst("meta[property=og:image]")?.attr("content")?.trim()
-        val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+    val title = document.selectFirst("h1.single-post-title")?.text()?.trim() ?: ""
+    val poster = document.selectFirst("figure.wp-block-image img")?.attr("src")
+    val description = document.selectFirst("div.single-blog-content")?.text()?.trim()
 
-        return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-            this.posterUrl = poster
-            this.plot = description
-        }
+    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        this.posterUrl = poster
+        this.plot = description
     }
+}
 
 override suspend fun loadLinks(
     data: String,
@@ -92,44 +92,32 @@ override suspend fun loadLinks(
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val document = app.get(data).document
-    Log.d("Nurgay", "=== LOAD LINKS for: $data ===")
-    Log.d("Nurgay", "Document title: ${document.selectFirst("title")?.text() ?: "no title"}")
-    val htmlPrefix = document.html().take(60000)
-    Log.d("Nurgay", "Page HTML (prefix 60KB): ${htmlPrefix.replace("\n","\\n").take(8000)}")
-
     var found = false
 
-    // Mirrors
-    val mirrors = document.select("ul#mirrorMenu a.mirror-opt, a.dropdown-item.mirror-opt")
-        .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
+    // Tabs links (lulustream, etc.)
+    val mirrors = document.select("div.responsive-tabs__panel a[href]")
+        .mapNotNull { it.attr("href").takeIf { u -> u.isNotBlank() } }
         .toMutableSet()
-    Log.d("Nurgay", "Mirrors found from data-url: ${mirrors.joinToString()}")
 
-    // Fallback iframe
+    // Fallback: iframe embeds
     if (mirrors.isEmpty()) {
-        val iframeSrc = document.selectFirst("iframe[src]")?.attr("src")
-        Log.d("Nurgay", "No mirrors; iframe src = $iframeSrc")
-        iframeSrc?.let { mirrors.add(it) }
+        document.select("iframe[src]").forEach {
+            mirrors.add(it.attr("src"))
+        }
     }
 
-    // Wrap the callback to log every link returned by the extractor
     mirrors.toList().amap { url ->
-        Log.d("Nurgay", "Trying loadExtractor for: $url (referer=$data)")
         val ok = loadExtractor(
             url,
             referer = data,
             subtitleCallback = subtitleCallback
         ) { link ->
-            // SAFE logging: don't reference unknown properties (like isVideo)
-            Log.d("Nurgay", "EXTRACTOR CALLBACK -> ${link.toString()}")
-            // forward to main callback so CloudStream receives it
             callback(link)
         }
-        Log.d("Nurgay", "loadExtractor returned $ok for $url")
         if (ok) found = true
     }
 
-    Log.d("Nurgay", "=== finished loadLinks; found=$found ===")
     return found
 }
+
 }
