@@ -57,6 +57,16 @@ private fun Element.toSearchResult(): SearchResponse {
     }
 }
 
+private fun Element.toRecommendResult(): SearchResponse? {
+    val title = this.select("h2.wpex-card-title a").text()
+    val href = fixUrl(this.select("h2.wpex-card-title a").attr("href"))
+    val posterUrl = fixUrlNull(this.select("div.wpex-card-thumbnail img").attr("src"))
+        
+        return newMovieSearchResponse(title, href, TvType.NSFW) {
+            this.posterUrl = posterUrl
+        }
+    }
+
 override suspend fun search(query: String): List<SearchResponse> {
     val searchResponse = mutableListOf<SearchResponse>()
 
