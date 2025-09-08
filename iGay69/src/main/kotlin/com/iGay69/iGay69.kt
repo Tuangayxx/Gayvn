@@ -10,7 +10,7 @@ import com.lagradost.api.Log
 
 
 class iGay69 : MainAPI() {
-    override var mainUrl = "https://iGay69.com"
+    override var mainUrl = "https://igay69.com"
     override var name = "iGay69"
     override val hasMainPage = true
     override var lang = "vi"
@@ -30,7 +30,7 @@ class iGay69 : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val pageUrl = if (page == 1) 
-        "$mainUrl$/{request.data}" 
+        "$mainUrl/${request.data}" 
     else 
         "$mainUrl/${request.data}/page/$page"
 
