@@ -35,7 +35,7 @@ class iGay69 : MainAPI() {
         "$mainUrl/${request.data}/page/$page"
 
     val document = app.get(pageUrl).document
-    val home = document.select("article.blog-entrys").mapNotNull { it.toSearchResult() }
+    val home = document.select("article.blog-entry").mapNotNull { it.toSearchResult() }
 
     return newHomePageResponse(
         list = HomePageList(
@@ -48,10 +48,10 @@ class iGay69 : MainAPI() {
 }
 
 private fun Element.toSearchResult(): SearchResponse {
-    val title = this.select("header.entry-header span").text() // ✅ Sửa lấy text
-    val href = fixUrl(this.select("a").attr("href"))
-    val posterUrl = fixUrlNull(this.select("img").attr("data-src"))
-    
+    val title = this.select("h2.wpex-card-title a").text()
+    val href = fixUrl(this.select("h2.wpex-card-title a").attr("href"))
+    val posterUrl = fixUrlNull(this.select("div.wpex-card-thumbnail img").attr("src"))
+
     return newMovieSearchResponse(title, href, TvType.NSFW) {
         this.posterUrl = posterUrl
     }
@@ -61,9 +61,8 @@ override suspend fun search(query: String): List<SearchResponse> {
     val searchResponse = mutableListOf<SearchResponse>()
 
     for (i in 1..7) {
-        // ✅ Sửa URL search: thêm `&page=i`
         val document = app.get("$mainUrl/?s=$query&page=$i").document
-        val results = document.select("article.blog-entrys").mapNotNull { it.toSearchResult() }
+        val results = document.select("article.blog-entry").mapNotNull { it.toSearchResult() }
 
         if (results.isEmpty()) break
         searchResponse.addAll(results)
