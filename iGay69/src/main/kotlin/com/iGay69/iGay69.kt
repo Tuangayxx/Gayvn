@@ -75,14 +75,31 @@ override suspend fun search(query: String): List<SearchResponse> {
     override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    val title = document.selectFirst("h1.single-post-title")?.text()?.trim() ?: url
-    val poster = document.selectFirst("figure.wp-block-image img")
-        ?.let { it.attr("src").ifBlank { it.attr("data-src") } }
-    val description = document.selectFirst("div.single-blog-content")?.text()?.trim()
+    // Lấy title từ og:title, fallback sang h1
+    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
+        ?: document.selectFirst("h1.single-post-title")?.text()?.trim()
+        ?: url
+
+    // Lấy poster từ og:image, fallback sang img trong figure
+    val poster = fixUrlNull(
+        document.selectFirst("meta[property=og:image]")?.attr("content")
+            ?: listOf("data-src", "data-lazy-src", "src")
+                .mapNotNull { attr -> document.selectFirst("figure.wp-block-image img")?.absUrl(attr) }
+                .firstOrNull { it.isNotBlank() }
+    )
+
+    // Lấy mô tả từ og:description, fallback sang nội dung bài viết
+    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        ?: document.selectFirst("div.single-blog-content")?.text()?.trim()
+
+    // Lấy danh sách gợi ý
+    val recommendations = document.select("div.list-item div.video.col-2")
+        .mapNotNull { it.toRecommendResult() }
 
     return newMovieLoadResponse(title, url, TvType.NSFW, url) {
         this.posterUrl = poster
         this.plot = description
+        this.recommendations = recommendations
     }
 }
 
@@ -97,15 +114,15 @@ override suspend fun loadLinks(
 
     val mirrors = mutableSetOf<String>()
 
-    // Tabs links (lulustream, stream, ...)
     document.select("div.responsive-tabs__panel a[href]").forEach { a ->
-        a.attr("href")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
-    }
+        val link = a.attr("href").trim()
+        if (link.isNotBlank() && link.startsWith("http")) mirrors.add(link)
+}
 
-    // Fallback: iframe embeds
     document.select("iframe[src]").forEach { iframe ->
-        iframe.attr("src")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
-    }
+        val link = iframe.attr("src").trim()
+        if (link.isNotBlank() && link.startsWith("http")) mirrors.add(link)
+}
 
     mirrors.toList().amap { url ->
         val ok = loadExtractor(
