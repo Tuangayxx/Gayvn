@@ -123,13 +123,59 @@ class FileMoon : FilemoonV2() {
     override var name = "FileMoon"
 }
 
+ * Tìm và tái tạo data-uri kiểu "data:video/...;base64,..." trong văn bản HTML/JS.
+ * Có bỏ qua các dấu nháy và dấu + khi base64 bị tách bằng JS string concatenation.
+
+fun reconstructDataUris(text: String, maxCollect: Int = 300_000): List<String> {
+    val out = mutableListOf<String>()
+    var idx = text.indexOf("data:video/")
+    while (idx >= 0) {
+        val baseStart = text.indexOf("base64,", idx)
+        if (baseStart < 0) break
+        val prefix = text.substring(idx, baseStart + 7) // includes "base64,"
+
+        val sb = StringBuilder()
+        var i = baseStart + 7
+        var collected = 0
+
+        while (i < text.length && collected < maxCollect) {
+            val c = text[i]
+            // các ký tự hợp lệ trong Base64
+            if (c in 'A'..'Z' || c in 'a'..'z' || c in '0'..'9' || c == '+' || c == '/' || c == '=') {
+                sb.append(c)
+                collected++
+                i++
+                continue
+            }
+            // bỏ qua ký tự nối chuỗi JS hoặc khoảng trắng
+            if (c == '\'' || c == '\"' || c == '+' || c.isWhitespace()) {
+                i++
+                continue
+            }
+            // heuristics để dừng: gặp tag html hoặc ký tự lạ sau đã thu được 8 ký tự
+            if ((c == '<' || c == '>') && collected > 8) break
+            if (!c.isLetterOrDigit() && collected > 8) break
+            i++
+        }
+
+        if (sb.isNotEmpty()) {
+            out.add(prefix + sb.toString())
+        }
+
+        val nextFrom = if (i <= idx) idx + 1 else i
+        idx = text.indexOf("data:video/", nextFrom)
+    }
+    return out
+}
+
+// --- Thay thế Base64Extractor bằng phiên bản sau ---
 open class Base64Extractor : ExtractorApi() {
     override val name = "Base64"
     override val mainUrl = "base64"
     override val requiresReferer = false
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
-        // Nếu chính là data-uri thì trả luôn
+        // Nếu chính là data-uri video -> trả luôn (không gọi app.get)
         if (url.startsWith("data:video/")) {
             return listOf(
                 newExtractorLink(
@@ -144,25 +190,51 @@ open class Base64Extractor : ExtractorApi() {
             )
         }
 
-        // Nếu là trang HTML -> lấy response text và tìm data-uri bằng regex
-        val responseText = app.get(url).text
-        val regex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
-        val match = regex.find(responseText) ?: return null
-        val dataUri = match.value // chính là "data:video/..;base64,AAAA..."
+        // Nếu không phải HTTP/HTTPS (ví dụ 'data:...') thì bỏ
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return null
 
-        return listOf(
-            newExtractorLink(
-                source = name,
-                name = name,
-                url = dataUri,
-                type = INFER_TYPE
-            ) {
-                this.referer = referer ?: mainUrl
-                this.quality = Qualities.Unknown.value
-            }
-        )
+        // Lấy HTML trang và tìm data-uri chuẩn
+        val responseText = app.get(url).text
+
+        // 1) tìm match liền mạch trước
+        val directRegex = Regex("""data:video\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=]+""")
+        val directMatch = directRegex.find(responseText)
+        if (directMatch != null) {
+            val dataUri = directMatch.value
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = dataUri,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = referer ?: url
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+
+        // 2) fallback: reconstruct các data-uri bị tách trong JS
+        val reconstructed = reconstructDataUris(responseText).firstOrNull()
+        if (reconstructed != null) {
+            return listOf(
+                newExtractorLink(
+                    source = name,
+                    name = name,
+                    url = reconstructed,
+                    type = INFER_TYPE
+                ) {
+                    this.referer = referer ?: url
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
+
+        // nếu không tìm được thì trả null
+        return null
     }
 }
+
 
 
 class JP : Base64Extractor() {
