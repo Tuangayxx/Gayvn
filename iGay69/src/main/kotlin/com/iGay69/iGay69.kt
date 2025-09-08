@@ -30,7 +30,7 @@ class iGay69 : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
     val pageUrl = if (page == 1) 
-        "$mainUrl${request.data}" 
+        "$mainUrl$/{request.data}" 
     else 
         "$mainUrl/${request.data}/page/$page"
 
