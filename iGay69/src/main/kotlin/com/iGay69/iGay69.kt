@@ -24,8 +24,8 @@ class iGay69 : MainAPI() {
     override val mainPage = mainPageOf(
         ""                         to "Latest",
         "category/porn/gaydar-porn"                    to "Gaydar",
-        "category/leak/march-cmu"                                to "March CMU",
-        "araw-2025"                             to "Araw",
+        "category/leak"                                to "Leak",
+        "category/magazine"                            to "Magazine",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -116,8 +116,10 @@ override suspend fun load(url: String): LoadResponse {
         .distinctBy { it.first } // chỉ giữ mỗi số tập 1 lần
         .sortedBy { it.first }
         .map { (partNumber, href) ->
-            newEpisode(href) {
-                this.name = "Tập $partNumber"
+            .map { (partNumber, href) ->
+    val episodeDataUrl = "$url#part$partNumber"
+        newEpisode(episodeDataUrl) {
+            this.name = "Tập $partNumber"
             }
         }
 
@@ -142,159 +144,139 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = try {
-        app.get(data).document
-    } catch (e: Exception) {
-        Log.e("igay69", "loadLinks: failed to fetch $data -> ${e.message}")
-        return false
-    }
-
-    Log.d("igay69", "=== LOAD LINKS for: $data ===")
-    Log.d("igay69", "Document title: ${document.selectFirst("title")?.text() ?: "no title"}")
-
+    Log.d("igay69", "=== loadLinks called with data=$data ===")
     var found = false
 
-    // --- 1) Thu thập tất cả URL có ích ---
-    val anchorSelectors = listOf(
-        ".responsive-tabs__panel a[href]",
-        ".tabcontent a[href]",
-        ".single-blog-content a[href]",
-        ".list-item a[href]",
-        "ul#mirrorMenu a.mirror-opt",
-        "a.dropdown-item.mirror-opt",
-        "iframe[src]"
-    )
+    // Nếu data chứa fragment #partN -> xử lý như "series page" (lấy nhiều server cho tập N)
+    val seriesMatch = Regex("^(https?://[^#]+)#part(\\d+)$", RegexOption.IGNORE_CASE).find(data)
+    if (seriesMatch != null) {
+        val seriesUrl = seriesMatch.groupValues[1]
+        val partNumber = seriesMatch.groupValues[2].toIntOrNull() ?: 0
+        Log.d("igay69", "Detected series page -> $seriesUrl ; requested part = $partNumber")
 
-    val rawUrls = linkedSetOf<String>()
-    anchorSelectors.forEach { sel ->
-        document.select(sel).forEach { el ->
-            val href = when {
-                el.tagName() == "iframe" -> el.absUrl("src").ifBlank { el.attr("data-src") }
-                else -> el.absUrl("href").ifBlank { el.attr("href") }
-            }?.trim() ?: ""
-            if (href.isNotBlank() && href != "#" && !href.startsWith("javascript:")) {
-                // normalize protocol-relative
-                val norm = if (href.startsWith("//")) "https:$href" else href
-                rawUrls.add(norm)
-            }
+        val doc = try {
+            app.get(seriesUrl).document
+        } catch (e: Exception) {
+            Log.e("igay69", "Failed to fetch series page $seriesUrl: ${e.message}")
+            return false
         }
-    }
 
-    Log.d("igay69", "rawUrls collected: ${rawUrls.joinToString().take(2000)}")
-
-    // --- 2) Nhóm theo số tập (nếu có) dựa vào text của <a> hoặc filename ---
-    val partMap = mutableMapOf<Int, MutableSet<String>>() // part -> set(url)
-    rawUrls.forEach { url ->
-        // Try to find a nearby anchor text that mentions part/tập
-        val anchors = document.select("a[href]").filter { a ->
-            val href = a.absUrl("href").ifBlank { a.attr("href") }
-            href.isNotBlank() && (href == url || url.contains(href) || href.contains(url))
+        // Các panel tabs (thứ tự tương ứng với linksv1..linksv4)
+        val panels = doc.select(".responsive-tabs__panel, .tabcontent")
+        if (panels.isEmpty()) {
+            Log.d("igay69", "No panels found on series page. Trying fallback selectors.")
         }
-        var partNum: Int? = null
-        if (anchors.isNotEmpty()) {
-            anchors.forEach { a ->
-                val t = a.text().trim()
-                val m = Regex("(?i)\\b(?:part|tập)\\s*0*([0-9]{1,3})\\b").find(t)
-                if (m != null) {
-                    partNum = m.groupValues.getOrNull(1)?.toIntOrNull()
+
+        // For each server panel (prefer panels in document order; if fewer than 4, use what's available)
+        panels.forEachIndexed { panelIndex, panel ->
+            try {
+                // 1) Try to match anchor whose text contains the part number (e.g. "part 01" or "tập 1")
+                val anchors = panel.select("a[href]")
+                val partRegex = Regex("(?i)\\b(?:part|tập)\\s*0*${partNumber}\\b")
+                val anchorMatch = anchors.firstOrNull { a -> partRegex.containsMatchIn(a.text()) }
+
+                val chosenHref = when {
+                    anchorMatch != null -> anchorMatch.absUrl("href").ifBlank { anchorMatch.attr("href") }
+                    // 2) Fallback: pick the anchor at index partNumber-1 if exists (anchors are usually in order)
+                    anchors.size >= partNumber && partNumber > 0 -> anchors[partNumber - 1].absUrl("href").ifBlank { anchors[partNumber - 1].attr("href") }
+                    else -> null
                 }
+
+                if (!chosenHref.isNullOrBlank()) {
+                    val norm = if (chosenHref.startsWith("//")) "https:$chosenHref" else chosenHref
+                    Log.d("igay69", "Panel #${panelIndex+1} -> found href for part $partNumber: $norm")
+                    // gọi loadExtractor cho từng server link (referer = seriesUrl)
+                    val ok = try {
+                        loadExtractor(
+                            norm,
+                            referer = seriesUrl,
+                            subtitleCallback = subtitleCallback
+                        ) { link ->
+                            Log.d("igay69", "EXTRACTOR CALLBACK -> ${link.toString()}")
+                            callback(link)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("igay69", "loadExtractor exception for $norm: ${e.message}")
+                        false
+                    }
+                    if (ok) found = true
+                } else {
+                    Log.d("igay69", "Panel #${panelIndex+1} -> no href found for part $partNumber")
+                }
+            } catch (e: Exception) {
+                Log.e("igay69", "Error processing panel #${panelIndex+1}: ${e.message}")
             }
         }
-        // fallback: try find "partX" in url path
-        if (partNum == null) {
-            val m2 = Regex("(?i)(?:part|p|ep|episode)[-_\\. ]*0*([0-9]{1,3})").find(url)
-            partNum = m2?.groupValues?.getOrNull(1)?.toIntOrNull()
-        }
 
-        if (partNum != null) {
-            partMap.getOrPut(partNum) { linkedSetOf() }.add(url)
-        } else {
-            // no part number -> put under 0 (general)
-            partMap.getOrPut(0) { linkedSetOf() }.add(url)
-        }
-    }
-
-    Log.d("igay69", "partMap keys: ${partMap.keys}")
-
-    // --- 3) Nếu đây là 1 trang series (nhiều part) và data không phải link host, cố gắng xử lý ---
-    val isIgayPage = data.contains("igay69.com") || data.contains("iGay69")
-    val multipleParts = partMap.keys.size > 1 || (partMap.keys.size == 1 && partMap.keys.first() > 0)
-
-    // Try to extract requested part from 'data' url (fragment or query)
-    val requestedPart: Int? = run {
-        val fragMatch = Regex("#(?:part|ep|tập)0*([0-9]{1,3})", RegexOption.IGNORE_CASE).find(data)
-            ?: Regex("[?&](?:part|ep|tập)=0*([0-9]{1,3})", RegexOption.IGNORE_CASE).find(data)
-        fragMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
-    }
-
-    // decide which urls to try
-    val urlsToTry = mutableSetOf<String>()
-    if (isIgayPage && multipleParts) {
-        if (requestedPart != null && partMap.containsKey(requestedPart)) {
-            urlsToTry.addAll(partMap[requestedPart]!!)
-            Log.d("igay69", "Detected requestedPart=$requestedPart; trying only its URLs")
-        } else {
-            // If CloudStream called loadLinks with series page (no requested part),
-            // we try to attempt all parts (so extractor can return playable streams for selected episode).
-            Log.d("igay69", "Series page detected; no specific part requested -> trying all part URLs")
-            partMap.values.forEach { urlsToTry.addAll(it) }
-        }
-    } else {
-        // not a series page (or no parts detected) -> try all rawUrls
-        urlsToTry.addAll(rawUrls)
-    }
-
-    // Fallback: if nothing collected, try the page itself
-    if (urlsToTry.isEmpty()) {
-        urlsToTry.add(data)
-    }
-
-    Log.d("igay69", "urlsToTry count=${urlsToTry.size}")
-
-    // --- 4) Thử loadExtractor trên từng URL; nếu không được, fetch và dò mp4/m3u8 từ HTML ---
-    val videoUrlRegex = Regex("""(https?:\/\/[^\s"'<>]+?\.(?:m3u8|mp4)(?:\?[^\s"'<>]*)?)""", RegexOption.IGNORE_CASE)
-    for (url in urlsToTry) {
-        try {
-            Log.d("igay69", "Trying loadExtractor for: $url (referer=$data)")
-            val ok = loadExtractor(
-                url,
-                referer = data,
-                subtitleCallback = subtitleCallback
-            ) { link ->
-                Log.d("igay69", "EXTRACTOR CALLBACK -> ${link.toString()}")
-                callback(link)
-            }
-            Log.d("igay69", "loadExtractor returned $ok for $url")
-            if (ok) found = true
-
-            // if loadExtractor failed to produce links, attempt direct parse of the host page for mp4/m3u8
-            if (!ok) {
-                try {
-                    Log.d("igay69", "loadExtractor returned false -> fetching $url to search mp4/m3u8")
-                    val hostDoc = try { app.get(url, headers = mapOf("Referer" to data)).document } catch (e: Exception) { null }
-                    val hostHtml = hostDoc?.html() ?: app.get(url).body?.string() ?: ""
-                    // search for direct video urls
-                    val matches = videoUrlRegex.findAll(hostHtml).map { it.groupValues[1] }.toList()
-                    if (matches.isNotEmpty()) {
-                        matches.distinct().forEach { v ->
-                            Log.d("igay69", "Found direct video URL fallback -> $v")
-                            // forward to callback via loadExtractor (prefer), else try to create a minimal ExtractorLink
-                            val tryOk = loadExtractor(v, referer = url, subtitleCallback = subtitleCallback) { link ->
-                                Log.d("igay69", "EXTRACTOR CALLBACK (fallback) -> ${link.toString()}")
+        // Nếu panels rỗng / không tìm được bằng text, thử selectors cụ thể cho linksv1..linksv4
+        if (!found) {
+            val serverSelectors = listOf(
+                ".tabcontent",                 // generic
+                ".responsive-tabs__panel",     // generic
+                ".linksv1", ".linksv2", ".linksv3", ".linksv4",
+                "#tablist1-panel1", "#tablist1-panel2", "#tablist1-panel3", "#tablist1-panel4"
+            )
+            serverSelectors.forEach { sel ->
+                if (found) return@forEach
+                doc.select(sel).forEach { panel ->
+                    val anchors = panel.select("a[href]")
+                    val partRegex = Regex("(?i)\\b(?:part|tập)\\s*0*${partNumber}\\b")
+                    val anchorMatch = anchors.firstOrNull { a -> partRegex.containsMatchIn(a.text()) }
+                    val chosen = anchorMatch ?: (anchors.getOrNull(partNumber - 1))
+                    val href = chosen?.absUrl("href")?.ifBlank { chosen.attr("href") }
+                    if (!href.isNullOrBlank()) {
+                        val norm = if (href.startsWith("//")) "https:$href" else href
+                        try {
+                            val ok = loadExtractor(norm, referer = seriesUrl, subtitleCallback = subtitleCallback) { link ->
+                                Log.d("igay69", "EXTRACTOR CALLBACK -> ${link.toString()}")
                                 callback(link)
                             }
-                            if (tryOk) found = true
+                            if (ok) found = true
+                        } catch (e: Exception) {
+                            Log.e("igay69", "Fallback loadExtractor exception for $norm: ${e.message}")
                         }
-                    } else {
-                        Log.d("igay69", "No direct mp4/m3u8 found in host page for $url")
                     }
-                } catch (ee: Exception) {
-                    Log.e("igay69", "Error when fallback parsing $url -> ${ee.message}")
                 }
             }
-        } catch (e: Exception) {
-            Log.e("igay69", "Exception while loadExtractor($url): ${e.message}")
         }
+
+        Log.d("igay69", "=== finished series loadLinks; found=$found ===")
+        return found
+    }
+
+    // Nếu không phải series#part -> xem data là link host / episode trực tiếp
+    try {
+        Log.d("igay69", "Treating data as host URL -> trying loadExtractor for $data")
+        val ok = loadExtractor(
+            data,
+            referer = null,
+            subtitleCallback = subtitleCallback
+        ) { link ->
+            Log.d("igay69", "EXTRACTOR CALLBACK -> ${link.toString()}")
+            callback(link)
+        }
+        if (ok) found = true
+        else {
+            // fallback: fetch page and try to extract direct mp4/m3u8
+            val pageHtml = try { app.get(data, headers = mapOf("Referer" to data)).body?.string() ?: "" } catch (e: Exception) { "" }
+            val videoRegex = Regex("(https?:\\\\?/\\\\?/[^\\s'\"<>]+?\\.(?:m3u8|mp4)(?:\\?[^\\s'\"<>]*)?)", RegexOption.IGNORE_CASE)
+            val matches = videoRegex.findAll(pageHtml).map { it.groupValues[1].replace("\\/", "/") }.distinct().toList()
+            if (matches.isNotEmpty()) {
+                matches.forEach { v ->
+                    try {
+                        val ok2 = loadExtractor(v, referer = data, subtitleCallback = subtitleCallback) { link ->
+                            Log.d("igay69", "EXTRACTOR CALLBACK (fallback) -> ${link.toString()}")
+                            callback(link)
+                        }
+                        if (ok2) found = true
+                    } catch (e: Exception) {
+                        Log.e("igay69", "Fallback loadExtractor($v) error: ${e.message}")
+                    }
+                }
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("igay69", "Exception in host handling: ${e.message}")
     }
 
     Log.d("igay69", "=== finished loadLinks; found=$found ===")
