@@ -142,63 +142,105 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+    val document = try {
+        app.get(data).document
+    } catch (e: Exception) {
+        Log.e("igay69", "loadLinks: failed to fetch $data -> ${e.message}")
+        return false
+    }
+
+    Log.d("igay69", "=== LOAD LINKS for: $data ===")
+    Log.d("igay69", "Document title: ${document.selectFirst("title")?.text() ?: "no title"}")
+
     var found = false
-    val visited = mutableSetOf<String>()
 
-    // Danh sách domain server cần lấy
-    val serverDomains = listOf(
-        "mxdrop.to", "mixdrop.to",
-        "streamtape.com",
-        "filemoon.to",
-        "dood", "doodstream.com", // doodstream, dood.to...
-        "vidcloud"
+    // 1) Nếu trang này có mirror menu giống trước -> lấy ra
+    val mirrorUrls = document.select("ul#mirrorMenu a.mirror-opt, a.dropdown-item.mirror-opt")
+        .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
+        .toMutableSet()
+    Log.d("igay69", "Mirrors found from data-url: ${mirrorUrls.joinToString()}")
+
+    // 2) Nếu không có mirrors, thử iframe trực tiếp trong trang (nguồn embed)
+    if (mirrorUrls.isEmpty()) {
+        document.selectFirst("iframe[src], iframe[data-src]")?.let { iframe ->
+            val src = iframe.absUrl("src").ifBlank { iframe.attr("data-src") }
+            if (src.isNotBlank()) {
+                mirrorUrls.add(src)
+                Log.d("igay69", "Added iframe src as mirror: $src")
+            }
+        }
+    }
+
+    // 3) Nếu vẫn chưa có gì, và nếu đây là trang bài viết (có responsive-tabs / tabcontent),
+    //    thu thập tất cả <a> trong các panels (linksv1, linksv2, ...)
+    val tabAnchors = document.select(
+        ".responsive-tabs__panel a[href], .responsive-tabs__panel a[href] *[href], " +
+        ".tabcontent a[href], .tabcontent a[href] *[href], " +
+        ".single-blog-content a[href]"
     )
+    if (tabAnchors.isNotEmpty()) {
+        tabAnchors.forEach { a ->
+            // absUrl sẽ trả link đầy đủ nếu có, nếu không thì lấy attr("href")
+            val href = a.absUrl("href").ifBlank { a.attr("href") }.trim()
+            if (href.isNotBlank() && href != "#") mirrorUrls.add(href)
+        }
+        Log.d("igay69", "Anchors found in tabs/content: ${mirrorUrls.joinToString()}")
+    }
 
-    suspend fun processLink(link: String, referer: String) {
-        if (visited.add(link)) {
-            val ok = loadExtractor(link, referer = referer, subtitleCallback = subtitleCallback, callback = callback)
+    // 4) Nếu mirrorUrls rỗng, có thể data chính là một link host (ví dụ luluvdoo...), thêm chính nó
+    if (mirrorUrls.isEmpty()) {
+        Log.d("igay69", "No mirrors/iframe/tabs found; will try the page itself: $data")
+        mirrorUrls.add(data)
+    }
+
+    // Chuẩn hóa và loại trùng
+    val urls = mirrorUrls.map { raw ->
+        // handle protocol-relative and whitespace
+        raw.trim().let { u ->
+            if (u.startsWith("//")) "https:$u" else u
+        }
+    }.filter { it.isNotBlank() }.toSet()
+
+    // Helper: try loadExtractor trên từng url; nếu loadExtractor trả true -> đánh dấu found = true
+    urls.forEach { url ->
+        try {
+            Log.d("igay69", "Trying loadExtractor for: $url (referer=$data)")
+            val ok = loadExtractor(
+                url,
+                referer = data,
+                subtitleCallback = subtitleCallback
+            ) { link ->
+                // Ghi log an toàn và forward link
+                Log.d("igay69", "EXTRACTOR CALLBACK -> ${link.toString()}")
+                callback(link)
+            }
+            Log.d("igay69", "loadExtractor returned $ok for $url")
             if (ok) found = true
+        } catch (e: Exception) {
+            Log.e("igay69", "Exception while loadExtractor($url): ${e.message}")
         }
     }
 
-    suspend fun extractFromPage(pageUrl: String, referer: String) {
-        val doc = runCatching { app.get(pageUrl, referer = referer).document }.getOrNull() ?: return
-
-        // 1. Quét iframe và a[href]
-        doc.select("iframe[src], a[href]").forEach { el ->
-            val link = el.absUrl("src").ifBlank { el.absUrl("href") }.trim()
-            if (link.startsWith("http") && serverDomains.any { link.contains(it, ignoreCase = true) }) {
-                processLink(link, pageUrl)
+    // --- Extra: nếu muốn biết số phần (part) từ text của <a>, ta log ra giúp debug ---
+    // (không ảnh hưởng tới logic chính; chỉ informational)
+    try {
+        document.select(".responsive-tabs__panel, .tabcontent, .single-blog-content").forEach { panel ->
+            panel.select("a[href]").forEach { a ->
+                val txt = a.text().trim()
+                val partMatch = Regex("(?i)part\\s*0*([0-9]{1,3})|tập\\s*0*([0-9]{1,3})").find(txt)
+                if (partMatch != null) {
+                    val num = partMatch.groupValues.filter { it.isNotBlank() }.lastOrNull()
+                    if (!num.isNullOrBlank()) {
+                        Log.d("igay69", "Found link part#$num -> ${a.absUrl("href").ifBlank { a.attr("href") }} (text='$txt')")
+                    }
+                }
             }
         }
-
-        // 2. Quét link trong toàn bộ HTML/text (bắt cả markdown)
-        val regex = Regex("""https?://[^\s"')<>]+""")
-        regex.findAll(doc.html()).forEach { match ->
-            val link = match.value
-            if (serverDomains.any { link.contains(it, ignoreCase = true) }) {
-                processLink(link, pageUrl)
-            }
-        }
+    } catch (e: Exception) {
+        // ignore
     }
 
-    // Mở trang chính
-    val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
-    val iframeUrl = doc.selectFirst("iframe[src]")?.absUrl("src")
-
-    if (!iframeUrl.isNullOrEmpty()) {
-        val iframeDoc = runCatching { app.get(iframeUrl, referer = data).document }.getOrNull()
-        val intermediateLinks = iframeDoc?.select("a[href]")?.mapNotNull { it.absUrl("href").takeIf { href -> href.startsWith("http") } } ?: emptyList()
-
-        if (intermediateLinks.isNotEmpty()) {
-            for (link in intermediateLinks) extractFromPage(link, referer = iframeUrl)
-        } else {
-            extractFromPage(iframeUrl, referer = data)
-        }
-    } else {
-        extractFromPage(data, referer = data)
-    }
-
+    Log.d("igay69", "=== finished loadLinks; found=$found ===")
     return found
 }
 }
