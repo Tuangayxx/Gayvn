@@ -84,44 +84,54 @@ override suspend fun search(query: String): List<SearchResponse> {
 override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    val title = document.selectFirst("meta[property=og:title]")?.attr("content")
-        ?: document.selectFirst("h1")?.text()
+    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
+        ?: document.selectFirst("h1.single-post-title")?.text()?.trim()
         ?: url
 
     val poster = fixUrlNull(
         document.selectFirst("meta[property=og:image]")?.attr("content")
+            ?: listOf("data-src", "data-lazy-src", "src")
+                .mapNotNull { attr -> document.selectFirst("figure.wp-block-image img")?.absUrl(attr) }
+                .firstOrNull { it.isNotBlank() }
     )
 
-    val description = document.selectFirst("meta[property=og:description]")?.attr("content")
+    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
+        ?: document.selectFirst("div.single-blog-content")?.text()?.trim()
 
-    // Lấy danh sách tập (Part/Tập) - chỉ giữ mỗi tập 1 lần
-    val episodes = document.select("a[href]").mapNotNull { a ->
-        val href = a.absUrl("href")
-        val text = a.text().trim()
-        val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
-        val epNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
-        if (epNum != null) {
-            epNum to href // href là link trang tập, loadLinks sẽ xử lý tiếp
-        } else null
-    }
-        .distinctBy { it.first }
+    val recommendations = document.select("div.list-item div.video.col-2")
+        .mapNotNull { it.toRecommendResult() }
+
+    // Lấy danh sách tập, loại trùng theo số tập
+    val episodes = document.select("div.single-blog-content a[href]")
+        .mapNotNull { a ->
+            val href = a.attr("href").trim()
+            val text = a.text().trim()
+            val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
+            val partNumber = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+
+            if (href.startsWith("http") && partNumber != null) {
+                partNumber to href
+            } else null
+        }
+        .distinctBy { it.first } // chỉ giữ mỗi số tập 1 lần
         .sortedBy { it.first }
-        .map { (epNum, href) ->
+        .map { (partNumber, href) ->
             newEpisode(href) {
-                this.name = "Tập $epNum"
-                this.episode = epNum
+                this.name = "Tập $partNumber"
             }
         }
 
     return if (episodes.isNotEmpty()) {
-        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+        newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
             this.posterUrl = poster
             this.plot = description
+            this.recommendations = recommendations
         }
     } else {
-        newMovieLoadResponse(title, url, TvType.Movie, url) {
+        newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
+            this.recommendations = recommendations
         }
     }
 }
