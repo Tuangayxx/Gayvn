@@ -145,17 +145,44 @@ override suspend fun loadLinks(
     var found = false
     val visited = mutableSetOf<String>()
 
+    // Danh sách domain server cần lấy
+    val serverDomains = listOf(
+        "mxdrop.to", "mixdrop.to",
+        "streamtape.com",
+        "filemoon.to",
+        "dood", "doodstream.com", // doodstream, dood.to...
+        "vidcloud"
+    )
+
+    suspend fun processLink(link: String, referer: String) {
+        if (visited.add(link)) {
+            val ok = loadExtractor(link, referer = referer, subtitleCallback = subtitleCallback, callback = callback)
+            if (ok) found = true
+        }
+    }
+
     suspend fun extractFromPage(pageUrl: String, referer: String) {
         val doc = runCatching { app.get(pageUrl, referer = referer).document }.getOrNull() ?: return
+
+        // 1. Quét iframe và a[href]
         doc.select("iframe[src], a[href]").forEach { el ->
             val link = el.absUrl("src").ifBlank { el.absUrl("href") }.trim()
-            if (link.startsWith("http") && visited.add(link)) {
-                val ok = loadExtractor(link, referer = pageUrl, subtitleCallback = subtitleCallback, callback = callback)
-                if (ok) found = true
+            if (link.startsWith("http") && serverDomains.any { link.contains(it, ignoreCase = true) }) {
+                processLink(link, pageUrl)
+            }
+        }
+
+        // 2. Quét link trong toàn bộ HTML/text (bắt cả markdown)
+        val regex = Regex("""https?://[^\s"')<>]+""")
+        regex.findAll(doc.html()).forEach { match ->
+            val link = match.value
+            if (serverDomains.any { link.contains(it, ignoreCase = true) }) {
+                processLink(link, pageUrl)
             }
         }
     }
 
+    // Mở trang chính
     val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
     val iframeUrl = doc.selectFirst("iframe[src]")?.absUrl("src")
 
