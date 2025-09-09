@@ -25,7 +25,7 @@ class iGay69 : MainAPI() {
         ""                                             to "Mới nhất",
         "category/porn/gaydar-porn"                    to "Gaydar",
         "category/leak"                                to "Leak",
-        "category/leak/page/4"                         to "Leak4"
+        "category/leak/page/4"                         to "Leak4",
         "category/magazine"                            to "Magazine",
         "category/collection"                          to "Collection",
     )    
