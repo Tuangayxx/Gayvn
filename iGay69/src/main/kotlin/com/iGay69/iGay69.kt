@@ -84,51 +84,49 @@ override suspend fun search(query: String): List<SearchResponse> {
 override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
-        ?: document.selectFirst("h1.single-post-title")?.text()?.trim()
+    val title = document.selectFirst("meta[property=og:title]")?.attr("content")
+        ?: document.selectFirst("h1.single-post-title")?.text()
         ?: url
 
     val poster = fixUrlNull(
         document.selectFirst("meta[property=og:image]")?.attr("content")
-            ?: listOf("data-src", "data-lazy-src", "src")
-                .mapNotNull { attr -> document.selectFirst("figure.wp-block-image img")?.absUrl(attr) }
-                .firstOrNull { it.isNotBlank() }
+            ?: document.selectFirst("figure.wp-block-image img")?.absUrl("src")
     )
 
-    val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
-        ?: document.selectFirst("div.single-blog-content")?.text()?.trim()
+    val description = document.selectFirst("meta[property=og:description]")?.attr("content")
+        ?: document.selectFirst("div.single-blog-content")?.text()
 
     val recommendations = document.select("div.list-item div.video.col-2")
         .mapNotNull { it.toRecommendResult() }
 
-    // Lấy danh sách tập, loại trùng theo số tập
+    // Lấy danh sách tập (Part/Tập)
     val episodes = document.select("div.single-blog-content a[href]")
         .mapNotNull { a ->
             val href = a.attr("href").trim()
             val text = a.text().trim()
             val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
-            val partNumber = match?.groupValues?.getOrNull(2)?.toIntOrNull()
-
-            if (href.startsWith("http") && partNumber != null) {
-                partNumber to href
+            val epNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+            if (href.startsWith("http") && epNum != null) {
+                epNum to href
             } else null
         }
-        .distinctBy { it.first } // chỉ giữ mỗi số tập 1 lần
+        .distinctBy { it.first }
         .sortedBy { it.first }
-        .map { (partNumber, href) ->
+        .map { (epNum, href) ->
             newEpisode(href) {
-                this.name = "Tập $partNumber"
+                this.name = "Tập $epNum"
+                this.episode = epNum
             }
         }
 
     return if (episodes.isNotEmpty()) {
-        newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
+        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
             this.plot = description
             this.recommendations = recommendations
         }
     } else {
-        newMovieLoadResponse(title, url, TvType.NSFW, url) {
+        newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.plot = description
             this.recommendations = recommendations
@@ -142,48 +140,55 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+    val doc = app.get(data).document
     var found = false
 
-    val allowedHosts = listOf(
-        "mixdrop", "streamtape", "filemoon", "dood", "voe", "vidhide", "upstream"
-    )
+    // B1: lấy iframe chính
+    val iframeUrl = doc.selectFirst("iframe[src]")?.absUrl("src")
+    if (iframeUrl.isNullOrEmpty()) {
+        Log.d("Error:", "Iframe not found")
+        return false
+    }
 
-    suspend fun extractFromPage(pageUrl: String, referer: String): Boolean {
-        val doc = runCatching { app.get(pageUrl, referer = referer).document }.getOrNull() ?: return false
+    // B2: mở iframe → tìm các nút nguồn
+    val iframeDoc = app.get(iframeUrl).document
+    val buttons = iframeDoc.select("a[href], button[data-href]")
+    if (buttons.isEmpty()) {
+        Log.d("Error:", "No source buttons found")
+        return false
+    }
 
-        val mirrors = doc.select("a[href], iframe[src]").mapNotNull { el ->
-            val link = el.attr("href").ifBlank { el.attr("src") }.trim()
-            val host = runCatching { java.net.URI(link).host?.lowercase() }.getOrNull()
-            if (link.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) link else null
-        }.toSet()
+    // B3: duyệt từng nút nguồn
+    for (button in buttons) {
+        val intermediateUrl = button.absUrl("href").ifBlank { button.attr("data-href") }
+        if (intermediateUrl.isBlank()) continue
 
-        for (url in mirrors) {
-            val ok = loadExtractor(url, referer = pageUrl, subtitleCallback = subtitleCallback) {
-                callback(it)
+        try {
+            // B4: mở trang trung gian → tìm link thực
+            val finalDoc = app.get(intermediateUrl).document
+            val finalElement = finalDoc.selectFirst("a[href], source[src]")
+            val finalUrl = when (finalElement?.tagName()) {
+                "a" -> finalElement.absUrl("href")
+                "source" -> finalElement.absUrl("src")
+                else -> null
             }
-            if (ok) found = true
+
+            if (!finalUrl.isNullOrEmpty()) {
+                val ok = loadExtractor(
+                    finalUrl,
+                    referer = data,
+                    subtitleCallback = subtitleCallback,
+                    callback = callback
+                )
+                if (ok) found = true
+            } else {
+                Log.d("Error:", "No final link found at $intermediateUrl")
+            }
+        } catch (e: Exception) {
+            Log.e("Error:", "Error processing link: $intermediateUrl $e")
         }
-
-        return found
     }
 
-    // Bước 1: mở trang tập
-    val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
-
-    // Bước 2: kiểm tra có link trung gian không
-    val intermediateLinks = doc.select("a[href]").mapNotNull { a ->
-        val href = a.attr("href").trim()
-        if (href.startsWith("http") && Regex("/[def]/").containsMatchIn(href)) href else null
-    }
-
-    // Bước 3: nếu có link trung gian, mở từng cái để lấy link thực
-    for (link in intermediateLinks) {
-        val ok = extractFromPage(link, referer = data)
-        if (ok) return true
-    }
-
-    // Bước 4: nếu không có trung gian, thử extract trực tiếp từ trang tập
-    val ok = extractFromPage(data, referer = data)
-    return ok || found
+    return found
 }
 }
