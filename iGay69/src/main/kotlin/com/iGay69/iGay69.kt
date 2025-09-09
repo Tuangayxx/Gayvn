@@ -101,33 +101,36 @@ override suspend fun load(url: String): LoadResponse {
     val recommendations = document.select("div.list-item div.video.col-2")
         .mapNotNull { it.toRecommendResult() }
 
+    // Tạo danh sách tập phim (chỉ gán tên và data, không gán link phát)
     val episodes = document.select("div.single-blog-content a[href]").mapNotNull { a ->
         val href = a.attr("href").trim()
         val text = a.text().trim()
-        val isPart = Regex("(?i)(part|tập)\\s*\\d+").containsMatchIn(text)
-        if (href.startsWith("http") && isPart) {
-            newEpisode(href) { this.name = text }
+        val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
+        val partNumber = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+
+        if (href.startsWith("http") && partNumber != null) {
+            newEpisode(href) {
+                this.name = "Tập $partNumber"
+            }
         } else null
     }.sortedBy {
         Regex("\\d+").find(it.name ?: "")?.value?.toIntOrNull() ?: Int.MAX_VALUE
     }
 
     return if (episodes.isNotEmpty()) {
-        // TV Series
         newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
             this.posterUrl = poster
             this.plot = description
             this.recommendations = recommendations
         }
     } else {
-        // Movie
         newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
             this.recommendations = recommendations
         }
     }
-} 
+}
 
 override suspend fun loadLinks(
     data: String,
@@ -138,108 +141,42 @@ override suspend fun loadLinks(
     val document = app.get(data).document
     var found = false
 
-    // Các host hợp lệ (có extractor)
     val allowedHosts = listOf(
-        "streamtape.com",
-        "filemoon.to",
-        "mixdrop.to",   // mxdrop.to thường redirect về mixdrop.to
-        "mxdrop.to",
-        "luluvid.com"   // lulustream đang dùng domain luluvid.com
+        "mixdrop.co", "mixdrop.to", "streamtape.com", "filemoon.sx", "filemoon.to",
+        "dood.watch", "dood.so", "voe.sx", "voe.to", "vidhide.com", "upstream.to"
     )
 
-    fun isAllowed(url: String): Boolean {
-        return try {
-            val host = java.net.URI(url).host?.lowercase() ?: return false
-            allowedHosts.any { host == it || host.endsWith(".$it") }
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    // Thu thập mirrors từ tabs (ưu tiên)
     val mirrors = linkedSetOf<String>()
 
-    document.select("div.responsive-tabs__panel a[href^=http]").forEach { a ->
+    // Quét các link trong tab nguồn phim
+    document.select("div.responsive-tabs__panel a[href]").forEach { a ->
         val href = a.attr("href").trim()
-        if (href.isNotBlank() && isAllowed(href)) {
+        val host = runCatching { java.net.URI(href).host?.lowercase() }.getOrNull()
+        if (href.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
             mirrors.add(href)
         }
     }
 
-    // Fallback: nếu tabs không có, thử quét toàn bộ anchor trong content
+    // Fallback: iframe nếu không có tab
     if (mirrors.isEmpty()) {
-        document.select("article a[href^=http], .single-blog-content a[href^=http]").forEach { a ->
-            val href = a.attr("href").trim()
-            if (href.isNotBlank() && isAllowed(href)) {
-                mirrors.add(href)
-            }
-        }
-    }
-
-    // Fallback cuối: iframe nhưng chỉ lấy host hợp lệ để tránh dính ads
-    if (mirrors.isEmpty()) {
-        document.select("iframe[src^=http]").forEach { f ->
-            val src = f.attr("src").trim()
-            if (src.isNotBlank() && isAllowed(src)) {
+        document.select("iframe[src]").forEach { iframe ->
+            val src = iframe.attr("src").trim()
+            val host = runCatching { java.net.URI(src).host?.lowercase() }.getOrNull()
+            if (src.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
                 mirrors.add(src)
             }
         }
     }
 
-    // Một số link kiểu /d/ cần mở ra thêm 1 bước để lấy link/iframe thực
-    suspend fun resolveIfDoor(url: String, referer: String): String? {
-        return try {
-            val u = url.lowercase()
-            val looksLikeDoor =
-                u.contains("/d/") || u.contains("/e/") || u.contains("/f/")
-
-            if (!looksLikeDoor) return null
-
-            val doc = app.get(url, referer = referer).document
-
-            // Ưu tiên iframe của host hợp lệ
-            doc.select("iframe[src^=http]").firstOrNull { iframe ->
-                val src = iframe.attr("src").trim()
-                src.isNotBlank() && isAllowed(src)
-            }?.attr("src")?.trim()?.let { return it }
-
-            // Nếu không có iframe, thử anchor hợp lệ
-            doc.select("a[href^=http]").firstOrNull { a ->
-                val href = a.attr("href").trim()
-                href.isNotBlank() && isAllowed(href)
-            }?.attr("href")?.trim()
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    // Gọi extractor (chạy tuần tự để đảm bảo set found chính xác)
+    // Gọi extractor cho từng link
     for (url in mirrors) {
-        // Trước tiên thử trực tiếp
-        runCatching {
-            val ok = loadExtractor(
-                url,
-                referer = data, // giữ referer là trang bài viết
-                subtitleCallback = subtitleCallback,
-                callback = { link -> callback(link) }
-            )
-            if (ok) {
-                found = true
-                // Không break: cho phép thu thêm mirrors khác
-            } else {
-                // Nếu fail, thử mở “door page” để lấy link thực rồi extract lại
-                val resolved = resolveIfDoor(url, data)
-                if (!resolved.isNullOrBlank()) {
-                    val ok2 = loadExtractor(
-                        resolved,
-                        referer = url, // đổi referer sang trang door vừa mở
-                        subtitleCallback = subtitleCallback,
-                        callback = { link -> callback(link) }
-                    )
-                    if (ok2) found = true
-                }
-            }
-        }
+        val ok = loadExtractor(
+            url,
+            referer = data,
+            subtitleCallback = subtitleCallback,
+            callback = { link -> callback(link) }
+        )
+        if (ok) found = true
     }
 
     return found
