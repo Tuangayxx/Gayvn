@@ -26,6 +26,10 @@ class iGay69 : MainAPI() {
         "category/porn/gaydar-porn"                    to "Gaydar",
         "category/leak"                                to "Leak",
         "category/leak/page/4"                         to "Leak4",
+        "category/leak/page/7"                         to "Leak7",
+        "category/leak/page/10"                        to "Leak10",
+        "category/leak/page/13"                        to "Leak13",
+        "category/leak/page/16"                        to "Leak16",
         "category/magazine"                            to "Magazine",
         "category/collection"                          to "Collection",
     )    
@@ -34,7 +38,7 @@ class iGay69 : MainAPI() {
     val pageUrl = if (page == 1) 
         "$mainUrl/${request.data}" 
     else 
-        "$mainUrl/${request.data}/page/$page"
+        "$mainUrl/${request.data}/page/$page/"
 
     val document = app.get(pageUrl).document
     val home = document.select("article.blog-entry").mapNotNull { it.toSearchResult() }
