@@ -154,55 +154,106 @@ override suspend fun loadLinks(
 
     var found = false
 
-    // 1) Nếu trang này có mirror menu giống trước -> lấy ra
-    val mirrorUrls = document.select("ul#mirrorMenu a.mirror-opt, a.dropdown-item.mirror-opt")
-        .mapNotNull { it.attr("data-url").takeIf { u -> u.isNotBlank() && u != "#" } }
-        .toMutableSet()
-    Log.d("igay69", "Mirrors found from data-url: ${mirrorUrls.joinToString()}")
+    // --- 1) Thu thập tất cả URL có ích ---
+    val anchorSelectors = listOf(
+        ".responsive-tabs__panel a[href]",
+        ".tabcontent a[href]",
+        ".single-blog-content a[href]",
+        ".list-item a[href]",
+        "ul#mirrorMenu a.mirror-opt",
+        "a.dropdown-item.mirror-opt",
+        "iframe[src]"
+    )
 
-    // 2) Nếu không có mirrors, thử iframe trực tiếp trong trang (nguồn embed)
-    if (mirrorUrls.isEmpty()) {
-        document.selectFirst("iframe[src], iframe[data-src]")?.let { iframe ->
-            val src = iframe.absUrl("src").ifBlank { iframe.attr("data-src") }
-            if (src.isNotBlank()) {
-                mirrorUrls.add(src)
-                Log.d("igay69", "Added iframe src as mirror: $src")
+    val rawUrls = linkedSetOf<String>()
+    anchorSelectors.forEach { sel ->
+        document.select(sel).forEach { el ->
+            val href = when {
+                el.tagName() == "iframe" -> el.absUrl("src").ifBlank { el.attr("data-src") }
+                else -> el.absUrl("href").ifBlank { el.attr("href") }
+            }?.trim() ?: ""
+            if (href.isNotBlank() && href != "#" && !href.startsWith("javascript:")) {
+                // normalize protocol-relative
+                val norm = if (href.startsWith("//")) "https:$href" else href
+                rawUrls.add(norm)
             }
         }
     }
 
-    // 3) Nếu vẫn chưa có gì, và nếu đây là trang bài viết (có responsive-tabs / tabcontent),
-    //    thu thập tất cả <a> trong các panels (linksv1, linksv2, ...)
-    val tabAnchors = document.select(
-        ".responsive-tabs__panel a[href], .responsive-tabs__panel a[href] *[href], " +
-        ".tabcontent a[href], .tabcontent a[href] *[href], " +
-        ".single-blog-content a[href]"
-    )
-    if (tabAnchors.isNotEmpty()) {
-        tabAnchors.forEach { a ->
-            // absUrl sẽ trả link đầy đủ nếu có, nếu không thì lấy attr("href")
-            val href = a.absUrl("href").ifBlank { a.attr("href") }.trim()
-            if (href.isNotBlank() && href != "#") mirrorUrls.add(href)
+    Log.d("igay69", "rawUrls collected: ${rawUrls.joinToString().take(2000)}")
+
+    // --- 2) Nhóm theo số tập (nếu có) dựa vào text của <a> hoặc filename ---
+    val partMap = mutableMapOf<Int, MutableSet<String>>() // part -> set(url)
+    rawUrls.forEach { url ->
+        // Try to find a nearby anchor text that mentions part/tập
+        val anchors = document.select("a[href]").filter { a ->
+            val href = a.absUrl("href").ifBlank { a.attr("href") }
+            href.isNotBlank() && (href == url || url.contains(href) || href.contains(url))
         }
-        Log.d("igay69", "Anchors found in tabs/content: ${mirrorUrls.joinToString()}")
+        var partNum: Int? = null
+        if (anchors.isNotEmpty()) {
+            anchors.forEach { a ->
+                val t = a.text().trim()
+                val m = Regex("(?i)\\b(?:part|tập)\\s*0*([0-9]{1,3})\\b").find(t)
+                if (m != null) {
+                    partNum = m.groupValues.getOrNull(1)?.toIntOrNull()
+                }
+            }
+        }
+        // fallback: try find "partX" in url path
+        if (partNum == null) {
+            val m2 = Regex("(?i)(?:part|p|ep|episode)[-_\\. ]*0*([0-9]{1,3})").find(url)
+            partNum = m2?.groupValues?.getOrNull(1)?.toIntOrNull()
+        }
+
+        if (partNum != null) {
+            partMap.getOrPut(partNum) { linkedSetOf() }.add(url)
+        } else {
+            // no part number -> put under 0 (general)
+            partMap.getOrPut(0) { linkedSetOf() }.add(url)
+        }
     }
 
-    // 4) Nếu mirrorUrls rỗng, có thể data chính là một link host (ví dụ luluvdoo...), thêm chính nó
-    if (mirrorUrls.isEmpty()) {
-        Log.d("igay69", "No mirrors/iframe/tabs found; will try the page itself: $data")
-        mirrorUrls.add(data)
+    Log.d("igay69", "partMap keys: ${partMap.keys}")
+
+    // --- 3) Nếu đây là 1 trang series (nhiều part) và data không phải link host, cố gắng xử lý ---
+    val isIgayPage = data.contains("igay69.com") || data.contains("iGay69")
+    val multipleParts = partMap.keys.size > 1 || (partMap.keys.size == 1 && partMap.keys.first() > 0)
+
+    // Try to extract requested part from 'data' url (fragment or query)
+    val requestedPart: Int? = run {
+        val fragMatch = Regex("#(?:part|ep|tập)0*([0-9]{1,3})", RegexOption.IGNORE_CASE).find(data)
+            ?: Regex("[?&](?:part|ep|tập)=0*([0-9]{1,3})", RegexOption.IGNORE_CASE).find(data)
+        fragMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
     }
 
-    // Chuẩn hóa và loại trùng
-    val urls = mirrorUrls.map { raw ->
-        // handle protocol-relative and whitespace
-        raw.trim().let { u ->
-            if (u.startsWith("//")) "https:$u" else u
+    // decide which urls to try
+    val urlsToTry = mutableSetOf<String>()
+    if (isIgayPage && multipleParts) {
+        if (requestedPart != null && partMap.containsKey(requestedPart)) {
+            urlsToTry.addAll(partMap[requestedPart]!!)
+            Log.d("igay69", "Detected requestedPart=$requestedPart; trying only its URLs")
+        } else {
+            // If CloudStream called loadLinks with series page (no requested part),
+            // we try to attempt all parts (so extractor can return playable streams for selected episode).
+            Log.d("igay69", "Series page detected; no specific part requested -> trying all part URLs")
+            partMap.values.forEach { urlsToTry.addAll(it) }
         }
-    }.filter { it.isNotBlank() }.toSet()
+    } else {
+        // not a series page (or no parts detected) -> try all rawUrls
+        urlsToTry.addAll(rawUrls)
+    }
 
-    // Helper: try loadExtractor trên từng url; nếu loadExtractor trả true -> đánh dấu found = true
-    urls.forEach { url ->
+    // Fallback: if nothing collected, try the page itself
+    if (urlsToTry.isEmpty()) {
+        urlsToTry.add(data)
+    }
+
+    Log.d("igay69", "urlsToTry count=${urlsToTry.size}")
+
+    // --- 4) Thử loadExtractor trên từng URL; nếu không được, fetch và dò mp4/m3u8 từ HTML ---
+    val videoUrlRegex = Regex("""(https?:\/\/[^\s"'<>]+?\.(?:m3u8|mp4)(?:\?[^\s"'<>]*)?)""", RegexOption.IGNORE_CASE)
+    for (url in urlsToTry) {
         try {
             Log.d("igay69", "Trying loadExtractor for: $url (referer=$data)")
             val ok = loadExtractor(
@@ -210,34 +261,40 @@ override suspend fun loadLinks(
                 referer = data,
                 subtitleCallback = subtitleCallback
             ) { link ->
-                // Ghi log an toàn và forward link
                 Log.d("igay69", "EXTRACTOR CALLBACK -> ${link.toString()}")
                 callback(link)
             }
             Log.d("igay69", "loadExtractor returned $ok for $url")
             if (ok) found = true
+
+            // if loadExtractor failed to produce links, attempt direct parse of the host page for mp4/m3u8
+            if (!ok) {
+                try {
+                    Log.d("igay69", "loadExtractor returned false -> fetching $url to search mp4/m3u8")
+                    val hostDoc = try { app.get(url, headers = mapOf("Referer" to data)).document } catch (e: Exception) { null }
+                    val hostHtml = hostDoc?.html() ?: app.get(url).body?.string() ?: ""
+                    // search for direct video urls
+                    val matches = videoUrlRegex.findAll(hostHtml).map { it.groupValues[1] }.toList()
+                    if (matches.isNotEmpty()) {
+                        matches.distinct().forEach { v ->
+                            Log.d("igay69", "Found direct video URL fallback -> $v")
+                            // forward to callback via loadExtractor (prefer), else try to create a minimal ExtractorLink
+                            val tryOk = loadExtractor(v, referer = url, subtitleCallback = subtitleCallback) { link ->
+                                Log.d("igay69", "EXTRACTOR CALLBACK (fallback) -> ${link.toString()}")
+                                callback(link)
+                            }
+                            if (tryOk) found = true
+                        }
+                    } else {
+                        Log.d("igay69", "No direct mp4/m3u8 found in host page for $url")
+                    }
+                } catch (ee: Exception) {
+                    Log.e("igay69", "Error when fallback parsing $url -> ${ee.message}")
+                }
+            }
         } catch (e: Exception) {
             Log.e("igay69", "Exception while loadExtractor($url): ${e.message}")
         }
-    }
-
-    // --- Extra: nếu muốn biết số phần (part) từ text của <a>, ta log ra giúp debug ---
-    // (không ảnh hưởng tới logic chính; chỉ informational)
-    try {
-        document.select(".responsive-tabs__panel, .tabcontent, .single-blog-content").forEach { panel ->
-            panel.select("a[href]").forEach { a ->
-                val txt = a.text().trim()
-                val partMatch = Regex("(?i)part\\s*0*([0-9]{1,3})|tập\\s*0*([0-9]{1,3})").find(txt)
-                if (partMatch != null) {
-                    val num = partMatch.groupValues.filter { it.isNotBlank() }.lastOrNull()
-                    if (!num.isNullOrBlank()) {
-                        Log.d("igay69", "Found link part#$num -> ${a.absUrl("href").ifBlank { a.attr("href") }} (text='$txt')")
-                    }
-                }
-            }
-        }
-    } catch (e: Exception) {
-        // ignore
     }
 
     Log.d("igay69", "=== finished loadLinks; found=$found ===")
