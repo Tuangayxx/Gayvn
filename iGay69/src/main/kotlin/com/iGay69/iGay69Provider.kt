@@ -8,8 +8,8 @@ import android.content.Context
 import com.iGay69.iGay69
 
 @CloudstreamPlugin
-class iGay69Provider: BasePlugin() {
-    override fun load() {
+class JayboysPlugin: Plugin() {
+    override fun load(context: Context) {
         registerMainAPI(iGay69())
         registerExtractorAPI(Bigwarp())
         registerExtractorAPI(Voe())
