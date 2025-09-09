@@ -81,16 +81,13 @@ override suspend fun search(query: String): List<SearchResponse> {
     return searchResponse
 }
    
-
-    override suspend fun load(url: String): LoadResponse {
+override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
-    // Lấy title từ og:title, fallback sang h1
     val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
         ?: document.selectFirst("h1.single-post-title")?.text()?.trim()
         ?: url
 
-    // Lấy poster từ og:image, fallback sang img trong figure
     val poster = fixUrlNull(
         document.selectFirst("meta[property=og:image]")?.attr("content")
             ?: listOf("data-src", "data-lazy-src", "src")
@@ -98,15 +95,12 @@ override suspend fun search(query: String): List<SearchResponse> {
                 .firstOrNull { it.isNotBlank() }
     )
 
-    // Lấy mô tả từ og:description, fallback sang nội dung bài viết
     val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
         ?: document.selectFirst("div.single-blog-content")?.text()?.trim()
 
-    // Lấy danh sách gợi ý
     val recommendations = document.select("div.list-item div.video.col-2")
         .mapNotNull { it.toRecommendResult() }
 
-    // Tìm các link có tiêu đề chứa Part/Tập
     val episodes = document.select("div.single-blog-content a[href]").mapNotNull { a ->
         val href = a.attr("href").trim()
         val text = a.text().trim()
@@ -114,28 +108,26 @@ override suspend fun search(query: String): List<SearchResponse> {
         if (href.startsWith("http") && isPart) {
             newEpisode(href) { this.name = text }
         } else null
-    }.sortedBy { ep ->
-        // Sắp xếp theo số part nếu có
-        Regex("\\d+").find(ep.name ?: "")?.value?.toIntOrNull() ?: Int.MAX_VALUE
+    }.sortedBy {
+        Regex("\\d+").find(it.name ?: "")?.value?.toIntOrNull() ?: Int.MAX_VALUE
     }
 
     return if (episodes.isNotEmpty()) {
-        // HTML có nhiều part => TV Series
-        newTvSeriesLoadResponse(title, url, TvType.NSFW, url) {
+        // TV Series
+        newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
             this.posterUrl = poster
             this.plot = description
             this.recommendations = recommendations
-            addEpisodes(episodes)
         }
     } else {
-        // HTML chỉ có 1 video => Movie
+        // Movie
         newMovieLoadResponse(title, url, TvType.NSFW, url) {
             this.posterUrl = poster
             this.plot = description
             this.recommendations = recommendations
         }
     }
-}
+} 
 
 override suspend fun loadLinks(
     data: String,
