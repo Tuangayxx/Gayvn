@@ -85,31 +85,25 @@ override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
     val title = document.selectFirst("meta[property=og:title]")?.attr("content")
-        ?: document.selectFirst("h1.single-post-title")?.text()
+        ?: document.selectFirst("h1")?.text()
         ?: url
 
     val poster = fixUrlNull(
         document.selectFirst("meta[property=og:image]")?.attr("content")
-            ?: document.selectFirst("figure.wp-block-image img")?.absUrl("src")
     )
 
     val description = document.selectFirst("meta[property=og:description]")?.attr("content")
-        ?: document.selectFirst("div.single-blog-content")?.text()
 
-    val recommendations = document.select("div.list-item div.video.col-2")
-        .mapNotNull { it.toRecommendResult() }
-
-    // Lấy danh sách tập (Part/Tập)
-    val episodes = document.select("div.single-blog-content a[href]")
-        .mapNotNull { a ->
-            val href = a.attr("href").trim()
-            val text = a.text().trim()
-            val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
-            val epNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
-            if (href.startsWith("http") && epNum != null) {
-                epNum to href
-            } else null
-        }
+    // Lấy danh sách tập (Part/Tập) - chỉ giữ mỗi tập 1 lần
+    val episodes = document.select("a[href]").mapNotNull { a ->
+        val href = a.absUrl("href")
+        val text = a.text().trim()
+        val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
+        val epNum = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+        if (epNum != null) {
+            epNum to href // href là link trang tập, loadLinks sẽ xử lý tiếp
+        } else null
+    }
         .distinctBy { it.first }
         .sortedBy { it.first }
         .map { (epNum, href) ->
@@ -123,13 +117,11 @@ override suspend fun load(url: String): LoadResponse {
         newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
             this.posterUrl = poster
             this.plot = description
-            this.recommendations = recommendations
         }
     } else {
         newMovieLoadResponse(title, url, TvType.Movie, url) {
             this.posterUrl = poster
             this.plot = description
-            this.recommendations = recommendations
         }
     }
 }
@@ -142,45 +134,25 @@ override suspend fun loadLinks(
 ): Boolean {
     var found = false
 
-    suspend fun extractFromPage(pageUrl: String, referer: String) {
-        val doc = runCatching { app.get(pageUrl, referer = referer).document }.getOrNull() ?: return
+    // Danh sách host hợp lệ
+    val allowedHosts = listOf("luluvid", "mixdrop", "streamtape", "filemoon")
 
-        // Quét tất cả iframe và link
-        doc.select("iframe[src], a[href]").forEach { el ->
-            val link = el.attr("src").ifBlank { el.attr("href") }.trim()
-            if (link.startsWith("http")) {
-                val ok = loadExtractor(link, referer = pageUrl, subtitleCallback = subtitleCallback, callback = callback)
-                if (ok) found = true
-            }
-        }
-    }
-
-    // 1. Mở trang tập
+    // Mở trang tập
     val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
 
-    // 2. Lấy iframe chính
-    val iframeUrl = doc.selectFirst("iframe[src]")?.absUrl("src")
-    if (!iframeUrl.isNullOrEmpty()) {
-        // 3. Mở iframe
-        val iframeDoc = runCatching { app.get(iframeUrl, referer = data).document }.getOrNull()
+    // Quét tất cả link server
+    val serverLinks = doc.select("a[href], iframe[src]").mapNotNull { el ->
+        val link = el.attr("href").ifBlank { el.attr("src") }.trim()
+        val host = runCatching { java.net.URI(link).host?.lowercase() }.getOrNull()
+        if (link.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
+            link
+        } else null
+    }.toSet()
 
-        // 4. Tìm link trung gian
-        val intermediateLinks = iframeDoc?.select("a[href]")?.mapNotNull { a ->
-            val href = a.absUrl("href")
-            if (href.startsWith("http")) href else null
-        } ?: emptyList()
-
-        if (intermediateLinks.isNotEmpty()) {
-            for (link in intermediateLinks) {
-                extractFromPage(link, referer = iframeUrl)
-            }
-        } else {
-            // Nếu không có link trung gian, quét trực tiếp trong iframe
-            extractFromPage(iframeUrl, referer = data)
-        }
-    } else {
-        // Nếu không có iframe, quét trực tiếp trong trang tập
-        extractFromPage(data, referer = data)
+    // Gọi extractor cho từng server
+    for (url in serverLinks) {
+        val ok = loadExtractor(url, referer = data, subtitleCallback = subtitleCallback, callback = callback)
+        if (ok) found = true
     }
 
     return found
