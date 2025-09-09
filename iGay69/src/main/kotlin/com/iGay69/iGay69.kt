@@ -142,53 +142,48 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
     var found = false
 
     val allowedHosts = listOf(
         "mixdrop", "streamtape", "filemoon", "dood", "voe", "vidhide", "upstream"
     )
 
-    val mirrors = linkedSetOf<String>()
+    suspend fun extractFromPage(pageUrl: String, referer: String): Boolean {
+        val doc = runCatching { app.get(pageUrl, referer = referer).document }.getOrNull() ?: return false
 
-    // Quét tất cả link tiềm năng
-    document.select("a[href], iframe[src]").forEach { el ->
-        val link = el.attr("href").ifBlank { el.attr("src") }.trim()
-        val host = runCatching { java.net.URI(link).host?.lowercase() }.getOrNull()
-        if (link.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
-            mirrors.add(link)
-        }
-    }
+        val mirrors = doc.select("a[href], iframe[src]").mapNotNull { el ->
+            val link = el.attr("href").ifBlank { el.attr("src") }.trim()
+            val host = runCatching { java.net.URI(link).host?.lowercase() }.getOrNull()
+            if (link.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) link else null
+        }.toSet()
 
-    // Fallback: nếu không tìm thấy, thử mở trang trung gian
-    if (mirrors.isEmpty()) {
-        val intermediate = document.select("a[href]").mapNotNull { a ->
-            val href = a.attr("href").trim()
-            if (href.startsWith("http") && Regex("/[def]/").containsMatchIn(href)) href else null
-        }
-
-        for (link in intermediate) {
-            val subDoc = runCatching { app.get(link, referer = data).document }.getOrNull() ?: continue
-            subDoc.select("iframe[src], a[href]").forEach { el ->
-                val subLink = el.attr("href").ifBlank { el.attr("src") }.trim()
-                val host = runCatching { java.net.URI(subLink).host?.lowercase() }.getOrNull()
-                if (subLink.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
-                    mirrors.add(subLink)
-                }
+        for (url in mirrors) {
+            val ok = loadExtractor(url, referer = pageUrl, subtitleCallback = subtitleCallback) {
+                callback(it)
             }
+            if (ok) found = true
         }
+
+        return found
     }
 
-    // Gọi extractor cho từng link thực
-    for (url in mirrors) {
-        val ok = loadExtractor(
-            url,
-            referer = data,
-            subtitleCallback = subtitleCallback
-        ) { link -> callback(link) }
-        if (ok) found = true
+    // Bước 1: mở trang tập
+    val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
+
+    // Bước 2: kiểm tra có link trung gian không
+    val intermediateLinks = doc.select("a[href]").mapNotNull { a ->
+        val href = a.attr("href").trim()
+        if (href.startsWith("http") && Regex("/[def]/").containsMatchIn(href)) href else null
     }
 
-    return found
+    // Bước 3: nếu có link trung gian, mở từng cái để lấy link thực
+    for (link in intermediateLinks) {
+        val ok = extractFromPage(link, referer = data)
+        if (ok) return true
+    }
+
+    // Bước 4: nếu không có trung gian, thử extract trực tiếp từ trang tập
+    val ok = extractFromPage(data, referer = data)
+    return ok || found
 }
 }
