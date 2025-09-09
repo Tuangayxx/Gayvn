@@ -42,6 +42,7 @@ class iGay69 : MainAPI() {
 
     val document = app.get(pageUrl).document
     val home = document.select("article.blog-entry").mapNotNull { it.toSearchResult() }
+    val hasNext = document.selectFirst("a.next.page-numbers") != null
 
     return newHomePageResponse(
         list = HomePageList(
@@ -49,7 +50,7 @@ class iGay69 : MainAPI() {
             list = home,
             isHorizontalImages = false
         ),
-        hasNext = true
+        hasNext = hasNext
     )
 }
 
