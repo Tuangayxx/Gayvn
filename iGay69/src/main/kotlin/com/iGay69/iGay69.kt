@@ -132,25 +132,29 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+    val document = app.get(data).document
     var found = false
 
-    // Danh sách host hợp lệ
-    val allowedHosts = listOf("luluvid", "mixdrop", "streamtape", "filemoon")
+    val mirrors = mutableSetOf<String>()
 
-    // Mở trang tập
-    val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
+    // Tabs links (lulustream, stream, ...)
+    document.select("div.responsive-tabs__panel a[href]").forEach { a ->
+        a.attr("href")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
+    }
 
-    // Quét tất cả link server
-    val serverLinks = doc.select("a[href], iframe[src]").mapNotNull { el ->
-        val link = el.attr("href").ifBlank { el.attr("src") }.trim()
-        val host = runCatching { java.net.URI(link).host?.lowercase() }.getOrNull()
-        if (link.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
-            link
-        } else null
-    }.toSet()
+    // Fallback: iframe embeds
+    document.select("iframe[src]").forEach { iframe ->
+        iframe.attr("src")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
+    }
 
-    serverLinks -> {
-        val ok = loadExtractor(url, referer = data, subtitleCallback = subtitleCallback, callback = callback)
+    mirrors.toList().amap { url ->
+        val ok = loadExtractor(
+            url,
+            referer = data,
+            subtitleCallback = subtitleCallback
+        ) { link ->
+            callback(link)
+        }
         if (ok) found = true
     }
 

@@ -18,6 +18,8 @@ class iGay69Provider: BasePlugin() {
         registerExtractorAPI(DoodstreamCom())
         registerExtractorAPI(vide0())
         registerExtractorAPI(LuluStream())
+        registerExtractorAPI(Lulustream1())
+        registerExtractorAPI(Lulustream2())
         registerExtractorAPI(StreamTape())
         registerExtractorAPI(MxDrop())
         registerExtractorAPI(FileMoon())
