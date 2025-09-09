@@ -151,7 +151,7 @@ override suspend fun loadLinks(
 
     val mirrors = linkedSetOf<String>()
 
-    // Quét link nguồn trong tab hoặc nội dung
+    // Quét tất cả link tiềm năng
     document.select("a[href], iframe[src]").forEach { el ->
         val link = el.attr("href").ifBlank { el.attr("src") }.trim()
         val host = runCatching { java.net.URI(link).host?.lowercase() }.getOrNull()
@@ -160,7 +160,26 @@ override suspend fun loadLinks(
         }
     }
 
-    // Gọi extractor cho từng nguồn
+    // Fallback: nếu không tìm thấy, thử mở trang trung gian
+    if (mirrors.isEmpty()) {
+        val intermediate = document.select("a[href]").mapNotNull { a ->
+            val href = a.attr("href").trim()
+            if (href.startsWith("http") && Regex("/[def]/").containsMatchIn(href)) href else null
+        }
+
+        for (link in intermediate) {
+            val subDoc = runCatching { app.get(link, referer = data).document }.getOrNull() ?: continue
+            subDoc.select("iframe[src], a[href]").forEach { el ->
+                val subLink = el.attr("href").ifBlank { el.attr("src") }.trim()
+                val host = runCatching { java.net.URI(subLink).host?.lowercase() }.getOrNull()
+                if (subLink.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
+                    mirrors.add(subLink)
+                }
+            }
+        }
+    }
+
+    // Gọi extractor cho từng link thực
     for (url in mirrors) {
         val ok = loadExtractor(
             url,
