@@ -101,21 +101,25 @@ override suspend fun load(url: String): LoadResponse {
     val recommendations = document.select("div.list-item div.video.col-2")
         .mapNotNull { it.toRecommendResult() }
 
-    // Tạo danh sách tập phim (chỉ gán tên và data, không gán link phát)
-    val episodes = document.select("div.single-blog-content a[href]").mapNotNull { a ->
-        val href = a.attr("href").trim()
-        val text = a.text().trim()
-        val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
-        val partNumber = match?.groupValues?.getOrNull(2)?.toIntOrNull()
+    // Lấy danh sách tập, loại trùng theo số tập
+    val episodes = document.select("div.single-blog-content a[href]")
+        .mapNotNull { a ->
+            val href = a.attr("href").trim()
+            val text = a.text().trim()
+            val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
+            val partNumber = match?.groupValues?.getOrNull(2)?.toIntOrNull()
 
-        if (href.startsWith("http") && partNumber != null) {
+            if (href.startsWith("http") && partNumber != null) {
+                partNumber to href
+            } else null
+        }
+        .distinctBy { it.first } // chỉ giữ mỗi số tập 1 lần
+        .sortedBy { it.first }
+        .map { (partNumber, href) ->
             newEpisode(href) {
                 this.name = "Tập $partNumber"
             }
-        } else null
-    }.sortedBy {
-        Regex("\\d+").find(it.name ?: "")?.value?.toIntOrNull() ?: Int.MAX_VALUE
-    }
+        }
 
     return if (episodes.isNotEmpty()) {
         newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
@@ -142,40 +146,27 @@ override suspend fun loadLinks(
     var found = false
 
     val allowedHosts = listOf(
-        "mixdrop.co", "mixdrop.to", "streamtape.com", "filemoon.sx", "filemoon.to",
-        "dood.watch", "dood.so", "voe.sx", "voe.to", "vidhide.com", "upstream.to"
+        "mixdrop", "streamtape", "filemoon", "dood", "voe", "vidhide", "upstream"
     )
 
     val mirrors = linkedSetOf<String>()
 
-    // Quét các link trong tab nguồn phim
-    document.select("div.responsive-tabs__panel a[href]").forEach { a ->
-        val href = a.attr("href").trim()
-        val host = runCatching { java.net.URI(href).host?.lowercase() }.getOrNull()
-        if (href.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
-            mirrors.add(href)
+    // Quét link nguồn trong tab hoặc nội dung
+    document.select("a[href], iframe[src]").forEach { el ->
+        val link = el.attr("href").ifBlank { el.attr("src") }.trim()
+        val host = runCatching { java.net.URI(link).host?.lowercase() }.getOrNull()
+        if (link.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
+            mirrors.add(link)
         }
     }
 
-    // Fallback: iframe nếu không có tab
-    if (mirrors.isEmpty()) {
-        document.select("iframe[src]").forEach { iframe ->
-            val src = iframe.attr("src").trim()
-            val host = runCatching { java.net.URI(src).host?.lowercase() }.getOrNull()
-            if (src.startsWith("http") && host != null && allowedHosts.any { host.contains(it) }) {
-                mirrors.add(src)
-            }
-        }
-    }
-
-    // Gọi extractor cho từng link
+    // Gọi extractor cho từng nguồn
     for (url in mirrors) {
         val ok = loadExtractor(
             url,
             referer = data,
-            subtitleCallback = subtitleCallback,
-            callback = { link -> callback(link) }
-        )
+            subtitleCallback = subtitleCallback
+        ) { link -> callback(link) }
         if (ok) found = true
     }
 
