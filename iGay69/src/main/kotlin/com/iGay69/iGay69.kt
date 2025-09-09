@@ -106,26 +106,34 @@ override suspend fun search(query: String): List<SearchResponse> {
     val recommendations = document.select("div.list-item div.video.col-2")
         .mapNotNull { it.toRecommendResult() }
 
-    // Lấy danh sách tập phim theo tiêu đề Part/Tập
+    // Tìm các link có tiêu đề chứa Part/Tập
     val episodes = document.select("div.single-blog-content a[href]").mapNotNull { a ->
         val href = a.attr("href").trim()
         val text = a.text().trim()
-
         val isPart = Regex("(?i)(part|tập)\\s*\\d+").containsMatchIn(text)
-        val episodeName = if (isPart) text else null
-
-        if (href.startsWith("http") && episodeName != null) {
-            newEpisode(href) {
-                this.name = episodeName
-            }
+        if (href.startsWith("http") && isPart) {
+            newEpisode(href) { this.name = text }
         } else null
+    }.sortedBy { ep ->
+        // Sắp xếp theo số part nếu có
+        Regex("\\d+").find(ep.name ?: "")?.value?.toIntOrNull() ?: Int.MAX_VALUE
     }
 
-    return newMovieLoadResponse(title, url, TvType.NSFW, url) {
-        this.posterUrl = poster
-        this.plot = description
-        this.recommendations = recommendations
-        this.episodes = episodes
+    return if (episodes.isNotEmpty()) {
+        // HTML có nhiều part => TV Series
+        newTvSeriesLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = poster
+            this.plot = description
+            this.recommendations = recommendations
+            addEpisodes(episodes)
+        }
+    } else {
+        // HTML chỉ có 1 video => Movie
+        newMovieLoadResponse(title, url, TvType.NSFW, url) {
+            this.posterUrl = poster
+            this.plot = description
+            this.recommendations = recommendations
+        }
     }
 }
 
