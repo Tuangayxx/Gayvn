@@ -149,8 +149,7 @@ override suspend fun loadLinks(
         } else null
     }.toSet()
 
-    // Gọi extractor cho từng server
-    for (url in serverLinks) {
+    serverLinks -> {
         val ok = loadExtractor(url, referer = data, subtitleCallback = subtitleCallback, callback = callback)
         if (ok) found = true
     }
