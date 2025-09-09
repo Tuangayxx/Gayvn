@@ -28,44 +28,34 @@ class MxDrop : MixDrop(){
     override var mainUrl = "https://mxdrop.to"
 }
 
-open class LuluStream : ExtractorApi() {
-    override var name = "LuluStream"
+class luluvid : LuluStream(){
     override var mainUrl = "https://luluvid.com"
+}
+
+open class Lulustream : ExtractorApi() {
+    override var name = "Lulustream"
+    override var mainUrl = "https://lulustream.com"
     override val requiresReferer = true
 
-    override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        val filecode = url.substringAfterLast("/")
-        val postUrl = "$mainUrl/d"
-        val post = app.post(
-            postUrl,
-            data = mapOf(
-                "op" to "embed",
-                "file_code" to filecode,
-                "auto" to "1",
-                "referer" to (referer ?: "")
-            )
-        ).document
-        post.selectFirst("script:containsData(vplayer)")?.data()
-            ?.let { script ->
-                Regex("file:\"(.*)\"").find(script)?.groupValues?.get(1)?.let { link ->
-                    callback.invoke(
-                        newExtractorLink(
-                            name,
-                            name,
-                            url = link,
-                            INFER_TYPE
-                        ) {
-                            this.referer = mainUrl
-                            this.quality = Qualities.P1080.value
-                        }
-                    )
-                }
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        val response = app.get(url,referer=mainUrl).document
+        val extractedpack =response.selectFirst("script:containsData(function(p,a,c,k,e,d))")?.data().toString()
+        JsUnpacker(extractedpack).unpack()?.let { unPacked ->
+            Regex("sources:\\[\\{file:\"(.*?)\"").find(unPacked)?.groupValues?.get(1)?.let { link ->
+                return listOf(
+                    newExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = link,
+                        INFER_TYPE
+                    ) {
+                        this.referer = referer ?: ""
+                        this.quality = Qualities.Unknown.value
+                    }
+                )
             }
+        }
+        return null
     }
 }
 

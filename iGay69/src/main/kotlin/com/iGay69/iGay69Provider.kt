@@ -17,7 +17,7 @@ class JayboysPlugin: Plugin() {
         registerExtractorAPI(dsio())
         registerExtractorAPI(DoodstreamCom())
         registerExtractorAPI(vide0())
-        registerExtractorAPI(LuluStream())
+        registerExtractorAPI(Lulustream())
         registerExtractorAPI(Lulustream1())
         registerExtractorAPI(Lulustream2())
         registerExtractorAPI(StreamTape())

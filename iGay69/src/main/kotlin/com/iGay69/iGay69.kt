@@ -22,10 +22,12 @@ class iGay69 : MainAPI() {
 
 
     override val mainPage = mainPageOf(
-        ""                         to "Latest",
+        ""                                             to "Mới nhất",
         "category/porn/gaydar-porn"                    to "Gaydar",
         "category/leak"                                to "Leak",
+        "category/leak/page/4"                         to "Leak4"
         "category/magazine"                            to "Magazine",
+        "category/collection"                          to "Collection",
     )    
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
@@ -88,12 +90,28 @@ override suspend fun search(query: String): List<SearchResponse> {
         ?: document.selectFirst("h1.single-post-title")?.text()?.trim()
         ?: url
 
-    val poster = fixUrlNull(
-        document.selectFirst("meta[property=og:image]")?.attr("content")
-            ?: listOf("data-src", "data-lazy-src", "src")
-                .mapNotNull { attr -> document.selectFirst("figure.wp-block-image img")?.absUrl(attr) }
-                .firstOrNull { it.isNotBlank() }
+    // robust poster extraction
+val poster = run {
+    val metaOg = document.selectFirst("meta[property=og:image]")?.attr("content")?.takeIf { it.isNotBlank() }
+    val linkImg = document.selectFirst("link[rel=image_src]")?.attr("href")?.takeIf { it.isNotBlank() }
+
+    val imgSelectors = listOf(
+        ".post-thumbnail img", ".wp-post-image", ".wp-block-image img",
+        "figure img", ".entry-thumb img", ".single-post img", ".site-logo img"
     )
+    val attrs = listOf("data-src", "data-lazy-src", "data-srcset", "src")
+
+    val fromImgs = imgSelectors.asSequence().mapNotNull { sel ->
+        document.selectFirst(sel)?.let { el ->
+            if (el.tagName() == "meta") el.attr("content")
+            else attrs.mapNotNull { a -> el.absUrl(a).takeIf { it.isNotBlank() } }.firstOrNull()
+        }
+    }.firstOrNull()
+
+    val raw = metaOg ?: linkImg ?: fromImgs ?: ""
+    fixUrlNull(raw)
+}
+
 
     val description = document.selectFirst("meta[property=og:description]")?.attr("content")?.trim()
         ?: document.selectFirst("div.single-blog-content")?.text()?.trim()
@@ -120,6 +138,7 @@ override suspend fun search(query: String): List<SearchResponse> {
         val episodeDataUrl = "$url#part$partNumber"
         newEpisode(episodeDataUrl) {
             this.name = "Tập $partNumber"
+            this.posterUrl = poster
         }
     }
 
