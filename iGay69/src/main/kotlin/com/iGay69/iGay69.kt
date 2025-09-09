@@ -140,53 +140,47 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val doc = app.get(data).document
     var found = false
 
-    // B1: lấy iframe chính
-    val iframeUrl = doc.selectFirst("iframe[src]")?.absUrl("src")
-    if (iframeUrl.isNullOrEmpty()) {
-        Log.d("Error:", "Iframe not found")
-        return false
-    }
+    suspend fun extractFromPage(pageUrl: String, referer: String) {
+        val doc = runCatching { app.get(pageUrl, referer = referer).document }.getOrNull() ?: return
 
-    // B2: mở iframe → tìm các nút nguồn
-    val iframeDoc = app.get(iframeUrl).document
-    val buttons = iframeDoc.select("a[href], button[data-href]")
-    if (buttons.isEmpty()) {
-        Log.d("Error:", "No source buttons found")
-        return false
-    }
-
-    // B3: duyệt từng nút nguồn
-    for (button in buttons) {
-        val intermediateUrl = button.absUrl("href").ifBlank { button.attr("data-href") }
-        if (intermediateUrl.isBlank()) continue
-
-        try {
-            // B4: mở trang trung gian → tìm link thực
-            val finalDoc = app.get(intermediateUrl).document
-            val finalElement = finalDoc.selectFirst("a[href], source[src]")
-            val finalUrl = when (finalElement?.tagName()) {
-                "a" -> finalElement.absUrl("href")
-                "source" -> finalElement.absUrl("src")
-                else -> null
-            }
-
-            if (!finalUrl.isNullOrEmpty()) {
-                val ok = loadExtractor(
-                    finalUrl,
-                    referer = data,
-                    subtitleCallback = subtitleCallback,
-                    callback = callback
-                )
+        // Quét tất cả iframe và link
+        doc.select("iframe[src], a[href]").forEach { el ->
+            val link = el.attr("src").ifBlank { el.attr("href") }.trim()
+            if (link.startsWith("http")) {
+                val ok = loadExtractor(link, referer = pageUrl, subtitleCallback = subtitleCallback, callback = callback)
                 if (ok) found = true
-            } else {
-                Log.d("Error:", "No final link found at $intermediateUrl")
             }
-        } catch (e: Exception) {
-            Log.e("Error:", "Error processing link: $intermediateUrl $e")
         }
+    }
+
+    // 1. Mở trang tập
+    val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
+
+    // 2. Lấy iframe chính
+    val iframeUrl = doc.selectFirst("iframe[src]")?.absUrl("src")
+    if (!iframeUrl.isNullOrEmpty()) {
+        // 3. Mở iframe
+        val iframeDoc = runCatching { app.get(iframeUrl, referer = data).document }.getOrNull()
+
+        // 4. Tìm link trung gian
+        val intermediateLinks = iframeDoc?.select("a[href]")?.mapNotNull { a ->
+            val href = a.absUrl("href")
+            if (href.startsWith("http")) href else null
+        } ?: emptyList()
+
+        if (intermediateLinks.isNotEmpty()) {
+            for (link in intermediateLinks) {
+                extractFromPage(link, referer = iframeUrl)
+            }
+        } else {
+            // Nếu không có link trung gian, quét trực tiếp trong iframe
+            extractFromPage(iframeUrl, referer = data)
+        }
+    } else {
+        // Nếu không có iframe, quét trực tiếp trong trang tập
+        extractFromPage(data, referer = data)
     }
 
     return found
