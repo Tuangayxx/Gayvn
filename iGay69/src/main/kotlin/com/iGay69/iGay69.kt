@@ -142,30 +142,34 @@ override suspend fun loadLinks(
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
-    val document = app.get(data).document
     var found = false
+    val visited = mutableSetOf<String>()
 
-    val mirrors = mutableSetOf<String>()
-
-    // Tabs links (lulustream, stream, ...)
-    document.select("div.responsive-tabs__panel a[href]").forEach { a ->
-        a.attr("href")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
-    }
-
-    // Fallback: iframe embeds
-    document.select("iframe[src]").forEach { iframe ->
-        iframe.attr("src")?.takeIf { it.startsWith("http") }?.let { mirrors.add(it) }
-    }
-
-    mirrors.toList().amap { url ->
-        val ok = loadExtractor(
-            url,
-            referer = data,
-            subtitleCallback = subtitleCallback
-        ) { link ->
-            callback(link)
+    suspend fun extractFromPage(pageUrl: String, referer: String) {
+        val doc = runCatching { app.get(pageUrl, referer = referer).document }.getOrNull() ?: return
+        doc.select("iframe[src], a[href]").forEach { el ->
+            val link = el.absUrl("src").ifBlank { el.absUrl("href") }.trim()
+            if (link.startsWith("http") && visited.add(link)) {
+                val ok = loadExtractor(link, referer = pageUrl, subtitleCallback = subtitleCallback, callback = callback)
+                if (ok) found = true
+            }
         }
-        if (ok) found = true
+    }
+
+    val doc = runCatching { app.get(data).document }.getOrNull() ?: return false
+    val iframeUrl = doc.selectFirst("iframe[src]")?.absUrl("src")
+
+    if (!iframeUrl.isNullOrEmpty()) {
+        val iframeDoc = runCatching { app.get(iframeUrl, referer = data).document }.getOrNull()
+        val intermediateLinks = iframeDoc?.select("a[href]")?.mapNotNull { it.absUrl("href").takeIf { href -> href.startsWith("http") } } ?: emptyList()
+
+        if (intermediateLinks.isNotEmpty()) {
+            for (link in intermediateLinks) extractFromPage(link, referer = iframeUrl)
+        } else {
+            extractFromPage(iframeUrl, referer = data)
+        }
+    } else {
+        extractFromPage(data, referer = data)
     }
 
     return found
