@@ -81,7 +81,7 @@ override suspend fun search(query: String): List<SearchResponse> {
     return searchResponse
 }
    
-override suspend fun load(url: String): LoadResponse {
+    override suspend fun load(url: String): LoadResponse {
     val document = app.get(url).document
 
     val title = document.selectFirst("meta[property=og:title]")?.attr("content")?.trim()
@@ -101,27 +101,27 @@ override suspend fun load(url: String): LoadResponse {
     val recommendations = document.select("div.list-item div.video.col-2")
         .mapNotNull { it.toRecommendResult() }
 
-    // Lấy danh sách tập, loại trùng theo số tập
-    val episodes = document.select("div.single-blog-content a[href]")
+    // Tìm tất cả <a> trong nội dung để lấy số tập (part/tập)
+    val partPairs = document.select(".single-blog-content a[href], .responsive-tabs__panel a[href], .tabcontent a[href]")
         .mapNotNull { a ->
-            val href = a.attr("href").trim()
+            val href = a.absUrl("href").ifBlank { a.attr("href") }.trim()
             val text = a.text().trim()
-            val match = Regex("(?i)(part|tập)\\s*(\\d+)").find(text)
-            val partNumber = match?.groupValues?.getOrNull(2)?.toIntOrNull()
-
+            val match = Regex("(?i)(?:part|tập)\\s*0*([0-9]{1,3})").find(text)
+            val partNumber = match?.groupValues?.getOrNull(1)?.toIntOrNull()
             if (href.startsWith("http") && partNumber != null) {
                 partNumber to href
             } else null
         }
-        .distinctBy { it.first } // chỉ giữ mỗi số tập 1 lần
+        .distinctBy { it.first } // chỉ giữ 1 per partNumber
         .sortedBy { it.first }
-        .map { (partNumber, href) ->
-            .map { (partNumber, href) ->
-    val episodeDataUrl = "$url#part$partNumber"
+
+    // Tạo episodes trỏ về trang series + fragment #partN (điều này cho phép loadLinks() tìm 4 server cho mỗi tập)
+    val episodes = partPairs.map { (partNumber, _) ->
+        val episodeDataUrl = "$url#part$partNumber"
         newEpisode(episodeDataUrl) {
             this.name = "Tập $partNumber"
-            }
         }
+    }
 
     return if (episodes.isNotEmpty()) {
         newTvSeriesLoadResponse(title, url, TvType.NSFW, episodes) {
@@ -147,7 +147,7 @@ override suspend fun loadLinks(
     Log.d("igay69", "=== loadLinks called with data=$data ===")
     var found = false
 
-    // Nếu data chứa fragment #partN -> xử lý như "series page" (lấy nhiều server cho tập N)
+    // Detect series fragment: example "https://igay69.com/lion-s1-2025/#part3"
     val seriesMatch = Regex("^(https?://[^#]+)#part(\\d+)$", RegexOption.IGNORE_CASE).find(data)
     if (seriesMatch != null) {
         val seriesUrl = seriesMatch.groupValues[1]
@@ -161,31 +161,29 @@ override suspend fun loadLinks(
             return false
         }
 
-        // Các panel tabs (thứ tự tương ứng với linksv1..linksv4)
-        val panels = doc.select(".responsive-tabs__panel, .tabcontent")
+        // Chọn panels (linksv1..linksv4 tương ứng với panel thứ tự)
+        val panels = doc.select(".responsive-tabs__panel, .tabcontent, .single-blog-content")
         if (panels.isEmpty()) {
-            Log.d("igay69", "No panels found on series page. Trying fallback selectors.")
+            Log.d("igay69", "No panels found on series page.")
         }
 
-        // For each server panel (prefer panels in document order; if fewer than 4, use what's available)
+        // Duyệt từng panel (mỗi panel thường là 1 server list)
         panels.forEachIndexed { panelIndex, panel ->
             try {
-                // 1) Try to match anchor whose text contains the part number (e.g. "part 01" or "tập 1")
                 val anchors = panel.select("a[href]")
+                // Tìm anchor có text chứa "part N" hoặc "tập N"
                 val partRegex = Regex("(?i)\\b(?:part|tập)\\s*0*${partNumber}\\b")
                 val anchorMatch = anchors.firstOrNull { a -> partRegex.containsMatchIn(a.text()) }
 
                 val chosenHref = when {
                     anchorMatch != null -> anchorMatch.absUrl("href").ifBlank { anchorMatch.attr("href") }
-                    // 2) Fallback: pick the anchor at index partNumber-1 if exists (anchors are usually in order)
                     anchors.size >= partNumber && partNumber > 0 -> anchors[partNumber - 1].absUrl("href").ifBlank { anchors[partNumber - 1].attr("href") }
                     else -> null
                 }
 
                 if (!chosenHref.isNullOrBlank()) {
                     val norm = if (chosenHref.startsWith("//")) "https:$chosenHref" else chosenHref
-                    Log.d("igay69", "Panel #${panelIndex+1} -> found href for part $partNumber: $norm")
-                    // gọi loadExtractor cho từng server link (referer = seriesUrl)
+                    Log.d("igay69", "Panel #${panelIndex + 1} -> found href for part $partNumber: $norm")
                     val ok = try {
                         loadExtractor(
                             norm,
@@ -201,18 +199,16 @@ override suspend fun loadLinks(
                     }
                     if (ok) found = true
                 } else {
-                    Log.d("igay69", "Panel #${panelIndex+1} -> no href found for part $partNumber")
+                    Log.d("igay69", "Panel #${panelIndex + 1} -> no href found for part $partNumber")
                 }
             } catch (e: Exception) {
-                Log.e("igay69", "Error processing panel #${panelIndex+1}: ${e.message}")
+                Log.e("igay69", "Error processing panel #${panelIndex + 1}: ${e.message}")
             }
         }
 
-        // Nếu panels rỗng / không tìm được bằng text, thử selectors cụ thể cho linksv1..linksv4
+        // Nếu panels không trả kết quả, thử bộ selector fallback (linksv1..4, #tablist1-panelX)
         if (!found) {
             val serverSelectors = listOf(
-                ".tabcontent",                 // generic
-                ".responsive-tabs__panel",     // generic
                 ".linksv1", ".linksv2", ".linksv3", ".linksv4",
                 "#tablist1-panel1", "#tablist1-panel2", "#tablist1-panel3", "#tablist1-panel4"
             )
@@ -222,7 +218,7 @@ override suspend fun loadLinks(
                     val anchors = panel.select("a[href]")
                     val partRegex = Regex("(?i)\\b(?:part|tập)\\s*0*${partNumber}\\b")
                     val anchorMatch = anchors.firstOrNull { a -> partRegex.containsMatchIn(a.text()) }
-                    val chosen = anchorMatch ?: (anchors.getOrNull(partNumber - 1))
+                    val chosen = anchorMatch ?: anchors.getOrNull(partNumber - 1)
                     val href = chosen?.absUrl("href")?.ifBlank { chosen.attr("href") }
                     if (!href.isNullOrBlank()) {
                         val norm = if (href.startsWith("//")) "https:$href" else href
@@ -244,7 +240,7 @@ override suspend fun loadLinks(
         return found
     }
 
-    // Nếu không phải series#part -> xem data là link host / episode trực tiếp
+    // Nếu không phải series#part => coi như link host/episode trực tiếp
     try {
         Log.d("igay69", "Treating data as host URL -> trying loadExtractor for $data")
         val ok = loadExtractor(
@@ -257,10 +253,10 @@ override suspend fun loadLinks(
         }
         if (ok) found = true
         else {
-            // fallback: fetch page and try to extract direct mp4/m3u8
+            // fallback: fetch host page và dò direct mp4/m3u8
             val pageHtml = try { app.get(data, headers = mapOf("Referer" to data)).body?.string() ?: "" } catch (e: Exception) { "" }
-            val videoRegex = Regex("(https?:\\\\?/\\\\?/[^\\s'\"<>]+?\\.(?:m3u8|mp4)(?:\\?[^\\s'\"<>]*)?)", RegexOption.IGNORE_CASE)
-            val matches = videoRegex.findAll(pageHtml).map { it.groupValues[1].replace("\\/", "/") }.distinct().toList()
+            val videoRegex = Regex("(https?://[^\\s'\"<>]+?\\.(?:m3u8|mp4)(?:\\?[^\\s'\"<>]*)?)", RegexOption.IGNORE_CASE)
+            val matches = videoRegex.findAll(pageHtml).map { it.groupValues[1] }.distinct().toList()
             if (matches.isNotEmpty()) {
                 matches.forEach { v ->
                     try {
