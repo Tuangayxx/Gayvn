@@ -28,6 +28,18 @@ class MxDrop : MixDrop(){
     override var mainUrl = "https://mxdrop.to"
 }
 
+class MixDropCv : MixDrop(){
+    override var mainUrl = "https://mixdrop.cv"
+}
+
+class mdfx9dc8n : MixDrop(){
+    override var mainUrl = "https://mdfx9dc8n.net"
+}
+
+class MixDropIs : MixDrop(){
+    override var mainUrl = "https://mixdrop.is"
+}
+
 class luluvid : LuluStream(){
     override var mainUrl = "https://luluvid.com"
 }
@@ -139,6 +151,22 @@ class DoodstreamCom : DoodLaExtractor() {
     override var mainUrl = "https://doodstream.com"
 }
 
+class doodspro : DoodLaExtractor() {
+    override var mainUrl = "https://doods.pro"
+}
+
+class doodyt : DoodLaExtractor() {
+    override var mainUrl = "https://dood.yt"
+}
+
+class doodre : DoodLaExtractor() {
+    override var mainUrl = "https://dood.re"
+}
+
+class doodpm : DoodLaExtractor() {
+    override var mainUrl = "https://dood.pm"
+}
+
 class vide0 : DoodLaExtractor() {
     override var mainUrl = "https://vide0.net"
 }
@@ -146,6 +174,11 @@ class vide0 : DoodLaExtractor() {
 class tapepops : StreamTape() {
     override var mainUrl = "https://tapepops.com"
     override var name = "tapepops"
+}
+
+class watchadsontape : StreamTape() {
+    override var mainUrl = "https://watchadsontape.com"
+    override var name = "watchadsontape"
 }
 
 class FileMoon : FilemoonV2() {
