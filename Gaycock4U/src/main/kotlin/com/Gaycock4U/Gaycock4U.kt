@@ -24,29 +24,29 @@ class Gaycock4U : MainAPI() {
     override val vpnStatus = VPNStatus.MightBeNeeded
 
     override val mainPage = mainPageOf(
-        "$mainUrl/" to "Latest Updates",
-        "$mainUrl/category/amateur/" to "Amateur",
-        "$mainUrl/category/bareback/" to "Bareback",
-        "$mainUrl/category/bigcock/" to "Big Cock",
-        "$mainUrl/category/group/" to "Group",
-        "$mainUrl/category/hardcore/" to "Hardcore",
-        "$mainUrl/category/latino/" to "Latino",
-        "$mainUrl/category/interracial/" to "Interracial",
-        "$mainUrl/category/twink/" to "Twink",
-        "$mainUrl/studio/asianetwork/" to "Asianetwork",
-        "$mainUrl/studio/bromo/" to "Bromo",
-        "$mainUrl/studio/latinonetwork/" to "Latino Network",
-        "$mainUrl/studio/lucasentertainment/" to "Lucas Entertainment",
-        "$mainUrl/studio/onlyfans/" to "Onlyfans",
-        "$mainUrl/studio/rawfuckclub/" to "Raw Fuck Club",
-        "$mainUrl/studio/ragingstallion/" to "Ragingstallion",
+        "/" to "Latest Updates",
+        "/category/amateur/" to "Amateur",
+        "/category/bareback/" to "Bareback",
+        "/category/bigcock/" to "Big Cock",
+        "/category/group/" to "Group",
+        "/category/hardcore/" to "Hardcore",
+        "/category/latino/" to "Latino",
+        "/category/interracial/" to "Interracial",
+        "/category/twink/" to "Twink",
+        "/studio/asianetwork/" to "Asianetwork",
+        "/studio/bromo/" to "Bromo",
+        "/studio/latinonetwork/" to "Latino Network",
+        "/studio/lucasentertainment/" to "Lucas Entertainment",
+        "/studio/onlyfans/" to "Onlyfans",
+        "/studio/rawfuckclub/" to "Raw Fuck Club",
+        "/studio/ragingstallion/" to "Ragingstallion",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val url = if (page > 1) {
-            "${request.data}page/$page"
+            "$mainUrl${request.data}page/$page"
         } else {
-            "${request.data}"
+            "$mainUrl${request.data}"
         }
 
         val ua = mapOf("User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
