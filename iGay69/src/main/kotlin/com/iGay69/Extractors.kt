@@ -305,7 +305,7 @@ open class WaawExtractor : ExtractorApi() {
                 this.referer = url
                 // try to extract quality from filename (e.g. 720p, 1080)
                 val qualityMatch = Regex("""(\d{3,4}p)""").find(link)?.groupValues?.get(1) ?: ""
-                this.quality = if (qualityMatch.isNotBlank()) Qualities.getQualityFromName(qualityMatch) else Qualities.Unknown.value
+                this.quality = quality?.toIntOrNull() ?: Qualities.Unknown.value
             }
         }
     }
