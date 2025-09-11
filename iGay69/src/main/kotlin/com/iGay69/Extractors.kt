@@ -226,3 +226,87 @@ open class Bigwarp : ExtractorApi() {
 class Bigwarpcc : Bigwarp() {
     override var mainUrl = "https://bigwarp.cc"
 }
+
+open class WaawExtractor : ExtractorApi() {
+    override val name = "Waaw"
+    override val mainUrl = "https://waaw.to"
+    override val requiresReferer = false
+
+    override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
+        val res = app.get(url)
+        if (res.code == 404) return emptyList()
+
+        val text = res.text
+        val doc = try { res.document } catch (e: Exception) { null }
+
+        val found = linkedSetOf<String>()
+
+        // 1) iframe[src]
+        try {
+            doc?.select("iframe[src]")?.forEach { el ->
+                el.attr("abs:src")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
+            }
+        } catch (_: Exception) {}
+
+        // 2) common data attributes (data-src, data-video, data-url)
+        try {
+            doc?.select("[data-src],[data-video],[data-url]")?.forEach { el ->
+                listOf("data-src", "data-video", "data-url").forEach { attr ->
+                    el.attr("abs:$attr")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
+                }
+                // sometimes src attribute on the element
+                el.attr("abs:src")?.takeIf { it.isNotBlank() }?.let { found.add(it) }
+            }
+        } catch (_: Exception) {}
+
+        // 3) scan <script> blocks: try JsUnpacker, search for .m3u8/.mp4 and base64 strings
+        try {
+            doc?.select("script")?.forEach { s ->
+                val data = s.data()
+                if (data.isNullOrBlank()) return@forEach
+
+                // Try unpacker first (handles p.a.c.k.e.r and similar)
+                JsUnpacker(data).unpack()?.let { unpacked ->
+                    Regex("""https?://[^'"\s\\]+\.m3u8[^'"\s\\]*""").findAll(unpacked).forEach { found.add(it.value) }
+                    Regex("""https?://[^'"\s\\]+\.mp4[^'"\s\\]*""").findAll(unpacked).forEach { found.add(it.value) }
+
+                    // try to find base64 blobs in unpacked and decode
+                    Regex("""["']([A-Za-z0-9+/=]{40,})["']""").findAll(unpacked).forEach { m ->
+                        try {
+                            val decoded = String(Base64.getDecoder().decode(m.groupValues[1]))
+                            Regex("""https?://[^'"\s\\]+""").findAll(decoded).forEach { found.add(it.value) }
+                        } catch (_: Exception) {}
+                    }
+                }
+
+                // Also directly search the raw script
+                Regex("""https?://[^'"\s\\]+\.m3u8[^'"\s\\]*""").findAll(data).forEach { found.add(it.value) }
+                Regex("""https?://[^'"\s\\]+\.mp4[^'"\s\\]*""").findAll(data).forEach { found.add(it.value) }
+            }
+        } catch (_: Exception) {}
+
+        // 4) fallback: search whole page text for m3u8 / mp4
+        try {
+            Regex("""https?://[^'"\s\\]+\.m3u8[^'"\s\\]*""").findAll(text).forEach { found.add(it.value) }
+            Regex("""https?://[^'"\s\\]+\.mp4[^'"\s\\]*""").findAll(text).forEach { found.add(it.value) }
+        } catch (_: Exception) {}
+
+        if (found.isEmpty()) return emptyList()
+
+        // Build ExtractorLink list (de-dupe)
+        return found.map { link ->
+            newExtractorLink(
+                name = name,
+                source = name,
+                url = link,
+                type = INFER_TYPE
+            ) {
+                // set referer to original page in case remote host needs it
+                this.referer = url
+                // try to extract quality from filename (e.g. 720p, 1080)
+                val qualityMatch = Regex("""(\d{3,4}p)""").find(link)?.groupValues?.get(1) ?: ""
+                this.quality = if (qualityMatch.isNotBlank()) Qualities.getQualityFromName(qualityMatch) else Qualities.Unknown.value
+            }
+        }
+    }
+}
