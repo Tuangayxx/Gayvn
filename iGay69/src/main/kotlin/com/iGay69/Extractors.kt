@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.extractors.StreamTape
 import com.lagradost.cloudstream3.extractors.Voe
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors.MixDrop
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.*
 import com.fasterxml.jackson.annotation.JsonProperty
