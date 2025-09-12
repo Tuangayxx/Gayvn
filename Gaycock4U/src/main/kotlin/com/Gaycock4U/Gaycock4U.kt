@@ -23,8 +23,13 @@ class Gaycock4U : MainAPI() {
     override val supportedTypes = setOf(TvType.NSFW)
     override val vpnStatus = VPNStatus.MightBeNeeded
 
-    private val ua = "Mozilla/5.0 (X11; Linux x86_64; rv:101.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Firefox/101.0", "X-Requested-With" to "XMLHttpRequest"
-    
+    private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0"
+    private val headers = mapOf(
+        "User-Agent" to userAgent,
+        "Accept" to "*/*",
+        "Connection" to "keep-alive"
+    )
+
     override val mainPage = mainPageOf(
         "" to "Latest Updates",
         "/category/amateur/" to "Amateur",
@@ -51,7 +56,7 @@ class Gaycock4U : MainAPI() {
             "$mainUrl${request.data}"
         }
 
-        val res = app.get(url, headers = mapOf("User-Agent" to ua), referer = mainUrl, allowRedirects = true)
+        val res = app.get(url, headers = headers, referer = mainUrl, allowRedirects = true)
         val document = res.document
         // Fixed selector - using correct container class
         val home = document.select("div.elementor-widget-container article.elementor-post").mapNotNull { it.toSearchResult() }
