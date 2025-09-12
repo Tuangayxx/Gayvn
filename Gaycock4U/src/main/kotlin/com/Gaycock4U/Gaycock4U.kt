@@ -27,7 +27,9 @@ class Gaycock4U : MainAPI() {
     private val headers = mapOf(
         "User-Agent" to userAgent,
         "Accept" to "*/*",
-        "Connection" to "keep-alive"
+        "Connection" to "keep-alive",
+        "Range" to "bytes=0-0",
+        "X-Requested-With" to "XMLHttpRequest"
     )
 
     override val mainPage = mainPageOf(
@@ -56,7 +58,7 @@ class Gaycock4U : MainAPI() {
             "$mainUrl${request.data}"
         }
 
-        val res = app.get(url, headers = headers, referer = mainUrl, allowRedirects = true)
+        val res = app.get(url, headers = headers, referer = referer, allowRedirects = true)
         val document = res.document
         // Fixed selector - using correct container class
         val home = document.select("div.elementor-widget-container article.elementor-post").mapNotNull { it.toSearchResult() }
