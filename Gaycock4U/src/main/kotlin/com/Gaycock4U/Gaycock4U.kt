@@ -29,7 +29,8 @@ class Gaycock4U : MainAPI() {
         "Accept" to "*/*",
         "Connection" to "keep-alive",
         "Range" to "bytes=0-0",
-        "X-Requested-With" to "XMLHttpRequest"
+        "X-Requested-With" to "XMLHttpRequest",
+        "Accept-Language" to "en-US,en;q=0.9",
     )
 
     override val mainPage = mainPageOf(
