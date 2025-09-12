@@ -49,8 +49,10 @@ class Gaycock4U : MainAPI() {
             "$mainUrl${request.data}page/$page"
         } else {
             "$mainUrl${request.data}"
+        }
 
-        val document = app.get(url, headers = mapOf("User-Agent" to ua), referer = mainUrl, allowRedirects = true)).document
+        val res = app.get(url, headers = mapOf("User-Agent" to ua), referer = mainUrl, allowRedirects = true)
+        val document = res.document
         // Fixed selector - using correct container class
         val home = document.select("div.elementor-widget-container article.elementor-post").mapNotNull { it.toSearchResult() }
 
