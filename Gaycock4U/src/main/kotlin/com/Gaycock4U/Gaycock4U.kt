@@ -62,7 +62,7 @@ class Gaycock4U : MainAPI() {
         val res = app.get(url, headers = headers, timeout = 50L, allowRedirects = true)
         val document = res.document
         // Fixed selector - using correct container class
-        val home = document.select("div.elementor-widget-container article.elementor-post").mapNotNull { it.toSearchResult() }
+        val home = document.select("article.elementor-post").mapNotNull { it.toSearchResult() }
 
         return newHomePageResponse(
             list = HomePageList(
