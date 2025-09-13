@@ -42,14 +42,14 @@ class Gaycock4U : MainAPI() {
         "/category/hardcore/" to "Hardcore",
         "/category/latino/" to "Latino",
         "/category/interracial/" to "Interracial",
-        "/category/twink/" to "Twink",
-        "/studio/asianetwork/" to "Asianetwork",
-        "/studio/bromo/" to "Bromo",
-        "/studio/latinonetwork/" to "Latino Network",
-        "/studio/lucasentertainment/" to "Lucas Entertainment",
-        "/studio/onlyfans/" to "Onlyfans",
-        "/studio/rawfuckclub/" to "Raw Fuck Club",
-        "/studio/ragingstallion/" to "Ragingstallion",
+     //   "/category/twink/" to "Twink",
+     //   "/studio/asianetwork/" to "Asianetwork",
+     //   "/studio/bromo/" to "Bromo",
+     //   "/studio/latinonetwork/" to "Latino Network",
+     //   "/studio/lucasentertainment/" to "Lucas Entertainment",
+     //   "/studio/onlyfans/" to "Onlyfans",
+     //   "/studio/rawfuckclub/" to "Raw Fuck Club",
+     //   "/studio/ragingstallion/" to "Ragingstallion",
     )
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
